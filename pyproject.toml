@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geosciml4china"
+version = "0.1.0"
+description = "MapGIS → GeoSciML 4.1 conversion, DZ/T 0179-2025 semantic styling, rendering and verification for Chinese 1:250k geological map sheets"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "geosciml4china contributors" },
+]
+keywords = ["GeoSciML", "MapGIS", "geological map", "DZ/T 0179", "OGC", "CGI vocabularies"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "mapgis2shp>=2.2.1",
+    "geopandas>=0.12",
+    "shapely>=2.0",
+    "pandas>=1.3",
+    "numpy>=1.21",
+    "lxml>=4.9",
+    "matplotlib>=3.6",
+]
+
+[project.scripts]
+g4c = "geosciml4china.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+geosciml4china = [
+    "data/geosciml_xsd/**/*",
+    "data/cgi_vocabs_current/*.json",
+    "data/dzt0179_patterns/*.svg",
+    "data/dzt0179_patterns/*.json",
+    "data/*.json",
+]

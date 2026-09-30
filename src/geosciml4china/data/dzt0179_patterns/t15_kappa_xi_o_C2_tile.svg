@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <!-- DZ/T 0179 表15 侵入岩填充花纹：κξοC2 晚石炭世石英碱长岩（最小可重复单元 100×100）
+       底色 R255 G204 B77；花纹色红 R255 G0 B0（碱性岩花纹为红色或黑色，表15 规则）；
+       母元间距 50、棋盘交替（参照 γδT2 花岗闪长岩模式：+→K、丄→品字形三点），周期 2×2 母元格；
+       内容 4 个完整母元——K (25,25)、品点 (75,25)、品点 (25,75)、K (75,75)；
+       瓦片四边均落在空隙，平铺时边界无裁切；2026-09-18 用户指定模式生成 -->
+  <rect width="100" height="100" fill="rgb(255,204,77)"/>
+  <g stroke="rgb(255,0,0)" stroke-width="2" fill="none">
+    <!-- K ，中心 (25,25)：Arial 字体（字号 28，cap height ≈20） -->
+    <text x="25" y="35" font-family="Arial" font-size="28" font-weight="normal"
+          fill="rgb(255,0,0)" stroke="none" text-anchor="middle">K</text>
+    <!-- 品字形三点 ，中心 (75,25)：上一点、下两点，r=2.5 -->
+    <circle cx="75" cy="18" r="2.5" fill="rgb(255,0,0)" stroke="none"/>
+    <circle cx="69" cy="31" r="2.5" fill="rgb(255,0,0)" stroke="none"/>
+    <circle cx="81" cy="31" r="2.5" fill="rgb(255,0,0)" stroke="none"/>
+    <!-- 品字形三点 ，中心 (25,75) -->
+    <circle cx="25" cy="68" r="2.5" fill="rgb(255,0,0)" stroke="none"/>
+    <circle cx="19" cy="81" r="2.5" fill="rgb(255,0,0)" stroke="none"/>
+    <circle cx="31" cy="81" r="2.5" fill="rgb(255,0,0)" stroke="none"/>
+    <!-- K ，中心 (75,75)：Arial 字体 -->
+    <text x="75" y="85" font-family="Arial" font-size="28" font-weight="normal"
+          fill="rgb(255,0,0)" stroke="none" text-anchor="middle">K</text>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 垫片（2026-09-28）：geosciml-lite.xsd 的 gmlsfLevels 导入仅用于
+     annotation/appinfo（合规等级声明），不参与内容模型——本树不需其
+     元素声明，以最小空 schema 解析该命名空间（不改写官方 XSD）。 -->
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        targetNamespace="http://www.opengis.net/gmlsf"
+        xmlns:gmlsf="http://www.opengis.net/gmlsf" elementFormDefault="qualified" version="shim"/>

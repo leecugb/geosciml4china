@@ -1,0 +1,175 @@
+{
+ "title": "LDZOFBA003.WL GZEEB 断层类型代码表（用户核实定稿）",
+ "date": "2026-09-03",
+ "updated": "2026-09-04",
+ "source_file": "LDZOFBA003.WL",
+ "total_features": 310,
+ "dictionary_source": "《矿产资源潜力评价数据模型丛书》断层类型下属词（纸质，未见原文）；本表经用户核实 + 数据证据交叉验证",
+ "codes": {
+  "01": {
+   "meaning": "断层",
+   "count": 155,
+   "evidence": "泛称断层；倾角45°-80°(18条有值)；GZEHG记切割地层；GZELD=109",
+   "confidence": "user_confirmed"
+  },
+  "04": {
+   "meaning": "推测断层",
+   "count": 25,
+   "evidence": "25条全部无实测倾角；主要沿F50覆盖区边缘分布",
+   "confidence": "verified"
+  },
+  "05": {
+   "meaning": "逆断层",
+   "count": 49,
+   "evidence": "32/49有实测倾角25°-85°主峰50°-76°；GZELD=101(压性)一一对应(46/49)",
+   "confidence": "verified"
+  },
+  "07": {
+   "meaning": "推覆体边界",
+   "count": 10,
+   "evidence": "低角度(25°/26°)；长城系ChSt(老)覆盖D2kz/C1w/P2q(新)，老盖新；集中东南角",
+   "confidence": "verified"
+  },
+  "16": {
+   "meaning": "右型走滑断层",
+   "count": 1,
+   "evidence": "走向近南北(KCDDEF=2.8°)横切东西向N1k/N1a；GZELD=103一一对应；旋向以用户核实为准",
+   "confidence": "verified"
+  },
+  "18": {
+   "meaning": "左型走滑断层",
+   "count": 3,
+   "evidence": "走向近南北(1.3°-7.6°)横切东西向地层带；GZELD=104一一对应；旋向以用户核实为准",
+   "confidence": "verified"
+  },
+  "28": {
+   "meaning": "区域性大断裂",
+   "count": 20,
+   "evidence": "GZEEE统一为102(区域性)；12/20 GZEHG为糜棱岩+蛇绿岩团块混杂带(F48主带)",
+   "confidence": "verified"
+  },
+  "31": {
+   "meaning": "复活断层",
+   "count": 26,
+   "evidence": "北部(39.8-39.9°N)与南部(~39.2°N)两条区域性大弧形线；倾角51°-67°；山前/盆缘主控断裂",
+   "confidence": "user_confirmed"
+  },
+  "41": {
+   "meaning": "边界断裂",
+   "count": 21,
+   "evidence": "16/21 GZEHG为'切割布伦阔勒岩群、志留系、泥盆系、二叠系地层'蛇绿混杂带(F9/F50)；GZEEE多为103(边界级)",
+   "confidence": "verified"
+  }
+ },
+ "named_faults": {
+  "F48": {
+   "segments": 15,
+   "types": [
+    "28",
+    "05"
+   ],
+   "zone_strike_deg": 130.56,
+   "interpretation": "区域性大断裂主体(蛇绿混杂岩带/缝合带性质)，局部叠加逆冲复活；倾角50°/58°/65°"
+  },
+  "F50": {
+   "segments": 22,
+   "types": [
+    "41",
+    "04"
+   ],
+   "interpretation": "边界断裂，部分段推测；切割布伦阔勒岩群至二叠系多个单元"
+  },
+  "F9": {
+   "segments": 5,
+   "types": [
+    "41"
+   ],
+   "interpretation": "边界断裂，北部39.6-39.7°N"
+  }
+ },
+ "legend_mapping": {
+  "note": "图例类型（用户 2026-09-04 提供，共 11 类）与 GZEEB 映射；9 类有数据，2 类本幅 0 条预留",
+  "断层": {
+   "gzeeb": "01",
+   "count": 155,
+   "status": "verified"
+  },
+  "正断层": {
+   "gzeeb": "02",
+   "count": 0,
+   "status": "pending: 代码为候选，待字典/用户确认"
+  },
+  "推测断层": {
+   "gzeeb": "04",
+   "count": 25,
+   "status": "verified"
+  },
+  "逆断层": {
+   "gzeeb": "05",
+   "count": 49,
+   "status": "verified"
+  },
+  "推覆体边界": {
+   "gzeeb": "07",
+   "count": 10,
+   "status": "verified"
+  },
+  "右型走滑断层": {
+   "gzeeb": "16",
+   "count": 1,
+   "status": "verified"
+  },
+  "左型走滑断层": {
+   "gzeeb": "18",
+   "count": 3,
+   "status": "verified"
+  },
+  "区域性大断裂": {
+   "gzeeb": "28",
+   "count": 20,
+   "status": "verified"
+  },
+  "复活断层": {
+   "gzeeb": "31",
+   "count": 26,
+   "status": "verified"
+  },
+  "边界断裂": {
+   "gzeeb": "41",
+   "count": 21,
+   "status": "verified"
+  },
+  "性质不明断层": {
+   "gzeeb": null,
+   "count": 0,
+   "status": "pending: 两位码字典代码待查（候选 99，比照 A115 三位码 999）"
+  }
+ },
+ "fault_aux_points": {
+  "source": "LDZOFBB099.WT (CHFCEC='断层辅助点')",
+  "count": 299,
+  "with_dip_number": 79,
+  "note": "制图者指定的断层注记/符号位置，尚未用于渲染；倾角注记与齿侧判定拟据此完善"
+ },
+ "field_semantics": {
+  "GZEEB": "断层类型（形态学分类，本表）",
+  "GZELD": "运动学性质：101=压性(逆冲)、103=右行走滑、104=左行走滑、109=一般/未分；与GZEEB互证(101↔05、103↔16、104↔18)。注意：109 不是正断层(normal)——07推覆体边界(10/10)、28缝合带(20/20) 全为109，若109=张性则自相矛盾；张性代码(102?)本幅 0 次出现，与'图例有正断层、数据无正断层'互证",
+  "GZEEE": "规模级别：101=一般断层、102=区域性、103=边界级；有实测倾角者仅见于101/102",
+  "GZAG": "可靠程度(推断)：101=实测为主，103=疑推断(仅41中5条)",
+  "GZEEC": "上级固定分类码，恒定106，无区分度",
+  "KCDDEF": "断层(带)总体走向方位角(度)，按整条断层赋值(如F48全15段=130.56°)，非单段几何走向",
+  "GZECE": "断层面倾角(度)，0=未实测(251/310)；仅GZEEB=01/05/07/28/31有值",
+  "GZEHG": "双语义：一般断层记切割的地质单元代号(268条)；大断裂带(28/41/部分04/05)记断层带物质描述(42条)",
+  "GZEAB": "断层编号(F9/F48/F50，仅大断裂带命名，42条)",
+  "GZECD/GZEKG/GZEHH": "空字段(0/310)",
+  "PKIGJ": "来源图件，恒定'1∶250000 库尔干幅(J43C001002)建造构造图'"
+ },
+ "gzeld_semantics": {
+  "101": "压性",
+  "102": "张性（本幅 0 次）",
+  "103": "右行",
+  "104": "左行",
+  "109": "一般",
+  "_note": "库尔干码义（2026-09-03 定稿互证）；英吉沙 103=左行 与本幅 103=右行不同构（2026-09-25 发现，各幅注册表各自为准）"
+ }
+}

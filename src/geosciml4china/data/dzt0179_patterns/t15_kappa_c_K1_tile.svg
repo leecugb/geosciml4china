@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <!-- DZ/T 0179 表15 侵入岩填充花纹：κcK1 早白垩世碳酸岩（最小可重复单元 100×100）
+       底色 R255 G128 B38（表13 碳酸岩 Mz 色）；花纹色红 R255 G0 B0（碳酸岩花纹为红色或黑色，表15 规则）；
+       参照 ηγJ1 二长花岗岩模式：母元间距 50、2×2 母元格，母元全部替换为 C（Arial 字体 28pt）；
+       内容 4 个完整母元——C (25,25)、C (75,25)、C (25,75)、C (75,75)；
+       瓦片四边均落在空隙，平铺时边界无裁切；2026-09-18 用户指定模式生成 -->
+  <rect width="100" height="100" fill="rgb(255,128,38)"/>
+  <g fill="rgb(255,0,0)" stroke="none">
+    <text x="25" y="35" font-family="Arial" font-size="28" font-weight="normal" text-anchor="middle">C</text>
+    <text x="75" y="35" font-family="Arial" font-size="28" font-weight="normal" text-anchor="middle">C</text>
+    <text x="25" y="85" font-family="Arial" font-size="28" font-weight="normal" text-anchor="middle">C</text>
+    <text x="75" y="85" font-family="Arial" font-size="28" font-weight="normal" text-anchor="middle">C</text>
+  </g>
+</svg>

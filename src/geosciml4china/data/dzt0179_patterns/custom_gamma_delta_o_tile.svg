@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <!-- 英云闪长岩花纹（γδο，自定义）：最小可重复单元 100×100
+       底色 R204 G102 B204（γδο 族现配色，英吉沙 γδοC2/γδοJx/γδοP1）；花纹色白色（酸性-中酸性岩花纹为白色或黑色）；
+       参照 ηγJ1 二长花岗岩模式：棋盘交替、母元间距 50、周期 2×2 母元格；= 替换为 N（Arial 字体 28pt）；
+       内容 4 个完整母元——+ (25,25)、N (75,25)、N (25,75)、+ (75,75)；
+       瓦片四边均落在空隙，平铺时边界无裁切；2026-09-18 用户指定模式生成 -->
+  <rect width="100" height="100" fill="rgb(204,102,204)"/>
+  <g stroke="white" stroke-width="2" fill="none">
+    <!-- + ，中心 (25,25)：正交十字，臂长 15 -->
+    <line x1="10" y1="25" x2="40" y2="25"/>
+    <line x1="25" y1="10" x2="25" y2="40"/>
+    <!-- N ，中心 (75,25)：Arial 字体 28pt -->
+    <text x="75" y="35" font-family="Arial" font-size="28" font-weight="normal"
+          fill="white" stroke="none" text-anchor="middle">N</text>
+    <!-- N ，中心 (25,75)：Arial 字体 28pt -->
+    <text x="25" y="85" font-family="Arial" font-size="28" font-weight="normal"
+          fill="white" stroke="none" text-anchor="middle">N</text>
+    <!-- + ，中心 (75,75) -->
+    <line x1="60" y1="75" x2="90" y2="75"/>
+    <line x1="75" y1="60" x2="75" y2="90"/>
+  </g>
+</svg>

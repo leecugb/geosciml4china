@@ -1,0 +1,2415 @@
+{
+ "_meta": {
+  "title": "CGI GeoSciML 词表术语清单（转换映射用）",
+  "source": "https://cgi-api.vocabs.ga.gov.au/sparql (CGI Geoscience Vocabularies, VocPrez)",
+  "fetched": "2026-09-20",
+  "scheme_uri_pattern": "http://resource.geosciml.org/classifierscheme/cgi/{version}/{vocab}",
+  "concept_uri_pattern": "http://resource.geosciml.org/classifier/cgi/{vocab}/{term}",
+  "version": "2016.01（mappingframe/planarpolaritycode 为 2017.01）",
+  "note": "每项为 [term, prefLabel(en)]；URI 用 term。simplelithology 共 265 词未含于此（层级大表，按需另取）"
+ },
+ "vocabularies": {
+  "faulttype": [
+   [
+    "detachment_fault",
+    "detachment fault"
+   ],
+   [
+    "dextral_strike_slip_fault",
+    "dextral strike slip fault"
+   ],
+   [
+    "extraction_fault",
+    "extraction fault"
+   ],
+   [
+    "fault",
+    "fault"
+   ],
+   [
+    "high_angle_fault",
+    "high angle fault"
+   ],
+   [
+    "high_angle_normal_fault",
+    "high angle normal fault"
+   ],
+   [
+    "high_angle_reverse",
+    "high angle reverse"
+   ],
+   [
+    "horizontal_fault",
+    "horizontal fault"
+   ],
+   [
+    "left_normal_fault",
+    "left normal fault"
+   ],
+   [
+    "left_reverse_fault",
+    "left reverse fault"
+   ],
+   [
+    "low_angle_fault",
+    "low angle fault"
+   ],
+   [
+    "low_angle_normal_fault",
+    "low angle normal fault"
+   ],
+   [
+    "mixed_extraction_fault",
+    "mixed extraction fault"
+   ],
+   [
+    "normal_fault",
+    "normal fault"
+   ],
+   [
+    "oblique_slip_fault",
+    "oblique slip fault"
+   ],
+   [
+    "pure_extraction_fault",
+    "pure extraction fault"
+   ],
+   [
+    "reverse_fault",
+    "reverse fault"
+   ],
+   [
+    "right_normal_fault",
+    "right normal fault"
+   ],
+   [
+    "right_reverse_fault",
+    "right reverse fault"
+   ],
+   [
+    "scissor_fault",
+    "scissor fault"
+   ],
+   [
+    "sinistral_strike_slip_fault",
+    "sinistral strike slip fault"
+   ],
+   [
+    "strike_slip_fault",
+    "strike slip fault"
+   ],
+   [
+    "thrust_fault",
+    "thrust fault"
+   ],
+   [
+    "wrench_fault",
+    "wrench fault"
+   ]
+  ],
+  "contacttype": [
+   [
+    "alteration_facies_contact",
+    "alteration facies contact"
+   ],
+   [
+    "angular_unconformable_contact",
+    "angular unconformable contact"
+   ],
+   [
+    "buttress_unconformity",
+    "buttress unconformity"
+   ],
+   [
+    "chronostratigraphic_zone_contact",
+    "chronostratigraphic-zone contact"
+   ],
+   [
+    "conductivity_contact",
+    "conductivity contact"
+   ],
+   [
+    "conformable_contact",
+    "conformable contact"
+   ],
+   [
+    "contact",
+    "contact"
+   ],
+   [
+    "deformation_zone_contact",
+    "deformation zone contact"
+   ],
+   [
+    "density_contact",
+    "density contact"
+   ],
+   [
+    "depositional_contact",
+    "depositional contact"
+   ],
+   [
+    "disconformable_contact",
+    "disconformable contact"
+   ],
+   [
+    "faulted_contact",
+    "faulted contact"
+   ],
+   [
+    "geologic_province_contact",
+    "geologic province contact"
+   ],
+   [
+    "geophysical_contact",
+    "geophysical contact"
+   ],
+   [
+    "glacial_stationary_line",
+    "glacial stationary line"
+   ],
+   [
+    "igneous_intrusive_contact",
+    "igneous intrusive contact"
+   ],
+   [
+    "igneous_phase_contact",
+    "igneous phase contact"
+   ],
+   [
+    "impact_structure_boundary",
+    "impact structure boundary"
+   ],
+   [
+    "lithogenetic_contact",
+    "lithogenetic contact"
+   ],
+   [
+    "magnetic_contact",
+    "magnetic contact"
+   ],
+   [
+    "magnetic_polarity_contact",
+    "magnetic polarity contact"
+   ],
+   [
+    "magnetic_susceptiblity_contact",
+    "magnetic susceptiblity contact"
+   ],
+   [
+    "magnetization_contact",
+    "magnetization contact"
+   ],
+   [
+    "metamorphic_contact",
+    "metamorphic contact"
+   ],
+   [
+    "metamorphic_facies_contact",
+    "metamorphic facies contact"
+   ],
+   [
+    "metasomatic_facies_contact",
+    "metasomatic facies contact"
+   ],
+   [
+    "mineralisation_assemblage_contact",
+    "mineralisation assemblage contact"
+   ],
+   [
+    "nonconformable_contact",
+    "nonconformable contact"
+   ],
+   [
+    "paraconformable_contact",
+    "paraconformable contact"
+   ],
+   [
+    "radiometric_contact",
+    "radiometric contact"
+   ],
+   [
+    "sedimentary_facies_contact",
+    "sedimentary facies contact"
+   ],
+   [
+    "sedimentary_intrusive_contact",
+    "sedimentary intrusive contact"
+   ],
+   [
+    "seismic_contact",
+    "seismic contact"
+   ],
+   [
+    "unconformable_contact",
+    "unconformable contact"
+   ],
+   [
+    "volcanic_subsidence_zone_boundary",
+    "volcanic subsidence zone boundary"
+   ],
+   [
+    "weathering_contact",
+    "weathering contact"
+   ]
+  ],
+  "geologicunittype": [
+   [
+    "allostratigraphic_unit",
+    "allostratigraphic unit"
+   ],
+   [
+    "alteration_unit",
+    "alteration unit"
+   ],
+   [
+    "artificial_ground",
+    "artificial ground"
+   ],
+   [
+    "biostratigraphic_unit",
+    "biostratigraphic unit"
+   ],
+   [
+    "chronostratigraphic_unit",
+    "chronostratigraphic unit"
+   ],
+   [
+    "deformation_unit",
+    "deformation unit"
+   ],
+   [
+    "excavation_unit",
+    "excavation unit"
+   ],
+   [
+    "geologic_unit",
+    "geologic unit"
+   ],
+   [
+    "geomorphologic_unit",
+    "geomorphologic unit"
+   ],
+   [
+    "geophysical_unit",
+    "geophysical unit"
+   ],
+   [
+    "lithodemic_unit",
+    "lithodemic unit"
+   ],
+   [
+    "lithogenetic_unit",
+    "lithogenetic unit"
+   ],
+   [
+    "lithologic_unit",
+    "lithologic unit"
+   ],
+   [
+    "lithostratigraphic_unit",
+    "lithostratigraphic unit"
+   ],
+   [
+    "lithotectonic_unit",
+    "lithotectonic unit"
+   ],
+   [
+    "magnetostratigraphic_unit",
+    "magnetostratigraphic unit"
+   ],
+   [
+    "mass_movement_unit",
+    "mass movement unit"
+   ],
+   [
+    "pedoderm",
+    "pedoderm"
+   ],
+   [
+    "pedostratigraphic_unit",
+    "pedostratigraphic unit"
+   ],
+   [
+    "polarity_chronostratigraphic_unit",
+    "polarity chronostratigraphic unit"
+   ]
+  ],
+  "stratigraphicrank": [
+   [
+    "bed",
+    "bed"
+   ],
+   [
+    "complex",
+    "complex"
+   ],
+   [
+    "formation",
+    "formation"
+   ],
+   [
+    "group",
+    "group"
+   ],
+   [
+    "lithodeme",
+    "lithodeme"
+   ],
+   [
+    "megasequence",
+    "megasequence"
+   ],
+   [
+    "member",
+    "member"
+   ],
+   [
+    "rank_not_specified",
+    "not specified"
+   ],
+   [
+    "sequence",
+    "sequence"
+   ],
+   [
+    "subgroup",
+    "subgroup"
+   ],
+   [
+    "suite",
+    "suite"
+   ],
+   [
+    "supergroup",
+    "supergroup"
+   ],
+   [
+    "supersequence",
+    "supersequence"
+   ],
+   [
+    "supersuite",
+    "supersuite"
+   ]
+  ],
+  "conventioncode": [
+   [
+    "dip_dip_direction",
+    "dip dip direction"
+   ],
+   [
+    "strike_dip_rhr",
+    "strike dip right hand rule"
+   ]
+  ],
+  "planarpolaritycode": [
+   [
+    "overturned",
+    "overturned"
+   ],
+   [
+    "upright",
+    "upright"
+   ],
+   [
+    "vertical",
+    "vertical"
+   ]
+  ],
+  "faultmovementtype": [
+   [
+    "dip_separation_sense",
+    "dip separation sense"
+   ],
+   [
+    "dip_slip",
+    "dip slip"
+   ],
+   [
+    "extraction",
+    "extraction"
+   ],
+   [
+    "horizontal",
+    "horizontal"
+   ],
+   [
+    "mixed_extraction",
+    "mixed extraction"
+   ],
+   [
+    "oblique_slip",
+    "oblique slip"
+   ],
+   [
+    "pure_extraction",
+    "pure extraction"
+   ],
+   [
+    "scissor",
+    "scissor"
+   ],
+   [
+    "strike_separation_sense",
+    "strike separation sense"
+   ],
+   [
+    "strike_slip",
+    "strike slip"
+   ],
+   [
+    "transcurrent",
+    "transcurrent"
+   ],
+   [
+    "transform",
+    "transform"
+   ],
+   [
+    "transpressional",
+    "transpressional"
+   ],
+   [
+    "transtensional",
+    "transtensional"
+   ],
+   [
+    "wrench",
+    "wrench"
+   ]
+  ],
+  "faultmovementsense": [
+   [
+    "detachment",
+    "detachment"
+   ],
+   [
+    "dextral",
+    "dextral"
+   ],
+   [
+    "generic_decollement",
+    "generic decollement"
+   ],
+   [
+    "no_movement_sense",
+    "no movement sense"
+   ],
+   [
+    "normal",
+    "normal"
+   ],
+   [
+    "normal_dextral",
+    "normal dextral"
+   ],
+   [
+    "normal_sinistral",
+    "normal sinistral"
+   ],
+   [
+    "reverse",
+    "reverse"
+   ],
+   [
+    "reverse_dextral",
+    "reverse dextral"
+   ],
+   [
+    "reverse_sinistral",
+    "reverse sinistral"
+   ],
+   [
+    "sinistral",
+    "sinistral"
+   ],
+   [
+    "thrust",
+    "thrust"
+   ],
+   [
+    "thrust_decollement",
+    "thrust decollement"
+   ]
+  ],
+  "deformationstyle": [
+   [
+    "brittle",
+    "brittle deformation"
+   ],
+   [
+    "ductile",
+    "ductile deformation"
+   ],
+   [
+    "mixed_brittle_ductile",
+    "mixed brittle and ductile"
+   ]
+  ],
+  "eventprocess": [
+   [
+    "accretion",
+    "accretion"
+   ],
+   [
+    "alteration",
+    "alteration"
+   ],
+   [
+    "biological_precipitation",
+    "biological precipitation"
+   ],
+   [
+    "biological_weathering",
+    "biological weathering"
+   ],
+   [
+    "bolide_impact",
+    "bolide impact"
+   ],
+   [
+    "chemical_precipitation",
+    "chemical precipitation"
+   ],
+   [
+    "chemical_weathering",
+    "chemical weathering"
+   ],
+   [
+    "cometary_impact",
+    "cometary impact"
+   ],
+   [
+    "contact_metamorphism",
+    "contact metamorphism"
+   ],
+   [
+    "continental_breakup",
+    "continental breakup"
+   ],
+   [
+    "continental_collision",
+    "continental collision"
+   ],
+   [
+    "debris_flow_deposition",
+    "debris flow deposition"
+   ],
+   [
+    "deep_water_oxygen_depletion",
+    "deep water oxygen depletion"
+   ],
+   [
+    "deformation",
+    "deformation"
+   ],
+   [
+    "deformation_twinning",
+    "deformation twinning"
+   ],
+   [
+    "deposition",
+    "deposition"
+   ],
+   [
+    "traction_saltation_or_suspension_deposition",
+    "deposition from moving fluid"
+   ],
+   [
+    "diagenetic_process",
+    "diagenetic process"
+   ],
+   [
+    "diffusion_creep",
+    "diffusion creep"
+   ],
+   [
+    "dislocation_metamorphism",
+    "dislocation metamorphism"
+   ],
+   [
+    "dissolution",
+    "dissolution"
+   ],
+   [
+    "dissolution_creep",
+    "dissolution creep"
+   ],
+   [
+    "ductile_flow",
+    "ductile flow"
+   ],
+   [
+    "effusive_eruption",
+    "effusive eruption"
+   ],
+   [
+    "erosion",
+    "erosion"
+   ],
+   [
+    "eruption",
+    "eruption"
+   ],
+   [
+    "excavation",
+    "excavation"
+   ],
+   [
+    "extinction",
+    "extinction"
+   ],
+   [
+    "faulting",
+    "faulting"
+   ],
+   [
+    "folding",
+    "folding"
+   ],
+   [
+    "fracturing",
+    "fracturing"
+   ],
+   [
+    "frost_shattering",
+    "frost shattering"
+   ],
+   [
+    "geologic_process",
+    "geologic process"
+   ],
+   [
+    "geomagnetic_process",
+    "geomagnetic process"
+   ],
+   [
+    "grading",
+    "grading"
+   ],
+   [
+    "haloclasty",
+    "haloclasty"
+   ],
+   [
+    "hawaiian_eruption",
+    "hawaiian eruption"
+   ],
+   [
+    "human_activity",
+    "human activity"
+   ],
+   [
+    "hydration",
+    "hydration"
+   ],
+   [
+    "hydrolysis",
+    "hydrolysis"
+   ],
+   [
+    "ice_erosion",
+    "ice erosion"
+   ],
+   [
+    "intrusion",
+    "intrusion"
+   ],
+   [
+    "magmatic_crystallisation",
+    "magmatic crystallisation"
+   ],
+   [
+    "magmatic_process",
+    "magmatic process"
+   ],
+   [
+    "magnetic_field_reversal",
+    "magnetic field reversal"
+   ],
+   [
+    "mass_wasting",
+    "mass wasting"
+   ],
+   [
+    "mass_wasting_deposition",
+    "mass wasting deposition"
+   ],
+   [
+    "material_transport_and_deposition",
+    "material transport and deposition"
+   ],
+   [
+    "mechanical_deposition",
+    "mechanical deposition"
+   ],
+   [
+    "melting",
+    "melting"
+   ],
+   [
+    "metamorphic_process",
+    "metamorphic process"
+   ],
+   [
+    "meteorite_impact",
+    "meteorite impact"
+   ],
+   [
+    "microfracturing",
+    "microfracturing"
+   ],
+   [
+    "obduction",
+    "obduction"
+   ],
+   [
+    "organic_accumulation",
+    "organic accumulation"
+   ],
+   [
+    "orogenic_process",
+    "orogenic process"
+   ],
+   [
+    "oxidation",
+    "oxidation"
+   ],
+   [
+    "partial_melting",
+    "partial melting"
+   ],
+   [
+    "physical_weathering",
+    "physical weathering"
+   ],
+   [
+    "plinian_eruption",
+    "plinian eruption"
+   ],
+   [
+    "polar_wander",
+    "polar wander"
+   ],
+   [
+    "pressure_release_weathering",
+    "pressure release weathering"
+   ],
+   [
+    "pyroclastic_eruption",
+    "pyroclastic eruption"
+   ],
+   [
+    "rifting",
+    "rifting"
+   ],
+   [
+    "sea_level_change",
+    "sea level change"
+   ],
+   [
+    "sea_level_fall",
+    "sea level fall"
+   ],
+   [
+    "sea_level_rise",
+    "sea level rise"
+   ],
+   [
+    "sedimentary_process",
+    "sedimentary process"
+   ],
+   [
+    "shearing",
+    "shearing"
+   ],
+   [
+    "speciation",
+    "speciation"
+   ],
+   [
+    "spreading",
+    "spreading"
+   ],
+   [
+    "strombolian_eruption",
+    "strombolian eruption"
+   ],
+   [
+    "subduction",
+    "subduction"
+   ],
+   [
+    "tectonic_process",
+    "tectonic process"
+   ],
+   [
+    "thermal_shock_weathering",
+    "thermal shock weathering"
+   ],
+   [
+    "transform_faulting",
+    "transform faulting"
+   ],
+   [
+    "turbidity_current_deposition",
+    "turbidity current deposition"
+   ],
+   [
+    "vulcanian_eruption",
+    "vulcanian eruption"
+   ],
+   [
+    "water_erosion",
+    "water erosion"
+   ],
+   [
+    "weathering",
+    "weathering"
+   ],
+   [
+    "wind_erosion",
+    "wind erosion"
+   ]
+  ],
+  "determinationmethodorientation": [
+   [
+    "calculated_average_orientation",
+    "calculated average orientation"
+   ],
+   [
+    "estimate_from_air_photo",
+    "estimate from air photo"
+   ],
+   [
+    "estimate_from_distance",
+    "estimate from distance"
+   ],
+   [
+    "measure_on_outcrop",
+    "measure on outcrop"
+   ],
+   [
+    "photogeologic_determination",
+    "photogeologic determination"
+   ],
+   [
+    "standard_on_site_measure",
+    "standard on site measure"
+   ],
+   [
+    "three_point_determination",
+    "three point determination"
+   ],
+   [
+    "visual_surface_estimation_on_outcrop",
+    "visual surface estimation on outcrop"
+   ]
+  ],
+  "mappingframe": [
+   [
+    "base_of_quaternary",
+    "base of Quaternary"
+   ],
+   [
+    "surface_geology",
+    "surface geology"
+   ],
+   [
+    "top_of_basement",
+    "top of basement"
+   ],
+   [
+    "top_of_bedrock",
+    "top of bedrock"
+   ]
+  ],
+  "proportionterm": [
+   [
+    "all",
+    "all"
+   ],
+   [
+    "subordinate",
+    "less than half"
+   ],
+   [
+    "dominant",
+    "major"
+   ],
+   [
+    "minor",
+    "minor"
+   ],
+   [
+    "major",
+    "more than half"
+   ],
+   [
+    "predominant",
+    "most abundant"
+   ],
+   [
+    "present",
+    "present"
+   ],
+   [
+    "rare",
+    "rare"
+   ],
+   [
+    "trace",
+    "trace"
+   ],
+   [
+    "variable",
+    "variable"
+   ]
+  ],
+  "featureobservationmethod": [
+   [
+    "borehole_cuttings_observation",
+    "borehole cuttings observation"
+   ],
+   [
+    "borehole_geophysical_log_measurements",
+    "borehole geophysical log measurements"
+   ],
+   [
+    "data_from_single_published_description",
+    "data from single published description"
+   ],
+   [
+    "digital_conversion_from_published_source",
+    "digital conversion from published source"
+   ],
+   [
+    "direct_observation",
+    "direct observation"
+   ],
+   [
+    "drill_core_observation",
+    "drill core observation"
+   ],
+   [
+    "drill_core_observation_estimated_values",
+    "drill core observation estimated values"
+   ],
+   [
+    "drill_core_observation_measured_values",
+    "drill core observation measured values"
+   ],
+   [
+    "indirect_method",
+    "indirect method"
+   ],
+   [
+    "outcrop_observation",
+    "outcrop observation"
+   ],
+   [
+    "outcrop_observation_estimated_values",
+    "outcrop observation estimated values"
+   ],
+   [
+    "outcrop_observation_measured_values",
+    "outcrop observation measured values"
+   ],
+   [
+    "remotely_sensed_data",
+    "remotely sensed data"
+   ],
+   [
+    "synthesis_from_multiple_sources",
+    "synthesis from multiple sources"
+   ],
+   [
+    "synthesis_of_multiple_outcrop_observations",
+    "synthesis of multiple outcrop observations"
+   ],
+   [
+    "synthesis_of_multiple_published_descriptions",
+    "synthesis of multiple published descriptions"
+   ]
+  ],
+  "foliationtype": [
+   [
+    "anastomosing_spaced_cleavage",
+    "anastomosing spaced cleavage"
+   ],
+   [
+    "bedding_fabric",
+    "bedding fabric"
+   ],
+   [
+    "bedding_lamination_structure",
+    "bedding lamination structure"
+   ],
+   [
+    "c_fabric",
+    "c fabric"
+   ],
+   [
+    "cleavage",
+    "cleavage"
+   ],
+   [
+    "cleavage_parallel_to_bedding",
+    "cleavage parallel to bedding"
+   ],
+   [
+    "close_joints",
+    "close joints"
+   ],
+   [
+    "comb_layering",
+    "comb layering"
+   ],
+   [
+    "compositional_layering",
+    "compositional layering"
+   ],
+   [
+    "compound_foliation",
+    "compound foliation"
+   ],
+   [
+    "compound_metamorphic_foliation",
+    "compound metamorphic foliation"
+   ],
+   [
+    "continuous_cleavage",
+    "continuous cleavage"
+   ],
+   [
+    "continuous_crenulation_cleavage",
+    "continuous crenulation cleavage"
+   ],
+   [
+    "crenulation_cleavage",
+    "crenulation cleavage"
+   ],
+   [
+    "crude_or_indistinct_bedding",
+    "crude or indistinct bedding"
+   ],
+   [
+    "cryptomicrobial_lamination",
+    "cryptomicrobial lamination"
+   ],
+   [
+    "cumulate_layering",
+    "cumulate layering"
+   ],
+   [
+    "discrete_cleavage",
+    "discrete cleavage"
+   ],
+   [
+    "discrete_crenulation_cleavage",
+    "discrete crenulation cleavage"
+   ],
+   [
+    "discrete_disjunct_spaced_cleavage",
+    "discrete disjunct spaced cleavage"
+   ],
+   [
+    "disjunctive_cleavage",
+    "disjunctive cleavage"
+   ],
+   [
+    "domainal_cleavage",
+    "domainal cleavage"
+   ],
+   [
+    "ductile_shear_banding_foliation",
+    "ductile shear banding foliation"
+   ],
+   [
+    "eutaxitic_foliation",
+    "eutaxitic foliation"
+   ],
+   [
+    "fissile_lamination",
+    "fissile lamination"
+   ],
+   [
+    "flaser_structure",
+    "flaser structure"
+   ],
+   [
+    "flow_layering",
+    "flow layering"
+   ],
+   [
+    "foliation",
+    "foliation"
+   ],
+   [
+    "generic_mylonitic_foliation",
+    "generic mylonitic foliation"
+   ],
+   [
+    "gneissic_layering",
+    "gneissic layering"
+   ],
+   [
+    "grain_shape_foliation",
+    "grain shape foliation"
+   ],
+   [
+    "igneous_flow_foliation",
+    "igneous flow foliation"
+   ],
+   [
+    "igneous_lamination",
+    "igneous lamination"
+   ],
+   [
+    "igneous_layering",
+    "igneous layering"
+   ],
+   [
+    "igneous_textural_layering",
+    "igneous textural layering"
+   ],
+   [
+    "imbricated_clast_fabric",
+    "imbricated clast fabric"
+   ],
+   [
+    "impersistent_lamination",
+    "impersistent lamination"
+   ],
+   [
+    "irregular_lamination",
+    "irregular lamination"
+   ],
+   [
+    "joint_fabric",
+    "joint fabric"
+   ],
+   [
+    "laminated_metamorphic_layering",
+    "laminated metamorphic layering"
+   ],
+   [
+    "lava_flow_banding",
+    "lava flow banding"
+   ],
+   [
+    "layered_mylonitic_foliation",
+    "layered mylonitic foliation"
+   ],
+   [
+    "layering",
+    "layering"
+   ],
+   [
+    "low_temperature_flow_foliation",
+    "low temperature flow foliation"
+   ],
+   [
+    "metamorphic_differentiation_layering",
+    "metamorphic differentiation layering"
+   ],
+   [
+    "metamorphic_layering",
+    "metamorphic layering"
+   ],
+   [
+    "metamorphic_layering_inherited_from_protolith",
+    "metamorphic layering inherited from protolith"
+   ],
+   [
+    "mineralogical_layering",
+    "mineralogical layering"
+   ],
+   [
+    "mylonite_foliation",
+    "mylonite foliation"
+   ],
+   [
+    "parallel_bedding",
+    "parallel bedding"
+   ],
+   [
+    "parallel_bedding_lamination",
+    "parallel bedding lamination"
+   ],
+   [
+    "phyllitic_cleavage",
+    "phyllitic cleavage"
+   ],
+   [
+    "planar_lamination",
+    "planar lamination"
+   ],
+   [
+    "primary_foliation",
+    "primary foliation"
+   ],
+   [
+    "primary_igneous_foliation",
+    "primary igneous foliation"
+   ],
+   [
+    "protomylonite_foliation",
+    "protomylonite foliation"
+   ],
+   [
+    "rhythmic_layering",
+    "rhythmic layering"
+   ],
+   [
+    "rough_cleavage",
+    "rough cleavage"
+   ],
+   [
+    "s_fabric",
+    "s fabric"
+   ],
+   [
+    "scaly_cleavage",
+    "scaly cleavage"
+   ],
+   [
+    "schistosity",
+    "schistosity"
+   ],
+   [
+    "sedimentary_layering",
+    "sedimentary layering"
+   ],
+   [
+    "slaty_cleavage",
+    "slaty cleavage"
+   ],
+   [
+    "solution_cleavage",
+    "solution cleavage"
+   ],
+   [
+    "spaced_cleavage",
+    "spaced cleavage"
+   ],
+   [
+    "stromatic_layering",
+    "stromatic layering"
+   ],
+   [
+    "stromatolitic_lamination",
+    "stromatolitic lamination"
+   ],
+   [
+    "tectonic_foliation",
+    "tectonic foliation"
+   ],
+   [
+    "tectonic_layering",
+    "tectonic layering"
+   ],
+   [
+    "transposed_bedding_layering",
+    "transposed bedding layering"
+   ],
+   [
+    "ultramylonite_foliation",
+    "ultramylonite foliation"
+   ],
+   [
+    "undulating_lamination",
+    "undulating lamination"
+   ],
+   [
+    "vague_metamorphic_layering",
+    "vague metamorphic layering"
+   ],
+   [
+    "varve_lamination",
+    "varve lamination"
+   ]
+  ],
+  "geologicunitmorphology": [
+   [
+    "arch_morphology",
+    "arch morphology"
+   ],
+   [
+    "arcuate_sheet",
+    "arcuate sheet"
+   ],
+   [
+    "basin_shape",
+    "basin shape"
+   ],
+   [
+    "blanket_shape",
+    "blanket shape"
+   ],
+   [
+    "blob",
+    "blob"
+   ],
+   [
+    "block",
+    "block"
+   ],
+   [
+    "boudin_shape",
+    "boudin shape"
+   ],
+   [
+    "bread_loaf_ellipsoid",
+    "bread loaf ellipsoid"
+   ],
+   [
+    "channel_shape",
+    "channel shape"
+   ],
+   [
+    "circular_cylinder",
+    "circular cylinder"
+   ],
+   [
+    "circular_profile",
+    "circular profile"
+   ],
+   [
+    "column_shape",
+    "column shape"
+   ],
+   [
+    "cone_segment",
+    "cone segment"
+   ],
+   [
+    "cone",
+    "cone shape"
+   ],
+   [
+    "conical_sheet",
+    "conical sheet"
+   ],
+   [
+    "cupola",
+    "cupola"
+   ],
+   [
+    "cylinder",
+    "cylinder"
+   ],
+   [
+    "dart_ellipsoid",
+    "dart ellipsoid"
+   ],
+   [
+    "diapir",
+    "diapir"
+   ],
+   [
+    "dike",
+    "dike"
+   ],
+   [
+    "disc",
+    "disc"
+   ],
+   [
+    "discoid_anulus",
+    "discoid anulus"
+   ],
+   [
+    "discus",
+    "discus"
+   ],
+   [
+    "dome",
+    "dome"
+   ],
+   [
+    "dome_sheet",
+    "dome sheet"
+   ],
+   [
+    "ductolith",
+    "ductolith"
+   ],
+   [
+    "ellipsoid",
+    "ellipsoid"
+   ],
+   [
+    "elliptical_cylinder",
+    "elliptical cylinder"
+   ],
+   [
+    "elliptical_profile",
+    "elliptical profile"
+   ],
+   [
+    "elongate_discus",
+    "elongate discus"
+   ],
+   [
+    "equant_polygonal_profile",
+    "equant polygonal profile"
+   ],
+   [
+    "equant_profile",
+    "equant profile"
+   ],
+   [
+    "ethmolith",
+    "ethmolith"
+   ],
+   [
+    "fan",
+    "fan"
+   ],
+   [
+    "football_ellipsoid",
+    "football ellipsoid"
+   ],
+   [
+    "geologic_body",
+    "geologic body"
+   ],
+   [
+    "graben_shape",
+    "graben shape"
+   ],
+   [
+    "hemispheroid",
+    "hemispheroid"
+   ],
+   [
+    "irregular_profile",
+    "irregular profile"
+   ],
+   [
+    "laccolith",
+    "laccolith"
+   ],
+   [
+    "layer_shape",
+    "layer shape"
+   ],
+   [
+    "lens",
+    "lens"
+   ],
+   [
+    "lenticular_profile",
+    "lenticular profile"
+   ],
+   [
+    "longitudinal_section_of_cylinder",
+    "longitudinal section of cylinder"
+   ],
+   [
+    "lopolith",
+    "lopolith"
+   ],
+   [
+    "mound",
+    "mound"
+   ],
+   [
+    "pancake_ellipsoid",
+    "pancake ellipsoid"
+   ],
+   [
+    "phacolith",
+    "phacolith"
+   ],
+   [
+    "pillow_ellipsoid",
+    "pillow ellipsoid"
+   ],
+   [
+    "pipe",
+    "pipe"
+   ],
+   [
+    "planar_profile",
+    "planar profile"
+   ],
+   [
+    "planar_sheet",
+    "planar sheet"
+   ],
+   [
+    "planar_vein",
+    "planar vein"
+   ],
+   [
+    "pod",
+    "pod"
+   ],
+   [
+    "polygonal_cylinder",
+    "polygonal cylinder"
+   ],
+   [
+    "polygonal_profile",
+    "polygonal profile"
+   ],
+   [
+    "prism",
+    "prism"
+   ],
+   [
+    "ribbon",
+    "ribbon"
+   ],
+   [
+    "ring_dyke",
+    "ring dike"
+   ],
+   [
+    "rock_body_geometry_irregular",
+    "rock body geometry irregular"
+   ],
+   [
+    "rock_body_geometry_not_specified",
+    "rock body geometry not specified"
+   ],
+   [
+    "rod",
+    "rod"
+   ],
+   [
+    "sheet",
+    "sheet"
+   ],
+   [
+    "sheet_ellipsoid",
+    "sheet ellipsoid"
+   ],
+   [
+    "sigmoid_sheet",
+    "sigmoid sheet"
+   ],
+   [
+    "sigmoidal_vein",
+    "sigmoidal vein"
+   ],
+   [
+    "sill_form",
+    "sill form"
+   ],
+   [
+    "sphenolith",
+    "sphenolith"
+   ],
+   [
+    "spheroid",
+    "spheroid"
+   ],
+   [
+    "square_profile",
+    "square profile"
+   ],
+   [
+    "tablet",
+    "tablet"
+   ],
+   [
+    "tabular_prism",
+    "tabular prism"
+   ],
+   [
+    "tear_drop",
+    "tear drop"
+   ],
+   [
+    "three_dimensional_body",
+    "three dimensional body"
+   ],
+   [
+    "trough",
+    "trough shape"
+   ],
+   [
+    "vein",
+    "vein-shape"
+   ],
+   [
+    "wedge",
+    "wedge"
+   ]
+  ],
+  "eventenvironment": [
+   [
+    "abandoned_channel",
+    "abandoned river channel setting"
+   ],
+   [
+    "above_carbonate_compensation_depth_setting",
+    "above carbonate compensation depth setting"
+   ],
+   [
+    "abyssal",
+    "abyssal setting"
+   ],
+   [
+    "active_continental_margin_setting",
+    "active continental margin setting"
+   ],
+   [
+    "active_spreading_center",
+    "active spreading center setting"
+   ],
+   [
+    "aeolian_process_setting",
+    "aeolian process setting"
+   ],
+   [
+    "algal_flat_setting",
+    "algal flat setting"
+   ],
+   [
+    "alluvial_fan",
+    "alluvial fan setting"
+   ],
+   [
+    "alluvial_plain",
+    "alluvial plain setting"
+   ],
+   [
+    "anoxic_setting",
+    "anoxic setting"
+   ],
+   [
+    "arid_or_semi_arid_environment_setting",
+    "arid or semi arid environment setting"
+   ],
+   [
+    "back_arc_setting",
+    "back arc setting"
+   ],
+   [
+    "backreef",
+    "backreef setting"
+   ],
+   [
+    "barrier_beach",
+    "barrier beach setting"
+   ],
+   [
+    "barrier_island_coastline_setting",
+    "barrier island coastline setting"
+   ],
+   [
+    "barrier_lagoon",
+    "barrier lagoon setting"
+   ],
+   [
+    "basin_bog",
+    "basin bog setting"
+   ],
+   [
+    "basin_plain_setting",
+    "basin plain setting"
+   ],
+   [
+    "bathyal",
+    "bathyal setting"
+   ],
+   [
+    "beach",
+    "beach setting"
+   ],
+   [
+    "below_carbonate_compensation_depth_setting",
+    "below carbonate compensation depth setting"
+   ],
+   [
+    "biological_reef_setting",
+    "biological reef setting"
+   ],
+   [
+    "blanket_bog",
+    "blanket bog"
+   ],
+   [
+    "bog",
+    "bog setting"
+   ],
+   [
+    "braided_channel",
+    "braided river channel setting"
+   ],
+   [
+    "carbonate_dominated_shoreline_setting",
+    "carbonate dominated shoreline setting"
+   ],
+   [
+    "cave",
+    "cave setting"
+   ],
+   [
+    "coastal_dune_field",
+    "coastal dune field setting"
+   ],
+   [
+    "coastal_plain_setting",
+    "coastal plain setting"
+   ],
+   [
+    "collisional_setting",
+    "collisional setting"
+   ],
+   [
+    "contact_metamorphic_origin",
+    "contact metamorphic setting"
+   ],
+   [
+    "continental_borderland_setting",
+    "continental borderland setting"
+   ],
+   [
+    "continental_crust",
+    "continental crustal setting"
+   ],
+   [
+    "continental_rift_setting",
+    "continental rift setting"
+   ],
+   [
+    "continental_shelf_setting",
+    "continental shelf setting"
+   ],
+   [
+    "crust",
+    "crustal setting"
+   ],
+   [
+    "cutoff_meander",
+    "cutoff meander setting"
+   ],
+   [
+    "deep_sea_trench",
+    "deep sea trench setting"
+   ],
+   [
+    "distributary_channel",
+    "delta distributary channel setting"
+   ],
+   [
+    "distributary_mouth",
+    "delta distributary mouth setting"
+   ],
+   [
+    "delta_front",
+    "delta front setting"
+   ],
+   [
+    "delta_plain",
+    "delta plain setting"
+   ],
+   [
+    "deltaic_system_setting",
+    "deltaic system setting"
+   ],
+   [
+    "dunefield",
+    "dunefield setting"
+   ],
+   [
+    "earth_interior_setting",
+    "earth interior setting"
+   ],
+   [
+    "earth_surface_setting",
+    "earth surface setting"
+   ],
+   [
+    "englacial_setting",
+    "englacial setting"
+   ],
+   [
+    "epicontinental_marine_setting",
+    "epicontinental marine setting"
+   ],
+   [
+    "estuarine_delta",
+    "estuarine delta setting"
+   ],
+   [
+    "estuarine_lagoon",
+    "estuarine lagoon setting"
+   ],
+   [
+    "estuary_setting",
+    "estuary setting"
+   ],
+   [
+    "extended_terrane",
+    "extended terrane setting"
+   ],
+   [
+    "extra_terrestrial_origin",
+    "extra terrestrial setting"
+   ],
+   [
+    "fast_spreading_center_setting",
+    "fast spreading center setting"
+   ],
+   [
+    "floodplain",
+    "floodplain setting"
+   ],
+   [
+    "forearc_setting",
+    "forearc setting"
+   ],
+   [
+    "foreland_setting",
+    "foreland setting"
+   ],
+   [
+    "forereef",
+    "forereef setting"
+   ],
+   [
+    "gibber_plain",
+    "gibber plain setting"
+   ],
+   [
+    "glacial_outwash_plain_setting",
+    "glacial outwash plain setting"
+   ],
+   [
+    "glacier_lateral_setting",
+    "glacier lateral setting"
+   ],
+   [
+    "glacier_related_setting",
+    "glacier related setting"
+   ],
+   [
+    "glacier_terminus_setting",
+    "glacier terminus setting"
+   ],
+   [
+    "hadal",
+    "hadal setting"
+   ],
+   [
+    "high_pressure_low_temperature_earth_interior_setting",
+    "high pressure low temperature earth interior setting"
+   ],
+   [
+    "hillslope_setting",
+    "hillslope setting"
+   ],
+   [
+    "hinterland_setting",
+    "hinterland tectonic setting"
+   ],
+   [
+    "hot_spot_setting",
+    "hot spot setting"
+   ],
+   [
+    "humid_temperate_climatic_setting",
+    "humid temperate climatic setting"
+   ],
+   [
+    "humid_tropical_climatic_setting",
+    "humid tropical climatic setting"
+   ],
+   [
+    "hypabyssal_setting",
+    "hypabyssal setting"
+   ],
+   [
+    "inactive_spreading_center",
+    "inactive spreading center setting"
+   ],
+   [
+    "inner_neritic",
+    "inner neritic setting"
+   ],
+   [
+    "interdistributary_bay",
+    "interdistributary bay setting"
+   ],
+   [
+    "intertidal",
+    "intertidal setting"
+   ],
+   [
+    "intraplate_tectonic_setting",
+    "intraplate tectonic setting"
+   ],
+   [
+    "lacustrine_delta",
+    "lacustrine delta setting"
+   ],
+   [
+    "lacustrine_setting",
+    "lacustrine setting"
+   ],
+   [
+    "lagoonal_setting",
+    "lagoonal setting"
+   ],
+   [
+    "low_energy_shoreline_setting",
+    "low energy shoreline setting"
+   ],
+   [
+    "low_pressure_high_temperature_setting",
+    "low pressure high temperature setting"
+   ],
+   [
+    "lower_bathyal",
+    "lower bathyal setting"
+   ],
+   [
+    "lower_continental_crust",
+    "lower continental crustal setting"
+   ],
+   [
+    "lower_delta_plain",
+    "lower delta plain setting"
+   ],
+   [
+    "lower_mantle",
+    "lower mantle setting"
+   ],
+   [
+    "lower_oceanic_crustal_setting",
+    "lower oceanic crustal setting"
+   ],
+   [
+    "mantle",
+    "mantle setting"
+   ],
+   [
+    "marginal_marine_sabkha_setting",
+    "marginal marine sabkha setting"
+   ],
+   [
+    "marine_carbonate_platform_setting",
+    "marine carbonate platform setting"
+   ],
+   [
+    "marine_setting",
+    "marine setting"
+   ],
+   [
+    "meandering_channel",
+    "meandering river channel setting"
+   ],
+   [
+    "medium_spreading_center_setting",
+    "medium rate spreading center setting"
+   ],
+   [
+    "mid_ocean_ridge_setting",
+    "mid ocean ridge setting"
+   ],
+   [
+    "middle_bathyal",
+    "middle bathyal setting"
+   ],
+   [
+    "middle_continental_crust_setting",
+    "middle continental crust setting"
+   ],
+   [
+    "middle_neritic",
+    "middle neritic setting"
+   ],
+   [
+    "mud_flat_setting",
+    "mud flat setting"
+   ],
+   [
+    "neritic",
+    "neritic setting"
+   ],
+   [
+    "ocean_highland_setting",
+    "ocean highland setting"
+   ],
+   [
+    "oceanic_crust",
+    "oceanic crustal setting"
+   ],
+   [
+    "oceanic_plateau_setting",
+    "oceanic plateau setting"
+   ],
+   [
+    "outer_neritic",
+    "outer neritic setting"
+   ],
+   [
+    "passive_continental_margin_setting",
+    "passive continental margin setting"
+   ],
+   [
+    "pediment_setting",
+    "pediment setting"
+   ],
+   [
+    "piedmont_slope_system_setting",
+    "piedmont slope system setting"
+   ],
+   [
+    "plate_margin_setting",
+    "plate margin setting"
+   ],
+   [
+    "plate_spreading_center",
+    "plate spreading center setting"
+   ],
+   [
+    "playa_setting",
+    "playa setting"
+   ],
+   [
+    "polar_climatic_setting",
+    "polar climatic setting"
+   ],
+   [
+    "prodelta",
+    "prodelta setting"
+   ],
+   [
+    "proglacial_setting",
+    "proglacial setting"
+   ],
+   [
+    "reef_flat",
+    "reef flat setting"
+   ],
+   [
+    "regional_metamorphic_origin",
+    "regional metamorphic setting"
+   ],
+   [
+    "river_channel",
+    "river channel setting"
+   ],
+   [
+    "river_plain_system_setting",
+    "river plain system setting"
+   ],
+   [
+    "rocky_coast_setting",
+    "rocky coast setting"
+   ],
+   [
+    "sand_plain",
+    "sand plain setting"
+   ],
+   [
+    "seamount_setting",
+    "seamount setting"
+   ],
+   [
+    "shoreline_settings",
+    "shoreline settings"
+   ],
+   [
+    "slope_rise_setting",
+    "slope rise setting"
+   ],
+   [
+    "slow_spreading_center_setting",
+    "slow spreading center setting"
+   ],
+   [
+    "strandplain_setting",
+    "strandplain setting"
+   ],
+   [
+    "subaerial_setting",
+    "subaerial setting"
+   ],
+   [
+    "subaqueous_setting",
+    "subaqueous setting"
+   ],
+   [
+    "subduction_zone_setting",
+    "subduction zone setting"
+   ],
+   [
+    "subglacial_setting",
+    "subglacial setting"
+   ],
+   [
+    "submarine_fan_setting",
+    "submarine fan setting"
+   ],
+   [
+    "supraglacial_setting",
+    "supraglacial setting"
+   ],
+   [
+    "supratidal",
+    "supratidal setting"
+   ],
+   [
+    "swamp_or_marsh_setting",
+    "swamp or marsh setting"
+   ],
+   [
+    "tectonic_setting",
+    "tectonically defined setting"
+   ],
+   [
+    "terrestrial_setting",
+    "terrestrial setting"
+   ],
+   [
+    "tidal_channel",
+    "tidal channel setting"
+   ],
+   [
+    "tidal_flat_setting",
+    "tidal flat setting"
+   ],
+   [
+    "tidal_marsh",
+    "tidal marsh setting"
+   ],
+   [
+    "tidal_setting",
+    "tidal setting"
+   ],
+   [
+    "transform_plate_boundary_setting",
+    "transform plate boundary setting"
+   ],
+   [
+    "transitional_crust",
+    "transitional crustal setting"
+   ],
+   [
+    "ultra_high_pressure_crustal_setting",
+    "ultra high pressure crustal setting"
+   ],
+   [
+    "upper_bathyal",
+    "upper bathyal setting"
+   ],
+   [
+    "upper_continental_crustal_setting",
+    "upper continental crustal setting"
+   ],
+   [
+    "upper_delta_plain",
+    "upper delta plain setting"
+   ],
+   [
+    "upper_mantle",
+    "upper mantle setting"
+   ],
+   [
+    "upper_oceanic_crustal_setting",
+    "upper oceanic crustal setting"
+   ],
+   [
+    "volcanic_arc_setting",
+    "volcanic arc setting"
+   ],
+   [
+    "wetland_setting",
+    "wetland setting"
+   ]
+  ],
+  "geneticcategory": [
+   [
+    "anthropogenic_genesis",
+    "anthropogenic genesis"
+   ],
+   [
+    "biological_sedimentary_genesis",
+    "biological sedimentary genesis"
+   ],
+   [
+    "cataclastic_genesis",
+    "cataclastic genesis"
+   ],
+   [
+    "chemical_sedimentary_genesis",
+    "chemical sedimentary genesis"
+   ],
+   [
+    "clastic_sedimentary_genesis",
+    "clastic sedimentary genesis"
+   ],
+   [
+    "composite_process_genesis",
+    "composite process genesis"
+   ],
+   [
+    "contact_metamorphic_genesis",
+    "contact metamorphic genesis"
+   ],
+   [
+    "deformation_genesis",
+    "deformation genesis"
+   ],
+   [
+    "diagenetic_genesis",
+    "diagenetic genesis"
+   ],
+   [
+    "dislocation_metamorphic_genesis",
+    "dislocation metamorphic genesis"
+   ],
+   [
+    "ductile_deformation_genesis",
+    "ductile deformation genesis"
+   ],
+   [
+    "hypabyssal_intrusive_genesis",
+    "hypabyssal intrusive genesis"
+   ],
+   [
+    "igneous_extrusive_genesis",
+    "igneous extrusive genesis"
+   ],
+   [
+    "igneous_genesis",
+    "igneous genesis"
+   ],
+   [
+    "igneous_intrusive_genesis",
+    "igneous intrusive genesis"
+   ],
+   [
+    "igneous_sedimentary_genesis",
+    "igneous sedimentary genesis"
+   ],
+   [
+    "impact_genesis",
+    "impact genesis"
+   ],
+   [
+    "local_metamorphic_genesis",
+    "local metamorphic genesis"
+   ],
+   [
+    "metaigneous_genesis",
+    "metaigneous genesis"
+   ],
+   [
+    "metamorphic_genesis",
+    "metamorphic genesis"
+   ],
+   [
+    "metamorphic_metasomatic_or_hydrothermal_genesis",
+    "metamorphic metasomatic or hydrothermal genesis"
+   ],
+   [
+    "metaplutonic_genesis",
+    "metaplutonic genesis"
+   ],
+   [
+    "metasedimentary_genesis",
+    "metasedimentary genesis"
+   ],
+   [
+    "metasomatic_or_hydrothermal_genesis",
+    "metasomatic or hydrothermal genesis"
+   ],
+   [
+    "metavolcanic_genesis",
+    "metavolcanic genesis"
+   ],
+   [
+    "plutonic_genesis",
+    "plutonic genesis"
+   ],
+   [
+    "regional_metamorphic_genesis",
+    "regional metamorphic genesis"
+   ],
+   [
+    "sedimentary_genesis",
+    "sedimentary genesis"
+   ],
+   [
+    "subaerial_extrusive_genesis",
+    "subaerial extrusive genesis"
+   ],
+   [
+    "subaqueous_extrusive_genesis",
+    "subaqueous extrusive genesis"
+   ],
+   [
+    "volcaniclastic_genesis",
+    "volcaniclastic genesis"
+   ],
+   [
+    "weathering_genesis",
+    "weathering genesis"
+   ]
+  ],
+  "consolidationdegree": [
+   [
+    "consolidated",
+    "consolidated"
+   ],
+   [
+    "consolidation_not_specified",
+    "consolidation not specified"
+   ],
+   [
+    "consolidation_variable",
+    "consolidation variable"
+   ],
+   [
+    "incipient_consolidation",
+    "incipient consolidation"
+   ],
+   [
+    "indurated",
+    "indurated"
+   ],
+   [
+    "moderately_indurated",
+    "moderately indurated"
+   ],
+   [
+    "slightly_indurated",
+    "slightly indurated"
+   ],
+   [
+    "unconsolidated",
+    "unconsolidated"
+   ],
+   [
+    "unconsolidated_loose",
+    "unconsolidated loose"
+   ],
+   [
+    "unconsolidated_very_loose",
+    "unconsolidated very loose"
+   ],
+   [
+    "variable_induration",
+    "variable induration"
+   ],
+   [
+    "well_consolidated",
+    "well consolidated"
+   ],
+   [
+    "well_indurated",
+    "well indurated"
+   ]
+  ]
+ }
+}

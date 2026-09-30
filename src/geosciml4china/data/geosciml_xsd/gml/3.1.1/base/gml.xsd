@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 桥接件（2026-09-28）：geosciml-lite.xsd 导入 gml/3.1.1/base/gml.xsd——
+     本地仅备 3.2.1 树；命名空间同为 http://www.opengis.net/gml，
+     以 include 方式复用 3.2.1 主文件（不改写官方 XSD）。 -->
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        targetNamespace="http://www.opengis.net/gml"
+        xmlns:gml="http://www.opengis.net/gml" elementFormDefault="qualified" version="bridge-3.2.1">
+  <include schemaLocation="../../3.2.1/gml.xsd"/>
+</schema>

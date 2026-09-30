@@ -1,0 +1,1956 @@
+{
+ "Aalenian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Aalenian",
+  "label_en": "Aalenian",
+  "label_zh": "阿连期",
+  "rank": "Age",
+  "older_Ma": 174.1,
+  "younger_Ma": 170.3,
+  "broader": [
+   "MiddleJurassic"
+  ]
+ },
+ "Aeronian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Aeronian",
+  "label_en": "Aeronian",
+  "label_zh": "埃隆期",
+  "rank": "Age",
+  "older_Ma": 440.8,
+  "younger_Ma": 438.5,
+  "broader": [
+   "Llandovery"
+  ]
+ },
+ "Albian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Albian",
+  "label_en": "Albian",
+  "label_zh": "阿尔布期",
+  "rank": "Age",
+  "older_Ma": 113.0,
+  "younger_Ma": 100.5,
+  "broader": [
+   "LowerCretaceous"
+  ]
+ },
+ "Anisian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Anisian",
+  "label_en": "Anisian",
+  "label_zh": "安尼期",
+  "rank": "Age",
+  "older_Ma": 247.2,
+  "younger_Ma": 242.0,
+  "broader": [
+   "MiddleTriassic"
+  ]
+ },
+ "Aptian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Aptian",
+  "label_en": "Aptian",
+  "label_zh": "阿普弟期",
+  "rank": "Age",
+  "older_Ma": 125.0,
+  "younger_Ma": 113.0,
+  "broader": [
+   "LowerCretaceous"
+  ]
+ },
+ "Aquitanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Aquitanian",
+  "label_en": "Aquitanian",
+  "label_zh": "阿启坦期",
+  "rank": "Age",
+  "older_Ma": 23.03,
+  "younger_Ma": 20.44,
+  "broader": [
+   "Miocene"
+  ]
+ },
+ "Archean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Archean",
+  "label_en": "Archaean",
+  "label_zh": "太古宙",
+  "rank": "Eon",
+  "older_Ma": 4000.0,
+  "younger_Ma": 2500.0,
+  "broader": [
+   "Precambrian"
+  ]
+ },
+ "Artinskian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Artinskian",
+  "label_en": "Artinskian",
+  "label_zh": "亚丁斯克期",
+  "rank": "Age",
+  "older_Ma": 290.1,
+  "younger_Ma": 283.5,
+  "broader": [
+   "Cisuralian"
+  ]
+ },
+ "Asselian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Asselian",
+  "label_en": "Asselian",
+  "label_zh": "阿瑟尔期",
+  "rank": "Age",
+  "older_Ma": 298.9,
+  "younger_Ma": 295.0,
+  "broader": [
+   "Cisuralian"
+  ]
+ },
+ "Bajocian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Bajocian",
+  "label_en": "Bajocian",
+  "label_zh": "巴柔期",
+  "rank": "Age",
+  "older_Ma": 170.3,
+  "younger_Ma": 168.3,
+  "broader": [
+   "MiddleJurassic"
+  ]
+ },
+ "Barremian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Barremian",
+  "label_en": "Barremian",
+  "label_zh": "巴列姆期",
+  "rank": "Age",
+  "older_Ma": 129.4,
+  "younger_Ma": 125.0,
+  "broader": [
+   "LowerCretaceous"
+  ]
+ },
+ "Bartonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Bartonian",
+  "label_en": "Bartonian",
+  "label_zh": "巴尔顿期",
+  "rank": "Age",
+  "older_Ma": 41.2,
+  "younger_Ma": 37.8,
+  "broader": [
+   "Eocene"
+  ]
+ },
+ "Bashkirian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Bashkirian",
+  "label_en": "Bashkirian",
+  "label_zh": "巴什基尔期",
+  "rank": "Age",
+  "older_Ma": 323.2,
+  "younger_Ma": 315.2,
+  "broader": [
+   "LowerPennsylvanian"
+  ]
+ },
+ "Bathonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Bathonian",
+  "label_en": "Bathonian",
+  "label_zh": "巴通期",
+  "rank": "Age",
+  "older_Ma": 168.3,
+  "younger_Ma": 166.1,
+  "broader": [
+   "MiddleJurassic"
+  ]
+ },
+ "Berriasian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Berriasian",
+  "label_en": "Berriasian",
+  "label_zh": "贝利亚斯期",
+  "rank": "Age",
+  "older_Ma": 145.0,
+  "younger_Ma": 139.8,
+  "broader": [
+   "LowerCretaceous"
+  ]
+ },
+ "Burdigalian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Burdigalian",
+  "label_en": "Burdigalian",
+  "label_zh": "布迪加尔期",
+  "rank": "Age",
+  "older_Ma": 20.44,
+  "younger_Ma": 15.97,
+  "broader": [
+   "Miocene"
+  ]
+ },
+ "Calabrian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Calabrian",
+  "label_en": "Calabrian",
+  "label_zh": "卡拉布里亚期",
+  "rank": "Age",
+  "older_Ma": 1.8,
+  "younger_Ma": 0.781,
+  "broader": [
+   "Pleistocene"
+  ]
+ },
+ "Callovian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Callovian",
+  "label_en": "Callovian",
+  "label_zh": "卡洛夫期",
+  "rank": "Age",
+  "older_Ma": 166.1,
+  "younger_Ma": 163.5,
+  "broader": [
+   "MiddleJurassic"
+  ]
+ },
+ "Calymmian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Calymmian",
+  "label_en": "Calymmian",
+  "label_zh": "盖层纪",
+  "rank": "Period",
+  "older_Ma": 1600.0,
+  "younger_Ma": 1400.0,
+  "broader": [
+   "Mesoproterozoic"
+  ]
+ },
+ "Cambrian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Cambrian",
+  "label_en": "Cambrian",
+  "label_zh": "寒武纪",
+  "rank": "Period",
+  "older_Ma": 541.0,
+  "younger_Ma": 485.4,
+  "broader": [
+   "Paleozoic"
+  ]
+ },
+ "CambrianSeries2": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/CambrianSeries2",
+  "label_en": "Cambrian Series 2",
+  "label_zh": "第二世",
+  "rank": "Epoch",
+  "older_Ma": 521.0,
+  "younger_Ma": 509.0,
+  "broader": [
+   "Cambrian"
+  ]
+ },
+ "CambrianStage10": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/CambrianStage10",
+  "label_en": "Cambrian-Stage 10",
+  "label_zh": "第十期",
+  "rank": "Age",
+  "older_Ma": 489.5,
+  "younger_Ma": 485.4,
+  "broader": [
+   "Furongian"
+  ]
+ },
+ "CambrianStage2": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/CambrianStage2",
+  "label_en": "Cambrian-Stage 2",
+  "label_zh": "第二期",
+  "rank": "Age",
+  "older_Ma": 529.0,
+  "younger_Ma": 521.0,
+  "broader": [
+   "Terreneuvian"
+  ]
+ },
+ "CambrianStage3": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/CambrianStage3",
+  "label_en": "Cambrian-Stage 3",
+  "label_zh": "第三期",
+  "rank": "Age",
+  "older_Ma": 521.0,
+  "younger_Ma": 514.0,
+  "broader": [
+   "CambrianSeries2"
+  ]
+ },
+ "CambrianStage4": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/CambrianStage4",
+  "label_en": "Cambrian-Stage 4",
+  "label_zh": "第四期",
+  "rank": "Age",
+  "older_Ma": 514.0,
+  "younger_Ma": 509.0,
+  "broader": [
+   "CambrianSeries2"
+  ]
+ },
+ "Campanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Campanian",
+  "label_en": "Campanian",
+  "label_zh": "坎佩尼期",
+  "rank": "Age",
+  "older_Ma": 83.6,
+  "younger_Ma": 72.1,
+  "broader": [
+   "UpperCretaceous"
+  ]
+ },
+ "Capitanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Capitanian",
+  "label_en": "Capitanian",
+  "label_zh": "卡匹敦期",
+  "rank": "Age",
+  "older_Ma": 265.1,
+  "younger_Ma": 259.1,
+  "broader": [
+   "Guadalupian"
+  ]
+ },
+ "Carboniferous": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Carboniferous",
+  "label_en": "Carboniferous",
+  "label_zh": "石炭纪",
+  "rank": "Period",
+  "older_Ma": 358.9,
+  "younger_Ma": 298.9,
+  "broader": [
+   "Paleozoic"
+  ]
+ },
+ "Carnian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Carnian",
+  "label_en": "Carnian",
+  "label_zh": "卡尼期",
+  "rank": "Age",
+  "older_Ma": 237.0,
+  "younger_Ma": 227.0,
+  "broader": [
+   "UpperTriassic"
+  ]
+ },
+ "Cenomanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Cenomanian",
+  "label_en": "Cenomanian",
+  "label_zh": "森诺曼期",
+  "rank": "Age",
+  "older_Ma": 100.5,
+  "younger_Ma": 93.9,
+  "broader": [
+   "UpperCretaceous"
+  ]
+ },
+ "Cenozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Cenozoic",
+  "label_en": "Cainozoic",
+  "label_zh": "新生代",
+  "rank": "Era",
+  "older_Ma": 66.0,
+  "younger_Ma": 0.0,
+  "broader": [
+   "Phanerozoic"
+  ]
+ },
+ "Changhsingian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Changhsingian",
+  "label_en": "Changhsingian",
+  "label_zh": "长兴期",
+  "rank": "Age",
+  "older_Ma": 254.14,
+  "younger_Ma": 251.902,
+  "broader": [
+   "Lopingian"
+  ]
+ },
+ "Chattian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Chattian",
+  "label_en": "Chattian",
+  "label_zh": "恰特期",
+  "rank": "Age",
+  "older_Ma": 27.82,
+  "younger_Ma": 23.03,
+  "broader": [
+   "Oligocene"
+  ]
+ },
+ "Cisuralian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Cisuralian",
+  "label_en": "Cisuralian",
+  "label_zh": "乌拉尔世",
+  "rank": "Epoch",
+  "older_Ma": 298.9,
+  "younger_Ma": 272.95,
+  "broader": [
+   "Permian"
+  ]
+ },
+ "Coniacian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Coniacian",
+  "label_en": "Coniacian",
+  "label_zh": "科尼亚克期",
+  "rank": "Age",
+  "older_Ma": 89.8,
+  "younger_Ma": 86.3,
+  "broader": [
+   "UpperCretaceous"
+  ]
+ },
+ "Cretaceous": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Cretaceous",
+  "label_en": "Cretaceous",
+  "label_zh": "白垩纪",
+  "rank": "Period",
+  "older_Ma": 145.0,
+  "younger_Ma": 66.0,
+  "broader": [
+   "Mesozoic"
+  ]
+ },
+ "Cryogenian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Cryogenian",
+  "label_en": "Cryogenian",
+  "label_zh": "成冰纪",
+  "rank": "Period",
+  "older_Ma": 720.0,
+  "younger_Ma": 635.0,
+  "broader": [
+   "Neoproterozoic"
+  ]
+ },
+ "Danian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Danian",
+  "label_en": "Danian",
+  "label_zh": "丹麦期",
+  "rank": "Age",
+  "older_Ma": 66.0,
+  "younger_Ma": 61.6,
+  "broader": [
+   "Paleocene"
+  ]
+ },
+ "Dapingian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Dapingian",
+  "label_en": "Dapingian",
+  "label_zh": "大坪期",
+  "rank": "Age",
+  "older_Ma": 470.0,
+  "younger_Ma": 467.3,
+  "broader": [
+   "MiddleOrdovician"
+  ]
+ },
+ "Darriwilian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Darriwilian",
+  "label_en": "Darriwilian",
+  "label_zh": "达瑞威尔期",
+  "rank": "Age",
+  "older_Ma": 467.3,
+  "younger_Ma": 458.4,
+  "broader": [
+   "MiddleOrdovician"
+  ]
+ },
+ "Devonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Devonian",
+  "label_en": "Devonian",
+  "label_zh": "泥盆纪",
+  "rank": "Period",
+  "older_Ma": 419.2,
+  "younger_Ma": 358.9,
+  "broader": [
+   "Paleozoic"
+  ]
+ },
+ "Drumian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Drumian",
+  "label_en": "Drumian",
+  "label_zh": "鼓山期",
+  "rank": "Age",
+  "older_Ma": 504.5,
+  "younger_Ma": 500.5,
+  "broader": [
+   "Miaolingian"
+  ]
+ },
+ "Ectasian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Ectasian",
+  "label_en": "Ectasian",
+  "label_zh": "延展纪",
+  "rank": "Period",
+  "older_Ma": 1400.0,
+  "younger_Ma": 1200.0,
+  "broader": [
+   "Mesoproterozoic"
+  ]
+ },
+ "Ediacaran": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Ediacaran",
+  "label_en": "Ediacaran",
+  "label_zh": "埃迪卡拉纪",
+  "rank": "Period",
+  "older_Ma": 635.0,
+  "younger_Ma": 541.0,
+  "broader": [
+   "Neoproterozoic"
+  ]
+ },
+ "Eifelian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Eifelian",
+  "label_en": "Eifelian",
+  "label_zh": "艾菲尔期",
+  "rank": "Age",
+  "older_Ma": 393.3,
+  "younger_Ma": 387.7,
+  "broader": [
+   "MiddleDevonian"
+  ]
+ },
+ "Emsian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Emsian",
+  "label_en": "Emsian",
+  "label_zh": "艾姆斯期",
+  "rank": "Age",
+  "older_Ma": 407.6,
+  "younger_Ma": 393.3,
+  "broader": [
+   "LowerDevonian"
+  ]
+ },
+ "Eoarchean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Eoarchean",
+  "label_en": "Eoarchaean",
+  "label_zh": "始太古代",
+  "rank": "Era",
+  "older_Ma": 4000.0,
+  "younger_Ma": 3600.0,
+  "broader": [
+   "Archean"
+  ]
+ },
+ "Eocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Eocene",
+  "label_en": "Eocene",
+  "label_zh": "始新世",
+  "rank": "Epoch",
+  "older_Ma": 56.0,
+  "younger_Ma": 33.9,
+  "broader": [
+   "Paleogene"
+  ]
+ },
+ "Famennian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Famennian",
+  "label_en": "Famennian",
+  "label_zh": "法门期",
+  "rank": "Age",
+  "older_Ma": 372.2,
+  "younger_Ma": 358.9,
+  "broader": [
+   "UpperDevonian"
+  ]
+ },
+ "Floian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Floian",
+  "label_en": "Floian",
+  "label_zh": "弗洛期",
+  "rank": "Age",
+  "older_Ma": 477.7,
+  "younger_Ma": 470.0,
+  "broader": [
+   "LowerOrdovician"
+  ]
+ },
+ "Fortunian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Fortunian",
+  "label_en": "Fortunian",
+  "label_zh": "好运期",
+  "rank": "Age",
+  "older_Ma": 541.0,
+  "younger_Ma": 529.0,
+  "broader": [
+   "Terreneuvian"
+  ]
+ },
+ "Frasnian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Frasnian",
+  "label_en": "Frasnian",
+  "label_zh": "弗拉斯期",
+  "rank": "Age",
+  "older_Ma": 382.7,
+  "younger_Ma": 372.2,
+  "broader": [
+   "UpperDevonian"
+  ]
+ },
+ "Furongian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Furongian",
+  "label_en": "Furongian",
+  "label_zh": "芙蓉世",
+  "rank": "Epoch",
+  "older_Ma": 497.0,
+  "younger_Ma": 485.4,
+  "broader": [
+   "Cambrian"
+  ]
+ },
+ "Gelasian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Gelasian",
+  "label_en": "Gelasian",
+  "label_zh": "格拉斯期",
+  "rank": "Age",
+  "older_Ma": 2.58,
+  "younger_Ma": 1.8,
+  "broader": [
+   "Pleistocene"
+  ]
+ },
+ "Givetian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Givetian",
+  "label_en": "Givetian",
+  "label_zh": "吉维特期",
+  "rank": "Age",
+  "older_Ma": 387.7,
+  "younger_Ma": 382.7,
+  "broader": [
+   "MiddleDevonian"
+  ]
+ },
+ "Gorstian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Gorstian",
+  "label_en": "Gorstian",
+  "label_zh": "格斯特期",
+  "rank": "Age",
+  "older_Ma": 427.4,
+  "younger_Ma": 425.6,
+  "broader": [
+   "Ludlow"
+  ]
+ },
+ "Greenlandian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Greenlandian",
+  "label_en": "Greenlandian",
+  "label_zh": "",
+  "rank": "Age",
+  "older_Ma": 0.0117,
+  "younger_Ma": 0.0082,
+  "broader": [
+   "Holocene"
+  ]
+ },
+ "Guadalupian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Guadalupian",
+  "label_en": "Guadalupian",
+  "label_zh": "瓜德鲁普世",
+  "rank": "Epoch",
+  "older_Ma": 272.95,
+  "younger_Ma": 259.1,
+  "broader": [
+   "Permian"
+  ]
+ },
+ "Guzhangian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Guzhangian",
+  "label_en": "Guzhangian",
+  "label_zh": "古丈期",
+  "rank": "Age",
+  "older_Ma": 500.5,
+  "younger_Ma": 497.0,
+  "broader": [
+   "Miaolingian"
+  ]
+ },
+ "Gzhelian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Gzhelian",
+  "label_en": "Gzhelian",
+  "label_zh": "格热尔期",
+  "rank": "Age",
+  "older_Ma": 303.7,
+  "younger_Ma": 298.9,
+  "broader": [
+   "UpperPennsylvanian"
+  ]
+ },
+ "Hadean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Hadean",
+  "label_en": "Hadean",
+  "label_zh": "冥古宙（非正式）",
+  "rank": "Eon",
+  "older_Ma": 4567.0,
+  "younger_Ma": 4000.0,
+  "broader": [
+   "Precambrian"
+  ]
+ },
+ "Hauterivian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Hauterivian",
+  "label_en": "Hauterivian",
+  "label_zh": "豪特里维期",
+  "rank": "Age",
+  "older_Ma": 132.9,
+  "younger_Ma": 129.4,
+  "broader": [
+   "LowerCretaceous"
+  ]
+ },
+ "Hettangian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Hettangian",
+  "label_en": "Hettangian",
+  "label_zh": "赫唐期",
+  "rank": "Age",
+  "older_Ma": 201.3,
+  "younger_Ma": 199.3,
+  "broader": [
+   "LowerJurassic"
+  ]
+ },
+ "Hirnantian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Hirnantian",
+  "label_en": "Hirnantian",
+  "label_zh": "赫南特期",
+  "rank": "Age",
+  "older_Ma": 445.2,
+  "younger_Ma": 443.8,
+  "broader": [
+   "UpperOrdovician"
+  ]
+ },
+ "Holocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Holocene",
+  "label_en": "Holocene",
+  "label_zh": "全新世",
+  "rank": "Epoch",
+  "older_Ma": 0.0117,
+  "younger_Ma": 0.0,
+  "broader": [
+   "Quaternary"
+  ]
+ },
+ "Homerian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Homerian",
+  "label_en": "Homerian",
+  "label_zh": "侯默期",
+  "rank": "Age",
+  "older_Ma": 430.5,
+  "younger_Ma": 427.4,
+  "broader": [
+   "Wenlock"
+  ]
+ },
+ "Induan": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Induan",
+  "label_en": "Induan",
+  "label_zh": "印度期",
+  "rank": "Age",
+  "older_Ma": 251.902,
+  "younger_Ma": 251.2,
+  "broader": [
+   "LowerTriassic"
+  ]
+ },
+ "Jiangshanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Jiangshanian",
+  "label_en": "Jiangshanian",
+  "label_zh": "江山期",
+  "rank": "Age",
+  "older_Ma": 494.0,
+  "younger_Ma": 489.5,
+  "broader": [
+   "Furongian"
+  ]
+ },
+ "Jurassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Jurassic",
+  "label_en": "Jurassic",
+  "label_zh": "侏罗纪",
+  "rank": "Period",
+  "older_Ma": 201.3,
+  "younger_Ma": 145.0,
+  "broader": [
+   "Mesozoic"
+  ]
+ },
+ "Kasimovian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Kasimovian",
+  "label_en": "Kasimovian",
+  "label_zh": "卡西莫夫期",
+  "rank": "Age",
+  "older_Ma": 307.0,
+  "younger_Ma": 303.7,
+  "broader": [
+   "UpperPennsylvanian"
+  ]
+ },
+ "Katian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Katian",
+  "label_en": "Katian",
+  "label_zh": "凯迪期",
+  "rank": "Age",
+  "older_Ma": 453.0,
+  "younger_Ma": 445.2,
+  "broader": [
+   "UpperOrdovician"
+  ]
+ },
+ "Kimmeridgian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Kimmeridgian",
+  "label_en": "Kimmeridgian",
+  "label_zh": "启莫里支期",
+  "rank": "Age",
+  "older_Ma": 157.3,
+  "younger_Ma": 152.1,
+  "broader": [
+   "UpperJurassic"
+  ]
+ },
+ "Kungurian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Kungurian",
+  "label_en": "Kungurian",
+  "label_zh": "孔古尔期",
+  "rank": "Age",
+  "older_Ma": 283.5,
+  "younger_Ma": 272.95,
+  "broader": [
+   "Cisuralian"
+  ]
+ },
+ "Ladinian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Ladinian",
+  "label_en": "Ladinian",
+  "label_zh": "拉迪尼亚期",
+  "rank": "Age",
+  "older_Ma": 242.0,
+  "younger_Ma": 237.0,
+  "broader": [
+   "MiddleTriassic"
+  ]
+ },
+ "Langhian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Langhian",
+  "label_en": "Langhian",
+  "label_zh": "兰海期",
+  "rank": "Age",
+  "older_Ma": 15.97,
+  "younger_Ma": 13.82,
+  "broader": [
+   "Miocene"
+  ]
+ },
+ "Llandovery": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Llandovery",
+  "label_en": "Llandovery",
+  "label_zh": "兰多维列世",
+  "rank": "Epoch",
+  "older_Ma": 443.8,
+  "younger_Ma": 433.4,
+  "broader": [
+   "Silurian"
+  ]
+ },
+ "Lochkovian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Lochkovian",
+  "label_en": "Lochkovian",
+  "label_zh": "洛赫科夫期",
+  "rank": "Age",
+  "older_Ma": 419.2,
+  "younger_Ma": 410.8,
+  "broader": [
+   "LowerDevonian"
+  ]
+ },
+ "Lopingian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Lopingian",
+  "label_en": "Lopingian",
+  "label_zh": "乐平世",
+  "rank": "Epoch",
+  "older_Ma": 259.1,
+  "younger_Ma": 251.902,
+  "broader": [
+   "Permian"
+  ]
+ },
+ "LowerCretaceous": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/LowerCretaceous",
+  "label_en": "Early Cretaceous",
+  "label_zh": "早白垩世",
+  "rank": "Epoch",
+  "older_Ma": 145.0,
+  "younger_Ma": 100.5,
+  "broader": [
+   "Cretaceous"
+  ]
+ },
+ "LowerDevonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/LowerDevonian",
+  "label_en": "Early Devonian",
+  "label_zh": "早泥盆世",
+  "rank": "Epoch",
+  "older_Ma": 419.2,
+  "younger_Ma": 393.3,
+  "broader": [
+   "Devonian"
+  ]
+ },
+ "LowerJurassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/LowerJurassic",
+  "label_en": "Early Jurassic",
+  "label_zh": "早侏罗世",
+  "rank": "Epoch",
+  "older_Ma": 201.3,
+  "younger_Ma": 174.1,
+  "broader": [
+   "Jurassic"
+  ]
+ },
+ "LowerMississippian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/LowerMississippian",
+  "label_en": "Early Mississippian",
+  "label_zh": "早密西西比世",
+  "rank": "Epoch",
+  "older_Ma": 358.9,
+  "younger_Ma": 346.7,
+  "broader": [
+   "Mississippian"
+  ]
+ },
+ "LowerOrdovician": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/LowerOrdovician",
+  "label_en": "Early Ordovician",
+  "label_zh": "早奥陶世",
+  "rank": "Epoch",
+  "older_Ma": 485.4,
+  "younger_Ma": 470.0,
+  "broader": [
+   "Ordovician"
+  ]
+ },
+ "LowerPennsylvanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/LowerPennsylvanian",
+  "label_en": "Early Pennsylvanian",
+  "label_zh": "早宾夕法尼亚世",
+  "rank": "Epoch",
+  "older_Ma": 323.2,
+  "younger_Ma": 315.2,
+  "broader": [
+   "Pennsylvanian"
+  ]
+ },
+ "LowerTriassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/LowerTriassic",
+  "label_en": "Early Triassic",
+  "label_zh": "早三叠世",
+  "rank": "Epoch",
+  "older_Ma": 251.902,
+  "younger_Ma": 247.2,
+  "broader": [
+   "Triassic"
+  ]
+ },
+ "Ludfordian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Ludfordian",
+  "label_en": "Ludfordian",
+  "label_zh": "卢德福德期",
+  "rank": "Age",
+  "older_Ma": 425.6,
+  "younger_Ma": 423.0,
+  "broader": [
+   "Ludlow"
+  ]
+ },
+ "Ludlow": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Ludlow",
+  "label_en": "Ludlow",
+  "label_zh": "卢德洛世",
+  "rank": "Epoch",
+  "older_Ma": 427.4,
+  "younger_Ma": 423.0,
+  "broader": [
+   "Silurian"
+  ]
+ },
+ "Lutetian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Lutetian",
+  "label_en": "Lutetian",
+  "label_zh": "卢台特期",
+  "rank": "Age",
+  "older_Ma": 47.8,
+  "younger_Ma": 41.2,
+  "broader": [
+   "Eocene"
+  ]
+ },
+ "Maastrichtian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Maastrichtian",
+  "label_en": "Maastrichtian",
+  "label_zh": "马斯特里赫特期",
+  "rank": "Age",
+  "older_Ma": 72.1,
+  "younger_Ma": 66.0,
+  "broader": [
+   "UpperCretaceous"
+  ]
+ },
+ "Meghalayan": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Meghalayan",
+  "label_en": "Meghalayan",
+  "label_zh": "",
+  "rank": "Age",
+  "older_Ma": 0.0042,
+  "younger_Ma": 0.0,
+  "broader": [
+   "Holocene"
+  ]
+ },
+ "Mesoarchean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Mesoarchean",
+  "label_en": "Mesoarchaean",
+  "label_zh": "中太古代",
+  "rank": "Era",
+  "older_Ma": 3200.0,
+  "younger_Ma": 2800.0,
+  "broader": [
+   "Archean"
+  ]
+ },
+ "Mesoproterozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Mesoproterozoic",
+  "label_en": "Mesoproterozoic",
+  "label_zh": "中元古代",
+  "rank": "Era",
+  "older_Ma": 1600.0,
+  "younger_Ma": 1000.0,
+  "broader": [
+   "Proterozoic"
+  ]
+ },
+ "Mesozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Mesozoic",
+  "label_en": "Mesozoic",
+  "label_zh": "中生代",
+  "rank": "Era",
+  "older_Ma": 251.902,
+  "younger_Ma": 66.0,
+  "broader": [
+   "Phanerozoic"
+  ]
+ },
+ "Messinian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Messinian",
+  "label_en": "Messinian",
+  "label_zh": "墨西拿期",
+  "rank": "Age",
+  "older_Ma": 7.246,
+  "younger_Ma": 5.333,
+  "broader": [
+   "Miocene"
+  ]
+ },
+ "Miaolingian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Miaolingian",
+  "label_en": "Miaolingian",
+  "label_zh": "",
+  "rank": "Epoch",
+  "older_Ma": 509.0,
+  "younger_Ma": 497.0,
+  "broader": [
+   "Cambrian"
+  ]
+ },
+ "MiddleDevonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/MiddleDevonian",
+  "label_en": "Middle Devonian",
+  "label_zh": "中泥盆世",
+  "rank": "Epoch",
+  "older_Ma": 393.3,
+  "younger_Ma": 382.7,
+  "broader": [
+   "Devonian"
+  ]
+ },
+ "MiddleJurassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/MiddleJurassic",
+  "label_en": "Middle Jurassic",
+  "label_zh": "中侏罗世",
+  "rank": "Epoch",
+  "older_Ma": 174.1,
+  "younger_Ma": 163.5,
+  "broader": [
+   "Jurassic"
+  ]
+ },
+ "MiddleMississippian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/MiddleMississippian",
+  "label_en": "Middle Mississippian",
+  "label_zh": "中密西西比世",
+  "rank": "Epoch",
+  "older_Ma": 346.7,
+  "younger_Ma": 330.9,
+  "broader": [
+   "Mississippian"
+  ]
+ },
+ "MiddleOrdovician": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/MiddleOrdovician",
+  "label_en": "Middle Ordovician",
+  "label_zh": "中奥陶世",
+  "rank": "Epoch",
+  "older_Ma": 470.0,
+  "younger_Ma": 458.4,
+  "broader": [
+   "Ordovician"
+  ]
+ },
+ "MiddlePennsylvanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/MiddlePennsylvanian",
+  "label_en": "Middle Pennsylvanian",
+  "label_zh": "中宾夕法尼亚世",
+  "rank": "Epoch",
+  "older_Ma": 315.2,
+  "younger_Ma": 307.0,
+  "broader": [
+   "Pennsylvanian"
+  ]
+ },
+ "MiddlePleistocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/MiddlePleistocene",
+  "label_en": "Chibanian",
+  "label_zh": "",
+  "rank": "Age",
+  "older_Ma": 0.781,
+  "younger_Ma": 0.126,
+  "broader": [
+   "Pleistocene"
+  ]
+ },
+ "MiddleTriassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/MiddleTriassic",
+  "label_en": "Middle Triassic",
+  "label_zh": "中三叠世",
+  "rank": "Epoch",
+  "older_Ma": 247.2,
+  "younger_Ma": 237.0,
+  "broader": [
+   "Triassic"
+  ]
+ },
+ "Miocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Miocene",
+  "label_en": "Miocene",
+  "label_zh": "中新世",
+  "rank": "Epoch",
+  "older_Ma": 23.03,
+  "younger_Ma": 5.333,
+  "broader": [
+   "Neogene"
+  ]
+ },
+ "Mississippian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Mississippian",
+  "label_en": "Mississippian",
+  "label_zh": "密西西比亚纪",
+  "rank": "Sub",
+  "older_Ma": 358.9,
+  "younger_Ma": 323.2,
+  "broader": [
+   "Carboniferous"
+  ]
+ },
+ "Moscovian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Moscovian",
+  "label_en": "Moscovian",
+  "label_zh": "莫斯科期",
+  "rank": "Age",
+  "older_Ma": 315.2,
+  "younger_Ma": 307.0,
+  "broader": [
+   "MiddlePennsylvanian"
+  ]
+ },
+ "Neoarchean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Neoarchean",
+  "label_en": "Neoarchaean",
+  "label_zh": "新太古代",
+  "rank": "Era",
+  "older_Ma": 2800.0,
+  "younger_Ma": 2500.0,
+  "broader": [
+   "Archean"
+  ]
+ },
+ "Neogene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Neogene",
+  "label_en": "Neogene",
+  "label_zh": "晚第三纪",
+  "rank": "Period",
+  "older_Ma": 23.03,
+  "younger_Ma": 2.58,
+  "broader": [
+   "Cenozoic"
+  ]
+ },
+ "Neoproterozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Neoproterozoic",
+  "label_en": "Neoproterozoic",
+  "label_zh": "新元古代",
+  "rank": "Era",
+  "older_Ma": 1000.0,
+  "younger_Ma": 541.0,
+  "broader": [
+   "Proterozoic"
+  ]
+ },
+ "Norian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Norian",
+  "label_en": "Norian",
+  "label_zh": "诺利克期",
+  "rank": "Age",
+  "older_Ma": 227.0,
+  "younger_Ma": 208.5,
+  "broader": [
+   "UpperTriassic"
+  ]
+ },
+ "Northgrippian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Northgrippian",
+  "label_en": "Northgrippian",
+  "label_zh": "",
+  "rank": "Age",
+  "older_Ma": 0.0082,
+  "younger_Ma": 0.0042,
+  "broader": [
+   "Holocene"
+  ]
+ },
+ "Olenekian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Olenekian",
+  "label_en": "Olenekian",
+  "label_zh": "奥伦尼克期",
+  "rank": "Age",
+  "older_Ma": 251.2,
+  "younger_Ma": 247.2,
+  "broader": [
+   "LowerTriassic"
+  ]
+ },
+ "Oligocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Oligocene",
+  "label_en": "Oligocene",
+  "label_zh": "渐新世",
+  "rank": "Epoch",
+  "older_Ma": 33.9,
+  "younger_Ma": 23.03,
+  "broader": [
+   "Paleogene"
+  ]
+ },
+ "Ordovician": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Ordovician",
+  "label_en": "Ordovician",
+  "label_zh": "奥陶纪",
+  "rank": "Period",
+  "older_Ma": 485.4,
+  "younger_Ma": 443.8,
+  "broader": [
+   "Paleozoic"
+  ]
+ },
+ "Orosirian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Orosirian",
+  "label_en": "Orosirian",
+  "label_zh": "造山纪",
+  "rank": "Period",
+  "older_Ma": 2050.0,
+  "younger_Ma": 1800.0,
+  "broader": [
+   "Paleoproterozoic"
+  ]
+ },
+ "Oxfordian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Oxfordian",
+  "label_en": "Oxfordian",
+  "label_zh": "牛津期",
+  "rank": "Age",
+  "older_Ma": 163.5,
+  "younger_Ma": 157.3,
+  "broader": [
+   "UpperJurassic"
+  ]
+ },
+ "Paibian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Paibian",
+  "label_en": "Paibian",
+  "label_zh": "排碧期",
+  "rank": "Age",
+  "older_Ma": 497.0,
+  "younger_Ma": 494.0,
+  "broader": [
+   "Furongian"
+  ]
+ },
+ "Paleoarchean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Paleoarchean",
+  "label_en": "Palaeoarchaean",
+  "label_zh": "古太古代",
+  "rank": "Era",
+  "older_Ma": 3600.0,
+  "younger_Ma": 3200.0,
+  "broader": [
+   "Archean"
+  ]
+ },
+ "Paleocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Paleocene",
+  "label_en": "Palaeocene",
+  "label_zh": "古新世",
+  "rank": "Epoch",
+  "older_Ma": 66.0,
+  "younger_Ma": 56.0,
+  "broader": [
+   "Paleogene"
+  ]
+ },
+ "Paleogene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Paleogene",
+  "label_en": "Palaeogene",
+  "label_zh": "早第三纪",
+  "rank": "Period",
+  "older_Ma": 66.0,
+  "younger_Ma": 23.03,
+  "broader": [
+   "Cenozoic"
+  ]
+ },
+ "Paleoproterozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Paleoproterozoic",
+  "label_en": "Palaeoproterozoic",
+  "label_zh": "古元古代",
+  "rank": "Era",
+  "older_Ma": 2500.0,
+  "younger_Ma": 1600.0,
+  "broader": [
+   "Proterozoic"
+  ]
+ },
+ "Paleozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Paleozoic",
+  "label_en": "Palaeozoic",
+  "label_zh": "古生代",
+  "rank": "Era",
+  "older_Ma": 541.0,
+  "younger_Ma": 251.902,
+  "broader": [
+   "Phanerozoic"
+  ]
+ },
+ "Pennsylvanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Pennsylvanian",
+  "label_en": "Pennsylvanian",
+  "label_zh": "宾夕法尼亚亚纪",
+  "rank": "Sub",
+  "older_Ma": 323.2,
+  "younger_Ma": 298.9,
+  "broader": [
+   "Carboniferous"
+  ]
+ },
+ "Permian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Permian",
+  "label_en": "Permian",
+  "label_zh": "二叠纪",
+  "rank": "Period",
+  "older_Ma": 298.9,
+  "younger_Ma": 251.902,
+  "broader": [
+   "Paleozoic"
+  ]
+ },
+ "Phanerozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Phanerozoic",
+  "label_en": "Phanerozoic",
+  "label_zh": "显生宙",
+  "rank": "Eon",
+  "older_Ma": 541.0,
+  "younger_Ma": 0.0,
+  "broader": []
+ },
+ "Piacenzian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Piacenzian",
+  "label_en": "Piacenzian",
+  "label_zh": "皮亚琴期",
+  "rank": "Age",
+  "older_Ma": 3.6,
+  "younger_Ma": 2.58,
+  "broader": [
+   "Pliocene"
+  ]
+ },
+ "Pleistocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Pleistocene",
+  "label_en": "Pleistocene",
+  "label_zh": "更新世",
+  "rank": "Epoch",
+  "older_Ma": 2.58,
+  "younger_Ma": 0.0117,
+  "broader": [
+   "Quaternary"
+  ]
+ },
+ "Pliensbachian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Pliensbachian",
+  "label_en": "Pliensbachian",
+  "label_zh": "普连斯巴奇期",
+  "rank": "Age",
+  "older_Ma": 190.8,
+  "younger_Ma": 182.7,
+  "broader": [
+   "LowerJurassic"
+  ]
+ },
+ "Pliocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Pliocene",
+  "label_en": "Pliocene",
+  "label_zh": "上新世",
+  "rank": "Epoch",
+  "older_Ma": 5.333,
+  "younger_Ma": 2.58,
+  "broader": [
+   "Neogene"
+  ]
+ },
+ "Pragian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Pragian",
+  "label_en": "Pragian",
+  "label_zh": "布拉格期",
+  "rank": "Age",
+  "older_Ma": 410.8,
+  "younger_Ma": 407.6,
+  "broader": [
+   "LowerDevonian"
+  ]
+ },
+ "Precambrian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Precambrian",
+  "label_en": "Precambrian",
+  "label_zh": "前寒武纪",
+  "rank": "Super",
+  "older_Ma": 4567.0,
+  "younger_Ma": 541.0,
+  "broader": []
+ },
+ "Priabonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Priabonian",
+  "label_en": "Priabonian",
+  "label_zh": "普里阿邦期",
+  "rank": "Age",
+  "older_Ma": 37.8,
+  "younger_Ma": 33.9,
+  "broader": [
+   "Eocene"
+  ]
+ },
+ "Pridoli": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Pridoli",
+  "label_en": "Pridoli",
+  "label_zh": "普里多利世",
+  "rank": "Age",
+  "older_Ma": 423.0,
+  "younger_Ma": 419.2,
+  "broader": [
+   "Silurian"
+  ]
+ },
+ "Proterozoic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Proterozoic",
+  "label_en": "Proterozoic",
+  "label_zh": "元古宙",
+  "rank": "Eon",
+  "older_Ma": 2500.0,
+  "younger_Ma": 541.0,
+  "broader": [
+   "Precambrian"
+  ]
+ },
+ "Quaternary": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Quaternary",
+  "label_en": "Quaternary",
+  "label_zh": "第四纪",
+  "rank": "Period",
+  "older_Ma": 2.58,
+  "younger_Ma": 0.0,
+  "broader": [
+   "Cenozoic"
+  ]
+ },
+ "Rhaetian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Rhaetian",
+  "label_en": "Rhaetian",
+  "label_zh": "瑞替期",
+  "rank": "Age",
+  "older_Ma": 208.5,
+  "younger_Ma": 201.3,
+  "broader": [
+   "UpperTriassic"
+  ]
+ },
+ "Rhuddanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Rhuddanian",
+  "label_en": "Rhuddanian",
+  "label_zh": "鲁丹期",
+  "rank": "Age",
+  "older_Ma": 443.8,
+  "younger_Ma": 440.8,
+  "broader": [
+   "Llandovery"
+  ]
+ },
+ "Rhyacian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Rhyacian",
+  "label_en": "Rhyacian",
+  "label_zh": "层侵纪",
+  "rank": "Period",
+  "older_Ma": 2300.0,
+  "younger_Ma": 2050.0,
+  "broader": [
+   "Paleoproterozoic"
+  ]
+ },
+ "Roadian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Roadian",
+  "label_en": "Roadian",
+  "label_zh": "罗德期",
+  "rank": "Age",
+  "older_Ma": 272.95,
+  "younger_Ma": 268.8,
+  "broader": [
+   "Guadalupian"
+  ]
+ },
+ "Rupelian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Rupelian",
+  "label_en": "Rupelian",
+  "label_zh": "鲁珀利期",
+  "rank": "Age",
+  "older_Ma": 33.9,
+  "younger_Ma": 28.1,
+  "broader": [
+   "Oligocene"
+  ]
+ },
+ "Sakmarian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Sakmarian",
+  "label_en": "Sakmarian",
+  "label_zh": "萨克马尔期",
+  "rank": "Age",
+  "older_Ma": 295.0,
+  "younger_Ma": 290.1,
+  "broader": [
+   "Cisuralian"
+  ]
+ },
+ "Sandbian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Sandbian",
+  "label_en": "Sandbian",
+  "label_zh": "桑比期",
+  "rank": "Age",
+  "older_Ma": 458.4,
+  "younger_Ma": 453.0,
+  "broader": [
+   "UpperOrdovician"
+  ]
+ },
+ "Santonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Santonian",
+  "label_en": "Santonian",
+  "label_zh": "桑托期",
+  "rank": "Age",
+  "older_Ma": 86.3,
+  "younger_Ma": 83.6,
+  "broader": [
+   "UpperCretaceous"
+  ]
+ },
+ "Selandian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Selandian",
+  "label_en": "Selandian",
+  "label_zh": "塞兰特期",
+  "rank": "Age",
+  "older_Ma": 61.6,
+  "younger_Ma": 59.2,
+  "broader": [
+   "Paleocene"
+  ]
+ },
+ "Serpukhovian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Serpukhovian",
+  "label_en": "Serpukhovian",
+  "label_zh": "谢尔普霍夫期",
+  "rank": "Age",
+  "older_Ma": 330.9,
+  "younger_Ma": 323.2,
+  "broader": [
+   "UpperMississippian"
+  ]
+ },
+ "Serravallian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Serravallian",
+  "label_en": "Serravallian",
+  "label_zh": "塞拉瓦尔期",
+  "rank": "Age",
+  "older_Ma": 13.82,
+  "younger_Ma": 11.63,
+  "broader": [
+   "Miocene"
+  ]
+ },
+ "Sheinwoodian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Sheinwoodian",
+  "label_en": "Sheinwoodian",
+  "label_zh": "申伍德期",
+  "rank": "Age",
+  "older_Ma": 433.4,
+  "younger_Ma": 430.5,
+  "broader": [
+   "Wenlock"
+  ]
+ },
+ "Siderian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Siderian",
+  "label_en": "Siderian",
+  "label_zh": "成铁纪",
+  "rank": "Period",
+  "older_Ma": 2500.0,
+  "younger_Ma": 2300.0,
+  "broader": [
+   "Paleoproterozoic"
+  ]
+ },
+ "Silurian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Silurian",
+  "label_en": "Silurian",
+  "label_zh": "志留纪",
+  "rank": "Period",
+  "older_Ma": 443.8,
+  "younger_Ma": 419.2,
+  "broader": [
+   "Paleozoic"
+  ]
+ },
+ "Sinemurian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Sinemurian",
+  "label_en": "Sinemurian",
+  "label_zh": "辛涅穆尔期",
+  "rank": "Age",
+  "older_Ma": 199.3,
+  "younger_Ma": 190.8,
+  "broader": [
+   "LowerJurassic"
+  ]
+ },
+ "Statherian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Statherian",
+  "label_en": "Statherian",
+  "label_zh": "固结纪",
+  "rank": "Period",
+  "older_Ma": 1800.0,
+  "younger_Ma": 1600.0,
+  "broader": [
+   "Paleoproterozoic"
+  ]
+ },
+ "Stenian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Stenian",
+  "label_en": "Stenian",
+  "label_zh": "狭带纪",
+  "rank": "Period",
+  "older_Ma": 1200.0,
+  "younger_Ma": 1000.0,
+  "broader": [
+   "Mesoproterozoic"
+  ]
+ },
+ "Telychian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Telychian",
+  "label_en": "Telychian",
+  "label_zh": "特列奇期",
+  "rank": "Age",
+  "older_Ma": 438.5,
+  "younger_Ma": 433.4,
+  "broader": [
+   "Llandovery"
+  ]
+ },
+ "Terreneuvian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Terreneuvian",
+  "label_en": "Terreneuvian",
+  "label_zh": "纽芬兰世",
+  "rank": "Epoch",
+  "older_Ma": 541.0,
+  "younger_Ma": 521.0,
+  "broader": [
+   "Cambrian"
+  ]
+ },
+ "Thanetian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Thanetian",
+  "label_en": "Thanetian",
+  "label_zh": "塔内提期",
+  "rank": "Age",
+  "older_Ma": 59.2,
+  "younger_Ma": 56.0,
+  "broader": [
+   "Paleocene"
+  ]
+ },
+ "Tithonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Tithonian",
+  "label_en": "Tithonian",
+  "label_zh": "提通期",
+  "rank": "Age",
+  "older_Ma": 152.1,
+  "younger_Ma": 145.0,
+  "broader": [
+   "UpperJurassic"
+  ]
+ },
+ "Toarcian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Toarcian",
+  "label_en": "Toarcian",
+  "label_zh": "托阿尔期",
+  "rank": "Age",
+  "older_Ma": 182.7,
+  "younger_Ma": 174.1,
+  "broader": [
+   "LowerJurassic"
+  ]
+ },
+ "Tonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Tonian",
+  "label_en": "Tonian",
+  "label_zh": "拉伸纪",
+  "rank": "Period",
+  "older_Ma": 1000.0,
+  "younger_Ma": 720.0,
+  "broader": [
+   "Neoproterozoic"
+  ]
+ },
+ "Tortonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Tortonian",
+  "label_en": "Tortonian",
+  "label_zh": "托尔顿期",
+  "rank": "Age",
+  "older_Ma": 11.63,
+  "younger_Ma": 7.246,
+  "broader": [
+   "Miocene"
+  ]
+ },
+ "Tournaisian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Tournaisian",
+  "label_en": "Tournaisian",
+  "label_zh": "杜内期",
+  "rank": "Age",
+  "older_Ma": 358.9,
+  "younger_Ma": 346.7,
+  "broader": [
+   "LowerMississippian"
+  ]
+ },
+ "Tremadocian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Tremadocian",
+  "label_en": "Tremadocian",
+  "label_zh": "特马豆克期",
+  "rank": "Age",
+  "older_Ma": 485.4,
+  "younger_Ma": 477.7,
+  "broader": [
+   "LowerOrdovician"
+  ]
+ },
+ "Triassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Triassic",
+  "label_en": "Triassic",
+  "label_zh": "三叠纪",
+  "rank": "Period",
+  "older_Ma": 251.902,
+  "younger_Ma": 201.3,
+  "broader": [
+   "Mesozoic"
+  ]
+ },
+ "Turonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Turonian",
+  "label_en": "Turonian",
+  "label_zh": "土仑期",
+  "rank": "Age",
+  "older_Ma": 93.9,
+  "younger_Ma": 89.8,
+  "broader": [
+   "UpperCretaceous"
+  ]
+ },
+ "UpperCretaceous": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperCretaceous",
+  "label_en": "Late Cretaceous",
+  "label_zh": "晚白垩世",
+  "rank": "Epoch",
+  "older_Ma": 100.5,
+  "younger_Ma": 66.0,
+  "broader": [
+   "Cretaceous"
+  ]
+ },
+ "UpperDevonian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperDevonian",
+  "label_en": "Late Devonian",
+  "label_zh": "晚泥盆世",
+  "rank": "Epoch",
+  "older_Ma": 382.7,
+  "younger_Ma": 358.9,
+  "broader": [
+   "Devonian"
+  ]
+ },
+ "UpperJurassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperJurassic",
+  "label_en": "Late Jurassic",
+  "label_zh": "晚侏罗世",
+  "rank": "Epoch",
+  "older_Ma": 163.5,
+  "younger_Ma": 145.0,
+  "broader": [
+   "Jurassic"
+  ]
+ },
+ "UpperMississippian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperMississippian",
+  "label_en": "Late Mississippian",
+  "label_zh": "晚密西西比世",
+  "rank": "Epoch",
+  "older_Ma": 330.9,
+  "younger_Ma": 298.9,
+  "broader": [
+   "Mississippian"
+  ]
+ },
+ "UpperOrdovician": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperOrdovician",
+  "label_en": "Late Ordovician",
+  "label_zh": "晚奥陶世",
+  "rank": "Epoch",
+  "older_Ma": 458.4,
+  "younger_Ma": 443.8,
+  "broader": [
+   "Ordovician"
+  ]
+ },
+ "UpperPennsylvanian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperPennsylvanian",
+  "label_en": "Late Pennsylvanian",
+  "label_zh": "晚宾夕法尼亚世",
+  "rank": "Epoch",
+  "older_Ma": 307.0,
+  "younger_Ma": 298.9,
+  "broader": [
+   "Pennsylvanian"
+  ]
+ },
+ "UpperPleistocene": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperPleistocene",
+  "label_en": "Late Pleistocene",
+  "label_zh": "晚更新世",
+  "rank": "Age",
+  "older_Ma": 0.126,
+  "younger_Ma": 0.0117,
+  "broader": [
+   "Pleistocene"
+  ]
+ },
+ "UpperTriassic": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/UpperTriassic",
+  "label_en": "Late Triassic",
+  "label_zh": "晚三叠世",
+  "rank": "Epoch",
+  "older_Ma": 237.0,
+  "younger_Ma": 201.3,
+  "broader": [
+   "Triassic"
+  ]
+ },
+ "Valanginian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Valanginian",
+  "label_en": "Valanginian",
+  "label_zh": "凡兰吟期",
+  "rank": "Age",
+  "older_Ma": 139.8,
+  "younger_Ma": 132.9,
+  "broader": [
+   "LowerCretaceous"
+  ]
+ },
+ "Visean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Visean",
+  "label_en": "Visean",
+  "label_zh": "韦宪期",
+  "rank": "Age",
+  "older_Ma": 346.7,
+  "younger_Ma": 330.9,
+  "broader": [
+   "MiddleMississippian"
+  ]
+ },
+ "Wenlock": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Wenlock",
+  "label_en": "Wenlock",
+  "label_zh": "温洛克世",
+  "rank": "Epoch",
+  "older_Ma": 433.4,
+  "younger_Ma": 427.4,
+  "broader": [
+   "Silurian"
+  ]
+ },
+ "Wordian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Wordian",
+  "label_en": "Wordian",
+  "label_zh": "沃德期",
+  "rank": "Age",
+  "older_Ma": 268.8,
+  "younger_Ma": 265.1,
+  "broader": [
+   "Guadalupian"
+  ]
+ },
+ "Wuchiapingian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Wuchiapingian",
+  "label_en": "Wuchiapingian",
+  "label_zh": "吴家坪期",
+  "rank": "Age",
+  "older_Ma": 259.1,
+  "younger_Ma": 254.14,
+  "broader": [
+   "Lopingian"
+  ]
+ },
+ "Wuliuan": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Wuliuan",
+  "label_en": "Wuliuan",
+  "label_zh": "",
+  "rank": "Age",
+  "older_Ma": 509.0,
+  "younger_Ma": 504.5,
+  "broader": [
+   "Miaolingian"
+  ]
+ },
+ "Ypresian": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Ypresian",
+  "label_en": "Ypresian",
+  "label_zh": "伊普雷斯期",
+  "rank": "Age",
+  "older_Ma": 56.0,
+  "younger_Ma": 47.8,
+  "broader": [
+   "Eocene"
+  ]
+ },
+ "Zanclean": {
+  "uri": "http://resource.geosciml.org/classifier/ics/ischart/Zanclean",
+  "label_en": "Zanclean",
+  "label_zh": "赞克勒期",
+  "rank": "Age",
+  "older_Ma": 5.333,
+  "younger_Ma": 3.6,
+  "broader": [
+   "Pliocene"
+  ]
+ }
+}

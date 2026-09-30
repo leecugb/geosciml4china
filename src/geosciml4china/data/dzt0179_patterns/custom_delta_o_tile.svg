@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <!-- 石英闪长岩花纹（δο，自定义）：最小可重复单元 100×100
+       底色 R190 G90 B170（δο 族色，库尔干 δοC2/δοP、英吉沙 δο 族同）；花纹色白色（中性岩花纹为白色或黑色）；
+       参照 γδT2 花岗闪长岩模式：棋盘交替、母元间距 50、周期 2×2 母元格；+ 替换为 品字形三点；
+       内容 4 个完整母元——品点 (25,25)、丄 (75,25)、丄 (25,75)、品点 (75,75)；
+       同构于库尔干 dots3_up_tack 花纹；瓦片四边均落在空隙，平铺时边界无裁切；
+       2026-09-18 用户指定模式生成 -->
+  <rect width="100" height="100" fill="rgb(190,90,170)"/>
+  <g stroke="white" stroke-width="2" fill="none">
+    <!-- 品字形三点 ，中心 (25,25)：上一点、下两点，r=2.5（整体上移 3） -->
+    <circle cx="25" cy="15" r="2.5" fill="white" stroke="none"/>
+    <circle cx="19" cy="28" r="2.5" fill="white" stroke="none"/>
+    <circle cx="31" cy="28" r="2.5" fill="white" stroke="none"/>
+    <!-- 丄 ，中心 (75,25)：横 30、竖 15 向上 -->
+    <line x1="60" y1="25" x2="90" y2="25"/>
+    <line x1="75" y1="10" x2="75" y2="25"/>
+    <!-- 丄 ，中心 (25,75) -->
+    <line x1="10" y1="75" x2="40" y2="75"/>
+    <line x1="25" y1="60" x2="25" y2="75"/>
+    <!-- 品字形三点 ，中心 (75,75) -->
+    <circle cx="75" cy="65" r="2.5" fill="white" stroke="none"/>
+    <circle cx="69" cy="78" r="2.5" fill="white" stroke="none"/>
+    <circle cx="81" cy="78" r="2.5" fill="white" stroke="none"/>
+  </g>
+</svg>

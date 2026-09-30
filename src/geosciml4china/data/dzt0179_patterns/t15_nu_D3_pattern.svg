@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="650" height="410" viewBox="0 0 650 410">
+  <!-- νD3 辉长岩花纹 650×410：修正版瓦片 <pattern> 平铺验证
+       pattern x=-20 使相位与原网格对齐（A 行 x=32.5+65k，B 行 x=65+65k） -->
+  <defs>
+    <pattern id="x_tile" x="-20" y="0" width="65" height="82" patternUnits="userSpaceOnUse">
+      <rect width="65" height="82" fill="rgb(77,255,102)"/>
+      <g stroke="white" stroke-width="3" fill="none">
+        <line x1="42.5" y1="5.5" x2="62.5" y2="35.5"/>
+        <line x1="62.5" y1="5.5" x2="42.5" y2="35.5"/>
+        <line x1="10" y1="46.5" x2="30" y2="76.5"/>
+        <line x1="30" y1="46.5" x2="10" y2="76.5"/>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="650" height="410" fill="url(#x_tile)"/>
+</svg>

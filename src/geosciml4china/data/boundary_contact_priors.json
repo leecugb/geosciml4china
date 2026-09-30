@@ -1,0 +1,8313 @@
+{
+ "_meta": {
+  "title": "新疆区域界线接触关系先验库（支持新疆各图幅转换渲染）",
+  "created": "2026-09-08",
+  "regenerated": "2026-09-13",
+  "converter": "_contacts_to_priors.py",
+  "rule_count": {
+   "memoir_rules": 329,
+   "manual_rules": 2,
+   "generic_rules": 6
+  },
+  "precedence": "adjudicated（用户核验，最高）> memoir（志书）> inferred > generic_rules > GZBD 兜底；同对多规则按 CONF_RANK 取最高级",
+  "sources": [
+   "data/xinjiang_stratigraphic_contacts.csv（《新疆区域地质志》地层接触关系表，355 行）",
+   "data/gzbd_overrides.json（用户逐段裁定）",
+   "data/dzt0179_color_library.json（2026-09-20 同步：stratigraphic_contacts/group_composition）"
+  ],
+  "note": "memoir_multi = 志书对同一地层对有多条不同接触关系表述（分区差异），渲染时取 contact 首项、其余供裁定参考",
+  "changelog_20260913": "修复:微角度不整合被角度不整合抢占;空名单元对;/并联单元未拆分;代号正则补∈下标",
+  "precedence_note": "志书优先于裁定系有意设计(用户2026-09-13确认):志书已收录的单元对以志书区域记述为准;裁定规则仅覆盖志书未收录的单元对(如C2ak艾克提克组)或特定界线段(如图幅代号EK|N1k),二者当前不相交",
+  "changelog_20260920": "同步色库地层知识：新增 age_order_priors（14 条层序/接触记录）与 group_composition（5 群镜像）；unit_pair_rules 增补 adjudicated 裁定规则 []；alias_map 增补 ['帕克（卡）布拉克组', '帕克布拉克组']；precedence 改定 adjudicated（用户核验）居首。注：superposed 仅载次序不冒充接触类型——江额结尔组|乌鲁克恰特组、达里约尔组|克斯库克组、艾克提克组|康克林组、托格买提组|克孜勒陶组、克孜尔塔格组|奇自拉夫组 5 对接触类型仍缺，标定命中时维持未覆盖。",
+  "authority": "本库为判断地层接触关系与地层新老关系的最高优先级知识来源（2026-09-20 用户定）；data/dzt0179_color_library.json 与本库配合制定渲染配色方案（其 stratigraphic_contacts/group_composition 两节为本库派生镜像，由 _build_dzt0179_color_library.py 重建时同步；修改请改本库主本）。",
+  "changelog_20260920_b": "权威定版：接触关系+新老关系双料最高知识源；age_order_priors/group_composition 转为主本（原色库同步方向反转，_sync_colorlib_to_priors.py 退役为 _check_knowledge_sync.py 一致性校验）",
+  "changelog_20260920_c": "用户核验录入库尔良群段间接触 3 条：下段|中段=整合、中段|上段=整合（01 期望）、下段|上段=断层接触（10 期望）——K1 与 K3 不能（地层）接触，中间恒有 C2K2，直接相贴仅可能为断层接触（原'不整合接触'录入当日按用户更正修订）；单元对规则命中优先于 generic_rules 第 5 条（同组段间恒整合）的兜底误推",
+  "changelog_20260920_d": "段间接触通则推广（用户定：其他单元分段遵循同样逻辑）：新增 11 条段级裁定 ['C1k1|C1k2=整合接触', 'C1w1|C1w2=整合接触', 'C1w1|C1w3=断层接触', 'C1w2|C1w3=整合接触', 'C2p1|C2p2=整合接触', 'D2kz1|D2kz2=整合接触', 'D2kz1|D2kz3=断层接触', 'D2kz2|D2kz3=整合接触', 'D3kz1|D3kz2=整合接触', 'D3kz1|D3kz3=断层接触', 'D3kz2|D3kz3=整合接触']；generic_rules 第 5 条细化为仅适用相邻段",
+  "updated": "2026-09-26",
+  "changelog_20260926": "新增间断通则（用户指令）：年代跨越≥200→不整合接触；01 命中登记分歧。contact/56 案例驱动"
+ },
+ "generic_rules": [
+  {
+   "rule": "任一侧为第四系（age_rank >= 1300）→ 第四系界线；不含已半固结成岩的沉积层（如西域组 Qp1X，算基岩）",
+   "contact": "第四系界线",
+   "priority": 1,
+   "confidence": "user_2026-09-13"
+  },
+  {
+   "rule": "任一侧属侵入岩层（LDZOFBB003.WP）且另一侧地层更老（被侵入）",
+   "contact": "侵入接触",
+   "younger": "侵入体一侧",
+   "priority": 2,
+   "confidence": "verified"
+  },
+  {
+   "rule": "一侧为侵入岩，另一侧为年轻地层（age_rank 大于侵入体，覆盖于侵入体之上）",
+   "contact": "角度不整合",
+   "younger": "年轻地层一侧",
+   "priority": 3,
+   "confidence": "user_2026-09-13"
+  },
+  {
+   "rule": "任一侧为西域组（Qp1X）且另一侧地层更老（西域组上覆）",
+   "contact": "角度不整合",
+   "younger": "西域组一侧",
+   "priority": 4,
+   "confidence": "user_2026-09-13",
+   "_note": "用户裁定原则（2026-09-13 修订）：西域组与下伏地层接触关系【优先以 unit_pair_rules 先验为准】（如 库车组|西域组=整合接触、乌苏群|西域组=不整合接触、湖积层|西域组=角度不整合）；本规则仅在先验库无该单元对规则时兜底为角度不整合"
+  },
+  {
+   "rule": "两侧单元属于同一地层组的不同段（组名相同且至少一侧带段级后缀）",
+   "contact": "整合接触",
+   "priority": 5,
+   "confidence": "user_2026-09-15",
+   "_note": "2026-09-20 用户细化：本规则仅适用于**相邻段**；跨段（中间缺段）不能地层接触、仅断层接触。段间细则以 unit_pair_rules 段级裁定条（confidence=adjudicated）为准"
+  },
+  {
+   "rule": "两侧均为地层单元（含变质基底，非第四系、非侵入岩）且年龄间断 age_rank 差 ≥200（明显沉积间断）→ 不整合接触（04 角度不整合兜底，24 平行不整合兼容）；GZBD=01 实测界线命中者登记分歧交裁定（发现编图错误通道）",
+   "contact": "不整合接触",
+   "contact_all": [
+    "角度不整合",
+    "平行不整合"
+   ],
+   "younger": "年轻地层一侧（age_rank 大者）",
+   "priority": 6,
+   "confidence": "adjudicated",
+   "source": "用户指令（2026-09-26，contact/56 案例 J3kz|C2ak 晚侏罗|晚石炭 间断 301）",
+   "_threshold_evidence": "阈值 200 由全幅分布标定：04 码 25%分位 101/中位 398、01 码 95%分位 101；≥200 仅 8 段（01 码 6 段为潜在编图错误候选，2 段与既有裁定吻合）",
+   "_date": "2026-09-26"
+  }
+ ],
+ "unit_pair_rules": [
+  {
+   "pair": [
+    "(中酸性火山岩;未建组)",
+    "下二叠统"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "(中酸性火山岩;未建组)",
+   "region": [
+    "祁漫塔格区"
+   ],
+   "page": [
+    "202"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "(暂未命名)",
+    "上石炭统上部"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "微角度不整合"
+   ],
+   "younger": "上石炭统上部",
+   "region": [
+    "昆仑-喀喇昆仑区(西昆仑西段)"
+   ],
+   "page": [
+    "153"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "(渐新统未建组)",
+    "古生代及中生代地层"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "(渐新统未建组)",
+   "region": [
+    "昆仑山区(吐拉-芒崖)"
+   ],
+   "page": [
+    "243"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "七克台组",
+    "三间房组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "七克台组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "七克台组",
+    "齐古组"
+   ],
+   "codes": [
+    "J3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "齐古组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "三十里大墩组",
+    "喀拉扎组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "三十里大墩组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "三工河组",
+    "八道湾组"
+   ],
+   "codes": [
+    "J1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "三工河组",
+   "region": [
+    "准噶尔区",
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "209",
+    "209-210",
+    "212",
+    "212-213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "三工河组",
+    "西山窑组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "西山窑组",
+   "region": [
+    "准噶尔区",
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "209-210",
+    "210-211",
+    "212-213",
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "三间房组",
+    "西山窑组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "三间房组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "上仓房沟群",
+    "克拉玛依组"
+   ],
+   "codes": [
+    "T1"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合"
+   ],
+   "younger": "克拉玛依组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "203"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "上志留统",
+    "托格买提组"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "托格买提组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "119-120"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "上志留统",
+    "琼哈拉峻山组"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "琼哈拉峻山组",
+   "region": [
+    "伊犁盆地-北天山区"
+   ],
+   "page": [
+    "144"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "上河尾滩群",
+    "空喀山口组"
+   ],
+   "codes": [
+    "T3"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "上河尾滩群",
+   "region": [
+    "昆仑山-喀喇昆仑区(喀喇昆仑)",
+    "空喀山口区"
+   ],
+   "page": [
+    "155 182-183",
+    "183"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "上泥盆统",
+    "克孜苏胡木组"
+   ],
+   "codes": [],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "上泥盆统",
+   "region": [
+    "昆仑山区"
+   ],
+   "page": [
+    "42-43"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "上泥盆统",
+    "呼吉尔斯特组"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "上泥盆统",
+   "region": [
+    "准噶尔-北天山区(沙尔布尔提山)"
+   ],
+   "page": [
+    "116"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "上泥盆统",
+    "铁石达斯群"
+   ],
+   "codes": [],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "上泥盆统",
+   "region": [
+    "祁漫塔格"
+   ],
+   "page": [
+    "78"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下-中侏罗统",
+    "杜瓦组"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "下-中侏罗统",
+   "region": [
+    "和田-巴楚区"
+   ],
+   "page": [
+    "180"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下-中泥盆统",
+    "柯坪塔格组"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "下-中泥盆统",
+   "region": [
+    "塔里木北缘区"
+   ],
+   "page": [
+    "96"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下二叠统",
+    "前寒武系"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "下二叠统",
+   "region": [
+    "昆仑山-喀喇昆仑区(柳什塔格)"
+   ],
+   "page": [
+    "182"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下二叠统",
+    "环形山组"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "下二叠统",
+   "region": [
+    "昆仑-阿尔金山区"
+   ],
+   "page": [
+    "77"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下仓房沟群",
+    "平地泉组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "下仓房沟群",
+   "region": [
+    "准噶尔-伊犁区(东准噶尔将军庙)"
+   ],
+   "page": [
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下仓房沟群",
+    "韭菜园组"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "整合接触"
+   ],
+   "younger": "韭菜园组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "175 202"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "下河尾滩群",
+    "空喀山口组"
+   ],
+   "codes": [
+    "T2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "下河尾滩群",
+   "region": [
+    "昆仑山-喀喇昆仑区(喀喇昆仑)"
+   ],
+   "page": [
+    "155 182-183"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下泥盆统",
+    "加普萨尔群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "下泥盆统",
+   "region": [
+    "东准噶尔"
+   ],
+   "page": [
+    "69"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下泥盆统",
+    "呼吉尔斯特组"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "呼吉尔斯特组",
+   "region": [
+    "准噶尔-北天山区(沙尔布尔提山)"
+   ],
+   "page": [
+    "116"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下泥盆统",
+    "科克赛尔克山组"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "下泥盆统",
+   "region": [
+    "阿尔泰-东准噶尔区"
+   ],
+   "page": [
+    "87 114"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下石炭统",
+    "克孜尔塔格组"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "下石炭统",
+   "region": [
+    "柯坪-阿合奇"
+   ],
+   "page": [
+    "121-122"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "下石炭统",
+    "坦盖塔尔组"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "下石炭统",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "120"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "丘达依塔格群",
+    "萨尔干组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "萨尔干组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "72",
+    "73-74"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "丘达依塔格群",
+    "阿瓦塔格群"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "丘达依塔格群",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "58 72",
+    "72"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "东图津河组",
+    "也列莫顿组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "东图津河组",
+   "region": [
+    "伊犁盆地-北天山区"
+   ],
+   "page": [
+    "146",
+    "147"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "东图津河组",
+    "志留系或下石炭统"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "东图津河组",
+   "region": [
+    "伊犁盆地-北天山区"
+   ],
+   "page": [
+    "147"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "东图津河组",
+    "白鱼山组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "白鱼山组",
+   "region": [
+    "伊犁盆地-北天山区"
+   ],
+   "page": [
+    "147"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "东沟组",
+    "滋泥泉子组"
+   ],
+   "codes": [
+    "E"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合"
+   ],
+   "younger": "滋泥泉子组",
+   "region": [
+    "北天山-准噶尔区(准噶尔南缘)"
+   ],
+   "page": [
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "东沟组",
+    "紫泥泉子组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合"
+   ],
+   "younger": "紫泥泉子组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "239"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "东沟组",
+    "连木沁组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合",
+    "整合接触"
+   ],
+   "younger": "东沟组",
+   "region": [
+    "北天山-准噶尔区",
+    "北天山-准噶尔区(准噶尔南缘)"
+   ],
+   "page": [
+    "228-229",
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "东锡勒克组",
+    "喀纳斯群"
+   ],
+   "codes": [],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "东锡勒克组",
+   "region": [
+    "阿尔泰",
+    "阿尔泰山区"
+   ],
+   "page": [
+    "34 69",
+    "69"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "东锡勒克组",
+    "白哈巴组"
+   ],
+   "codes": [
+    "O3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "白哈巴组",
+   "region": [
+    "阿尔泰"
+   ],
+   "page": [
+    "69"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中-上侏罗统",
+    "喀拉托洛盖组"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "中-上侏罗统",
+   "region": [
+    "准噶尔-伊犁区"
+   ],
+   "page": [
+    "171"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中元古界",
+    "琼哈拉峻山组"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "琼哈拉峻山组",
+   "region": [
+    "伊犁盆地-北天山区"
+   ],
+   "page": [
+    "144"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中奥陶统",
+    "巴工布兰莎群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "巴工布兰莎群",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "207-208"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中志留统",
+    "乌尊布拉克组"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "中志留统",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "93"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中泥盆统",
+    "克孜尔塔格组"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克孜尔塔格组",
+   "region": [
+    "柯坪-阿合奇"
+   ],
+   "page": [
+    "121-122"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中泥盆统",
+    "巴工布兰莎群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "巴工布兰莎群",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "207-208"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中泥盆统",
+    "温泉群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "中泥盆统",
+   "region": [
+    "天山区"
+   ],
+   "page": [
+    "13"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "中石炭统",
+    "铁隆滩群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "铁隆滩群",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "207 231-232 237"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌伦古河组",
+    "索索泉组"
+   ],
+   "codes": [
+    "E3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "索索泉组",
+   "region": [
+    "准噶尔区北缘(乌伦古河地区)"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌伦古河组",
+    "红砾山组"
+   ],
+   "codes": [
+    "E2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌伦古河组",
+   "region": [
+    "准噶尔区北缘(乌伦古河地区)"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌依塔克组",
+    "依格孜牙组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "依格孜牙组",
+   "region": [
+    "塔里木盆地西缘区"
+   ],
+   "page": [
+    "230"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌依塔克组",
+    "库克拜组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌依塔克组",
+   "region": [
+    "塔里木盆地西缘区"
+   ],
+   "page": [
+    "230"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌图布拉克组",
+    "克克雄库都克组"
+   ],
+   "codes": [
+    "D1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌图布拉克组",
+   "region": [
+    "准噶尔-北天山区",
+    "西准噶尔-北天山区"
+   ],
+   "page": [
+    "115",
+    "92 114"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌图布拉克组",
+    "曼格尔组"
+   ],
+   "codes": [
+    "D1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "曼格尔组",
+   "region": [
+    "准噶尔-北天山区"
+   ],
+   "page": [
+    "115"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌尔图组",
+    "人子沟组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "人子沟组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌尔图组",
+    "石人子沟组"
+   ],
+   "codes": [
+    "C3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "石人子沟组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "173"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌尔图组",
+    "祁家沟组"
+   ],
+   "codes": [
+    "C3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌尔图组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "142-143",
+    "143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌尔苏组",
+    "准巴斯陶组"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌尔苏组",
+   "region": [
+    "准噶尔-北天山区(东准噶尔)",
+    "准噶尔-北天山区(东准噶尔南部)"
+   ],
+   "page": [
+    "116",
+    "116-117"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌尔苏组",
+    "纸房组"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "纸房组",
+   "region": [
+    "准噶尔-北天山区(东准噶尔南部)"
+   ],
+   "page": [
+    "116-117",
+    "117"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌尔苏组",
+    "芒克鲁组"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌尔苏组",
+   "region": [
+    "准噶尔-北天山区"
+   ],
+   "page": [
+    "115"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌拉根组",
+    "卡拉塔尔组"
+   ],
+   "codes": [
+    "E2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌拉根组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "241-242",
+    "242"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌拉根组",
+    "巴什布拉克组"
+   ],
+   "codes": [
+    "E3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "巴什布拉克组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "242"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌拉泊组",
+    "井井子沟组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "井井子沟组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "173 176",
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌拉泊组",
+    "塔什库拉组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌拉泊组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "173",
+    "173 176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌苏群",
+    "冰碛层"
+   ],
+   "codes": [
+    "Qp2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "冰碛层",
+   "region": [
+    "山区"
+   ],
+   "page": [
+    "256-257"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "乌苏群",
+    "新疆群"
+   ],
+   "codes": [
+    "Qp3"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "新疆群",
+   "region": [
+    "全疆",
+    "全疆(山前地带)"
+   ],
+   "page": [
+    "253-254 261",
+    "257-259"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "乌苏群",
+    "西域组"
+   ],
+   "codes": [
+    "Qp2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "乌苏群",
+   "region": [
+    "全疆",
+    "全疆(山麓及山间盆地)"
+   ],
+   "page": [
+    "252-253",
+    "253-254 261"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "乌郎组",
+    "晓山萨依组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "晓山萨依组",
+   "region": [
+    "准噶尔-伊犁区(伊犁)"
+   ],
+   "page": [
+    "171",
+    "172"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌里格孜塔格组",
+    "却尔却克组"
+   ],
+   "codes": [
+    "O3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌里格孜塔格组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "75"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乌里格孜塔格组",
+    "土什布拉克组"
+   ],
+   "codes": [
+    "S1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "土什布拉克组",
+   "region": [
+    "塔里木北缘区(库鲁克塔格东段)",
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "75",
+    "75 96"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "也列莫顿组",
+    "阿克沙克组"
+   ],
+   "codes": [
+    "C1-2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "也列莫顿组",
+   "region": [
+    "伊犁盆地-北天山区"
+   ],
+   "page": [
+    "144-146",
+    "146"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乱石山组",
+    "冰沟南组"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "冰沟南组",
+   "region": [
+    "阿尔金山区"
+   ],
+   "page": [
+    "24",
+    "25"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乱石山组",
+    "米兰群"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "乱石山组",
+   "region": [
+    "阿尔金山区"
+   ],
+   "page": [
+    "24",
+    "24-25"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "乱石山组",
+    "金雁山组"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "角度不整合"
+   ],
+   "younger": "乱石山组",
+   "region": [
+    "阿尔金山区"
+   ],
+   "page": [
+    "24"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "井井子沟组",
+    "芦草沟组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "芦草沟组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "亚格列木组",
+    "喀拉扎组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "亚格列木组",
+   "region": [
+    "塔里木区(拜城)",
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "214 228",
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "亚格列木组",
+    "舒善河组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "舒善河组",
+   "region": [
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "伊南里克组",
+    "奥陶系"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "伊南里克组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "93"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "侏罗系",
+    "达里约尔组"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "侏罗系",
+   "region": [
+    "天山南脉-柯坪-叶城区(叶城)"
+   ],
+   "page": [
+    "180"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "依格孜牙组",
+    "吐依洛克组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "吐依洛克组",
+   "region": [
+    "塔里木盆地西缘区"
+   ],
+   "page": [
+    "230"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "俄霍布拉克群",
+    "克拉玛依组"
+   ],
+   "codes": [
+    "T2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克拉玛依组",
+   "region": [
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "198"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "俄霍布拉克群",
+    "比尤勒包谷孜群"
+   ],
+   "codes": [
+    "T1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "俄霍布拉克群",
+   "region": [
+    "天山南脉-塔里木区",
+    "天山南脉-柯坪-叶城区(天山南脉)"
+   ],
+   "page": [
+    "177 198",
+    "198"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "元古代片麻状花岗岩",
+    "干沙河组"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "干沙河组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克克雄库都克组",
+    "沙尔布尔提组"
+   ],
+   "codes": [
+    "S3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克克雄库都克组",
+   "region": [
+    "西准噶尔-北天山区"
+   ],
+   "page": [
+    "90-91",
+    "92 114"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克勒青河群",
+    "巴工布兰莎群"
+   ],
+   "codes": [
+    "J1-2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "巴工布兰莎群",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "203 208",
+    "207-208"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克勒青河群",
+    "河尾滩群"
+   ],
+   "codes": [
+    "T3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克勒青河群",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "183 202(表I-12) 203",
+    "203 208"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克孜勒努尔组",
+    "恰克马克组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "恰克马克组",
+   "region": [
+    "塔里木区(库车)"
+   ],
+   "page": [
+    "213",
+    "214"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克孜勒努尔组",
+    "阳霞组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克孜勒努尔组",
+   "region": [
+    "塔里木区(库车)",
+    "塔里木区(库车-拜城)"
+   ],
+   "page": [
+    "213",
+    "214"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克孜勒苏群",
+    "库克拜组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库克拜组",
+   "region": [
+    "塔里木盆地西缘区"
+   ],
+   "page": [
+    "229-230",
+    "230"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克孜勒苏群",
+    "库孜贡苏组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "不整合或平行不整合",
+   "contact_all": [
+    "不整合或平行不整合",
+    "平行不整合",
+    "整合接触"
+   ],
+   "younger": "克孜勒苏群",
+   "region": [
+    "塔里木区(乌恰-阿合提山)",
+    "塔里木盆地西缘区"
+   ],
+   "page": [
+    "213-214 229",
+    "229-230"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "克孜勒陶组",
+    "奇自拉夫组"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "奇自拉夫组",
+   "region": [
+    "塔里木-昆仑区(铁克力克)"
+   ],
+   "page": [
+    "128-129 148-149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克孜洛依组",
+    "安居安组"
+   ],
+   "codes": [
+    "N1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "安居安组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "242-243",
+    "243"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克孜洛依组",
+    "巴什布拉克组"
+   ],
+   "codes": [
+    "N1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "微角度不整合"
+   ],
+   "younger": "克孜洛依组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "242",
+    "242-243"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "克孜苏胡木组",
+    "库尔卡克组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "整合接触"
+   ],
+   "younger": "克孜苏胡木组",
+   "region": [
+    "昆仑山区"
+   ],
+   "page": [
+    "42-43"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "克孜里奇曼组",
+    "塔哈其组"
+   ],
+   "codes": [
+    "C3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克孜里奇曼组",
+   "region": [
+    "塔里木区(塔西南)"
+   ],
+   "page": [
+    "151",
+    "151-152"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克孜里奇曼组",
+    "棋盘组"
+   ],
+   "codes": [
+    "P"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "棋盘组",
+   "region": [
+    "塔里木区(塔西南)"
+   ],
+   "page": [
+    "151-152"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克安库都克组",
+    "纸房组"
+   ],
+   "codes": [
+    "D3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克安库都克组",
+   "region": [
+    "准噶尔-北天山区(东准噶尔)",
+    "准噶尔-北天山区(东准噶尔南部)"
+   ],
+   "page": [
+    "117",
+    "117 138"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克安库都克组",
+    "黑山头组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "黑山头组",
+   "region": [
+    "准噶尔-北天山区(东准噶尔)",
+    "阿尔泰-北准噶尔区"
+   ],
+   "page": [
+    "117 138",
+    "137-138"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克拉玛依组",
+    "烧房沟组"
+   ],
+   "codes": [
+    "T2"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合"
+   ],
+   "younger": "克拉玛依组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "202-203"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克拉玛依组",
+    "黄山街组"
+   ],
+   "codes": [
+    "T3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "黄山街组",
+   "region": [
+    "北天山-准噶尔区",
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "197 203",
+    "198",
+    "203"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克里塔克组",
+    "和什拉甫组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "和什拉甫组",
+   "region": [
+    "塔里木区",
+    "塔里木区(英吉沙-叶城以南)"
+   ],
+   "page": [
+    "149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "克里塔克组",
+    "库山河组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克里塔克组",
+   "region": [
+    "塔里木区",
+    "塔里木区(铁克力克)"
+   ],
+   "page": [
+    "148-149",
+    "149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "全新统",
+    "冰碛层"
+   ],
+   "codes": [
+    "Qh"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "全新统",
+   "region": [
+    "山区"
+   ],
+   "page": [
+    "256-257"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "全新统",
+    "新疆群"
+   ],
+   "codes": [
+    "Qh"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "全新统",
+   "region": [
+    "全疆(山前地带)"
+   ],
+   "page": [
+    "257-259"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "八道湾组",
+    "小泉沟群"
+   ],
+   "codes": [
+    "T2-3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合或平行不整合"
+   ],
+   "younger": "八道湾组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "209"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "八道湾组",
+    "郝家沟组"
+   ],
+   "codes": [
+    "J1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合或平行不整合"
+   ],
+   "younger": "八道湾组",
+   "region": [
+    "北天山-准噶尔区",
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "203 209",
+    "212"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "公格尔群",
+    "布伦库勒群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "公格尔群",
+   "region": [
+    "昆仑区"
+   ],
+   "page": [
+    "14",
+    "14-15"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "六棵树组",
+    "柳树沟组"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "柳树沟组",
+   "region": [
+    "南准噶尔区",
+    "南准噶尔区(乌鲁木齐-巴里坤)"
+   ],
+   "page": [
+    "142-143",
+    "143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "六棵树组",
+    "石钱滩组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "六棵树组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "142-143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "六棵树组",
+    "祁家沟组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "祁家沟组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "142-143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "兴地塔格群",
+    "杨吉布拉克群"
+   ],
+   "codes": [
+    "Ch"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "角度不整合"
+   ],
+   "younger": "杨吉布拉克群",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "13",
+    "21"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "兴地塔格群",
+    "达格拉格布拉克群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "兴地塔格群",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "13",
+    "9 13"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "其浪组",
+    "坎岭组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "其浪组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "73",
+    "74"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "其浪组",
+    "柯坪塔格组"
+   ],
+   "codes": [
+    "S1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "柯坪塔格组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "73"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "其浪组",
+    "音干组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "音干组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "75"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "冬瓜山组",
+    "甜水海群"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "冬瓜山组",
+   "region": [
+    "昆仑-阿尔金山区",
+    "昆仑区(甜水海/木吉)"
+   ],
+   "page": [
+    "26 76",
+    "77"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "冬瓜山组",
+    "那克十七江干群"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "那克十七江干群",
+   "region": [
+    "昆仑-阿尔金山区"
+   ],
+   "page": [
+    "77",
+    "78 97"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "冰沟南组",
+    "平洼沟组"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "平洼沟组",
+   "region": [
+    "阿尔金山区"
+   ],
+   "page": [
+    "25",
+    "25 75"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "冰碛及冰水沉积",
+    "新疆群"
+   ],
+   "codes": [
+    "Qp3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "冰碛及冰水沉积",
+   "region": [
+    "全疆"
+   ],
+   "page": [
+    "259-260"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "冲积层",
+    "新疆群"
+   ],
+   "codes": [
+    "Qp3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "冲积层",
+   "region": [
+    "全疆"
+   ],
+   "page": [
+    "259-260"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "准巴斯陶组",
+    "塔克尔巴斯陶组"
+   ],
+   "codes": [
+    "D1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "准巴斯陶组",
+   "region": [
+    "准噶尔-北天山区(三塘湖)",
+    "准噶尔-北天山区(东准噶尔)"
+   ],
+   "page": [
+    "114-115",
+    "116"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "凯拉克提群",
+    "开尔塔斯群"
+   ],
+   "codes": [
+    "Z"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "凯拉克提群",
+   "region": [
+    "天山区(科古琴山)"
+   ],
+   "page": [
+    "34-35",
+    "34-35 50"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "凯拉克提群",
+    "磷矿沟组"
+   ],
+   "codes": [
+    "∈1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "微角度不整合"
+   ],
+   "younger": "磷矿沟组",
+   "region": [
+    "天山区(科古琴山)"
+   ],
+   "page": [
+    "34-35 50",
+    "50"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "加温达坂组",
+    "空喀山口组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "空喀山口组",
+   "region": [
+    "昆仑山-喀喇昆仑区(喀喇昆仑)",
+    "空喀山口区"
+   ],
+   "page": [
+    "155 182-183",
+    "183"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "化学沉积等",
+    "新疆群"
+   ],
+   "codes": [
+    "Qp3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "化学沉积等",
+   "region": [
+    "全疆"
+   ],
+   "page": [
+    "259-260"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "北塔山组",
+    "温都尔喀拉组"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "温都尔喀拉组",
+   "region": [
+    "准噶尔-北天山区(东准噶尔北部)"
+   ],
+   "page": [
+    "117"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "十三间房组",
+    "大步组"
+   ],
+   "codes": [
+    "E2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "十三间房组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "240"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "十三间房组",
+    "连坎组"
+   ],
+   "codes": [
+    "E2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "连坎组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "240",
+    "240-241"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "南灰山群",
+    "苔古勒塔格组"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "苔古勒塔格组",
+   "region": [
+    "北山"
+   ],
+   "page": [
+    "54"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "南灰山群",
+    "黄山群"
+   ],
+   "codes": [
+    "∈2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "南灰山群",
+   "region": [
+    "北山"
+   ],
+   "page": [
+    "54"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "博查特塔格群",
+    "苏库罗克群"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "苏库罗克群",
+   "region": [
+    "西昆仑山北坡"
+   ],
+   "page": [
+    "25 27"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "博查特塔格群",
+    "苏玛兰组"
+   ],
+   "codes": [
+    "Jx"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "苏玛兰组",
+   "region": [
+    "西昆仑山北坡"
+   ],
+   "page": [
+    "27"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "博查特塔格群",
+    "赛拉加兹塔格群"
+   ],
+   "codes": [
+    "Jx"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "博查特塔格群",
+   "region": [
+    "昆仑区",
+    "西昆仑山北坡"
+   ],
+   "page": [
+    "14 25-27",
+    "25 27"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "博格达群上亚群",
+    "博格达群下亚群"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "博格达群上亚群",
+   "region": [
+    "南准噶尔区(吉木萨尔以南)"
+   ],
+   "page": [
+    "143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "博罗科努组",
+    "呼独克达坂组"
+   ],
+   "codes": [
+    "S3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "博罗科努组",
+   "region": [
+    "天山区(科古琴山南)"
+   ],
+   "page": [
+    "71-72"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "博罗科努组",
+    "阿克塔什组"
+   ],
+   "codes": [
+    "S3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "博罗科努组",
+   "region": [
+    "天山区(科古琴山南)"
+   ],
+   "page": [
+    "71"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "卡拉乌依组",
+    "和什拉甫组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "卡拉乌依组",
+   "region": [
+    "塔里木区(塔西南)",
+    "塔里木区(英吉沙-叶城以南)"
+   ],
+   "page": [
+    "149",
+    "150"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "卡拉乌依组",
+    "阿孜干组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "阿孜干组",
+   "region": [
+    "塔里木区(塔西南)"
+   ],
+   "page": [
+    "150"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "卡拉塔尔组",
+    "齐姆根组"
+   ],
+   "codes": [
+    "E2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "卡拉塔尔组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "241",
+    "241-242"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "卡拉苏组",
+    "野云沟组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "卡拉苏组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "120 149",
+    "150"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "却尔却克组",
+    "巷古勒塔格组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "却尔却克组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "56 73",
+    "75"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "台子组",
+    "大步组"
+   ],
+   "codes": [
+    "E2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "大步组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "240"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "台子组",
+    "苏巴什组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "台子组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "240"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "叶尔羌河群",
+    "喀什群"
+   ],
+   "codes": [
+    "E"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "喀什群",
+   "region": [
+    "昆仑区"
+   ],
+   "page": [
+    "217(表I-13)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "叶桑岗组",
+    "喀拉米兰河群"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "整合接触"
+   ],
+   "younger": "叶桑岗组",
+   "region": [
+    "昆仑-喀喇昆仑区(西昆仑东段)",
+    "昆仑山-喀喇昆仑区(喀拉米兰河中游)"
+   ],
+   "page": [
+    "154 181",
+    "181"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "吉木乃组",
+    "喀尔交组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "角度不整合"
+   ],
+   "younger": "喀尔交组",
+   "region": [
+    "准噶尔-伊犁区"
+   ],
+   "page": [
+    "90 171"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "吉木乃组",
+    "恰其海组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "恰其海组",
+   "region": [
+    "阿尔泰-北准噶尔区"
+   ],
+   "page": [
+    "139-140",
+    "140"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "吉木乃组",
+    "那仁喀拉组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触",
+    "角度不整合"
+   ],
+   "younger": "吉木乃组",
+   "region": [
+    "阿尔泰-北准噶尔区"
+   ],
+   "page": [
+    "139",
+    "139-140"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "吉迪克组",
+    "康村组"
+   ],
+   "codes": [
+    "N1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "康村组",
+   "region": [
+    "塔里木区库车"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "吉迪克组",
+    "苏布依组"
+   ],
+   "codes": [
+    "E3-N1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "吉迪克组",
+   "region": [
+    "塔里木区库车"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "吐依洛克组",
+    "阿尔塔什组"
+   ],
+   "codes": [
+    "E1"
+   ],
+   "contact": "不整合或平行不整合",
+   "contact_all": [
+    "不整合或平行不整合"
+   ],
+   "younger": "阿尔塔什组",
+   "region": [
+    "塔里木区",
+    "塔里木盆地西缘区"
+   ],
+   "page": [
+    "230",
+    "230 241"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "吾松格尔组",
+    "沙依里克组"
+   ],
+   "codes": [
+    "∈2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "沙依里克组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "57-58",
+    "58"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "吾松格尔组",
+    "肖尔布拉克组"
+   ],
+   "codes": [
+    "∈1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "吾松格尔组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "57",
+    "57-58"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "呼图壁河组",
+    "清水河组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "呼图壁河组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "228"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "呼图壁河组",
+    "胜金口组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "胜金口组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "228"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "呼独克达坂组",
+    "阿克塔什组"
+   ],
+   "codes": [
+    "O3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "呼独克达坂组",
+   "region": [
+    "天山区(科古琴山南)"
+   ],
+   "page": [
+    "71-72"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "和布克河组",
+    "喀尔交组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "角度不整合"
+   ],
+   "younger": "喀尔交组",
+   "region": [
+    "准噶尔-伊犁区"
+   ],
+   "page": [
+    "90 171"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "和布克河组",
+    "朱鲁木特组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "和布克河组",
+   "region": [
+    "准噶尔-北天山区(西准噶尔)",
+    "阿尔泰-北准噶尔区"
+   ],
+   "page": [
+    "136"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "和布克河组",
+    "黑山头组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "黑山头组",
+   "region": [
+    "阿尔泰-北准噶尔区"
+   ],
+   "page": [
+    "136",
+    "137-138"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "哈拉玛盖组",
+    "独山子组"
+   ],
+   "codes": [
+    "N2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "独山子组",
+   "region": [
+    "准噶尔区北缘(乌伦古河地区)"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "哈拉玛盖组",
+    "索索泉组"
+   ],
+   "codes": [
+    "N1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "哈拉玛盖组",
+   "region": [
+    "准噶尔区北缘(乌伦古河地区)"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "哈米斯特组",
+    "晓山萨依组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "哈米斯特组",
+   "region": [
+    "准噶尔-伊犁区(伊犁)"
+   ],
+   "page": [
+    "172"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "哈米斯特组",
+    "铁木里克组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "铁木里克组",
+   "region": [
+    "准噶尔-伊犁区(伊犁)"
+   ],
+   "page": [
+    "172"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "喀尔交组",
+    "喀拉托洛盖组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "喀拉托洛盖组",
+   "region": [
+    "准噶尔-伊犁区"
+   ],
+   "page": [
+    "171",
+    "90 171"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "喀尔交组",
+    "布龙组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "角度不整合"
+   ],
+   "younger": "喀尔交组",
+   "region": [
+    "准噶尔-伊犁区",
+    "西准噶尔-北天山区"
+   ],
+   "page": [
+    "90",
+    "90 171"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "喀拉喀什群",
+    "埃连卡特群"
+   ],
+   "codes": [],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "埃连卡特群",
+   "region": [
+    "昆仑区"
+   ],
+   "page": [
+    "14-15"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "喀拉喀什群",
+    "赛拉加兹塔格群"
+   ],
+   "codes": [
+    "Pt1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "赛拉加兹塔格群",
+   "region": [
+    "昆仑区"
+   ],
+   "page": [
+    "14 25-27"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "喀拉扎组",
+    "清水河组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "清水河组",
+   "region": [
+    "准噶尔区",
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "212",
+    "228"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "喀拉扎组",
+    "齐古组"
+   ],
+   "codes": [
+    "J3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "喀拉扎组",
+   "region": [
+    "准噶尔区",
+    "塔里木区(拜城)",
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "211-212",
+    "212",
+    "213",
+    "214 228"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "喀拉米兰河群",
+    "托库孜达坂群"
+   ],
+   "codes": [
+    "C2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "喀拉米兰河群",
+   "region": [
+    "昆仑-喀喇昆仑区(昆仑山)",
+    "昆仑-喀喇昆仑区(西昆仑东段)"
+   ],
+   "page": [
+    "152-153",
+    "154 181"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "喀纳斯群",
+    "白哈巴组"
+   ],
+   "codes": [
+    "O3"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "白哈巴组",
+   "region": [
+    "阿尔泰山区"
+   ],
+   "page": [
+    "34 69"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "坎岭组",
+    "萨尔干组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "坎岭组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "73-74",
+    "74"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "坦盖塔尔组",
+    "托格买提组"
+   ],
+   "codes": [
+    "D3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "坦盖塔尔组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "119-120",
+    "120"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "坦盖塔尔组",
+    "野云沟组"
+   ],
+   "codes": [
+    "D3"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "野云沟组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "120 149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔什库拉组",
+    "石人子沟组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔什库拉组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "173"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔什达坂群",
+    "巴什库尔干群"
+   ],
+   "codes": [
+    "Jx"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "塔什达坂群",
+   "region": [
+    "阿尔金山区"
+   ],
+   "page": [
+    "22"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔克尔巴斯陶组",
+    "科克赛尔克山组"
+   ],
+   "codes": [
+    "D1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔克尔巴斯陶组",
+   "region": [
+    "准噶尔-北天山区(三塘湖)",
+    "阿尔泰-东准噶尔区"
+   ],
+   "page": [
+    "114-115",
+    "87 114"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔勒基河组",
+    "新二台组"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔勒基河组",
+   "region": [
+    "天山区(科古琴山北)"
+   ],
+   "page": [
+    "53 70",
+    "70-71"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔勒基河组",
+    "风沟组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "风沟组",
+   "region": [
+    "天山区(科古琴山北)"
+   ],
+   "page": [
+    "70-71",
+    "71"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔哈其组",
+    "棋盘组"
+   ],
+   "codes": [
+    "P"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "棋盘组",
+   "region": [
+    "塔里木区(塔西南)"
+   ],
+   "page": [
+    "151"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔哈其组",
+    "阿孜干组"
+   ],
+   "codes": [
+    "C3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔哈其组",
+   "region": [
+    "塔里木区(塔西南)"
+   ],
+   "page": [
+    "150",
+    "151"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔哈奇组",
+    "棋盘组"
+   ],
+   "codes": [
+    "C3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "棋盘组",
+   "region": [
+    "天山南脉-柯坪-叶城区(叶城)"
+   ],
+   "page": [
+    "178"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔尔尕组",
+    "库孜贡苏组"
+   ],
+   "codes": [
+    "J3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库孜贡苏组",
+   "region": [
+    "塔里木区",
+    "塔里木区(乌恰-阿合提山)"
+   ],
+   "page": [
+    "213-214 229",
+    "214"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔尔尕组",
+    "杨叶组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔尔尕组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "214"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔尔尕组",
+    "齐古组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "齐古组",
+   "region": [
+    "塔里木区(拜城)"
+   ],
+   "page": [
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔尔郎组",
+    "大河沿组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔尔郎组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(吐鲁番地区)"
+   ],
+   "page": [
+    "185-186(表I-11)",
+    "186(表I-11)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔木岗组",
+    "泥盆系"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔木岗组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "141"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔木岗组",
+    "滴水泉组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "微角度不整合"
+   ],
+   "younger": "滴水泉组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "141",
+    "141-142"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "塔西河组",
+    "沙湾组"
+   ],
+   "codes": [
+    "N1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔西河组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "239",
+    "240"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔西河组",
+    "独山子组"
+   ],
+   "codes": [
+    "N2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "独山子组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "240"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔里奇克组",
+    "莎里塔什组"
+   ],
+   "codes": [
+    "T3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "莎里塔什组",
+   "region": [
+    "塔里木区(乌恰等)"
+   ],
+   "page": [
+    "213-214"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "塔里奇克组",
+    "阿合组"
+   ],
+   "codes": [
+    "J1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "阿合组",
+   "region": [
+    "塔里木区(库车-拜城)",
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "198 213",
+    "198-199 203"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "塔里奇克组",
+    "黄山街组"
+   ],
+   "codes": [
+    "T3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "塔里奇克组",
+   "region": [
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "198",
+    "198-199 203"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "大南湖组",
+    "头苏泉组"
+   ],
+   "codes": [
+    "D1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "头苏泉组",
+   "region": [
+    "准噶尔-北天山区(大石头-巴里坤)"
+   ],
+   "page": [
+    "116"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "大步组",
+    "苏巴什组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "大步组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "240"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "太勒古拉组",
+    "恰其海组"
+   ],
+   "codes": [
+    "C2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "太勒古拉组",
+   "region": [
+    "阿尔泰-北准噶尔区"
+   ],
+   "page": [
+    "140"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "头屯河组",
+    "西山窑组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "头屯河组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "210-211",
+    "211"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "头屯河组",
+    "齐古组"
+   ],
+   "codes": [
+    "J3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "齐古组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "211",
+    "211-212"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "奇格布拉克组",
+    "玉尔吐斯组"
+   ],
+   "codes": [
+    "∈1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "玉尔吐斯组",
+   "region": [
+    "塔里木区(柯坪)",
+    "柯坪区"
+   ],
+   "page": [
+    "42-43 58",
+    "57-58"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "奇格布拉克组",
+    "苏盖特布拉克组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "奇格布拉克组",
+   "region": [
+    "柯坪区"
+   ],
+   "page": [
+    "41 43",
+    "42-43 58"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "奇自拉夫组",
+    "布拉克巴什群"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "奇自拉夫组",
+   "region": [
+    "塔里木-昆仑区(铁克力克)"
+   ],
+   "page": [
+    "128-129 148-149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "奇自拉夫组",
+    "库山河组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "整合接触"
+   ],
+   "younger": "库山河组",
+   "region": [
+    "塔里木-昆仑区(铁克力克)",
+    "塔里木区(铁克力克)"
+   ],
+   "page": [
+    "128-129 148-149",
+    "148-149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "奈楞格勒达坂群",
+    "阿克塔什组"
+   ],
+   "codes": [
+    "O3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "阿克塔什组",
+   "region": [
+    "天山区(科古琴山南)"
+   ],
+   "page": [
+    "71"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "姜巴斯套组",
+    "那仁喀拉组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "那仁喀拉组",
+   "region": [
+    "阿尔泰-北准噶尔区"
+   ],
+   "page": [
+    "138",
+    "139"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "安居安组",
+    "帕卡布拉克组"
+   ],
+   "codes": [
+    "N1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "帕卡布拉克组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "243"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "安集海组",
+    "沙湾组"
+   ],
+   "codes": [
+    "E3-N1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "沙湾组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "239"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "安集海组",
+    "紫泥泉子组"
+   ],
+   "codes": [
+    "E2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "安集海组",
+   "region": [
+    "准噶尔区"
+   ],
+   "page": [
+    "239"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "将军庙组",
+    "巴塔玛依内山组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "将军庙组",
+   "region": [
+    "准噶尔-伊犁区(东准噶尔将军庙)"
+   ],
+   "page": [
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "将军庙组",
+    "平地泉组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "平地泉组",
+   "region": [
+    "准噶尔-伊犁区(东准噶尔将军庙)"
+   ],
+   "page": [
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "将军沟组",
+    "果子沟组"
+   ],
+   "codes": [
+    "∈3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "果子沟组",
+   "region": [
+    "天山区(科古琴山)"
+   ],
+   "page": [
+    "52",
+    "53"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "将军沟组",
+    "阿合恰特组"
+   ],
+   "codes": [
+    "∈3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "将军沟组",
+   "region": [
+    "天山区(科古琴山)"
+   ],
+   "page": [
+    "52"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "小提坎里克组",
+    "库尔干组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "库尔干组",
+   "region": [
+    "天山南脉-柯坪-叶城区(天山南脉)"
+   ],
+   "page": [
+    "177"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "小提坎里克组",
+    "康克林组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "小提坎里克组",
+   "region": [
+    "天山南脉-柯坪",
+    "天山南脉-柯坪-叶城区(天山南脉)"
+   ],
+   "page": [
+    "151 176-178",
+    "177"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "小泉达坂组",
+    "平洼沟组"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "小泉达坂组",
+   "region": [
+    "阿尔金山区"
+   ],
+   "page": [
+    "25",
+    "25 75"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "小泉达坂组",
+    "额兰塔格组"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "额兰塔格组",
+   "region": [
+    "阿尔金山区"
+   ],
+   "page": [
+    "25"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "尤尔美那克组",
+    "巧恩布拉克组"
+   ],
+   "codes": [
+    "Z1"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "尤尔美那克组",
+   "region": [
+    "柯坪区"
+   ],
+   "page": [
+    "39-40",
+    "40-41"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "尤尔美那克组",
+    "苏盖特布拉克组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "苏盖特布拉克组",
+   "region": [
+    "柯坪区"
+   ],
+   "page": [
+    "40-41",
+    "41 43"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "尤尔美那克组",
+    "阿克苏群"
+   ],
+   "codes": [
+    "Z1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "尤尔美那克组",
+   "region": [
+    "柯坪区"
+   ],
+   "page": [
+    "22 39"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巧恩布拉克组",
+    "阿克苏群"
+   ],
+   "codes": [
+    "Ch"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "巧恩布拉克组",
+   "region": [
+    "柯坪区"
+   ],
+   "page": [
+    "39-40"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴依喀拉提坎组",
+    "库普库兹满组"
+   ],
+   "codes": [],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "巴依喀拉提坎组",
+   "region": [
+    "天山南脉-柯坪-叶城区(柯坪)"
+   ],
+   "page": [
+    "187 186(表I-11)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴依喀拉提坎组",
+    "开派兹雷克组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "开派兹雷克组",
+   "region": [
+    "天山南脉-柯坪-叶城区(柯坪)"
+   ],
+   "page": [
+    "178 186(表I-11)",
+    "187 186(表I-11)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴依喀拉提坎组",
+    "贝勒克勒克组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "巴依喀拉提坎组",
+   "region": [
+    "天山南脉-柯坪-叶城区(柯坪)"
+   ],
+   "page": [
+    "178",
+    "178 186(表I-11)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴勒迪尔塔格组",
+    "康克林组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "微角度不整合",
+   "contact_all": [
+    "微角度不整合"
+   ],
+   "younger": "巴勒迪尔塔格组",
+   "region": [
+    "天山南脉-柯坪",
+    "天山南脉-柯坪-叶城区(阔克沙勒岭东部)"
+   ],
+   "page": [
+    "151 176-178",
+    "178"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴塔玛依内山组",
+    "弧形梁组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "弧形梁组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "138 142",
+    "142"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴塔玛依内山组",
+    "滴水泉组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "巴塔玛依内山组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "138 142",
+    "141-142"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴工布兰莎群",
+    "红其拉甫组"
+   ],
+   "codes": [
+    "J3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "红其拉甫组",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "207-208"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴西改组",
+    "恰克马克其组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "恰克马克其组",
+   "region": [
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巴西改组",
+    "舒善河组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "巴西改组",
+   "region": [
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "巷古勒塔格组",
+    "突尔沙克塔格组"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "巷古勒塔格组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "56",
+    "56 73"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "布拉克巴什群",
+    "提孜那甫组"
+   ],
+   "codes": [
+    "D3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "提孜那甫组",
+   "region": [
+    "塔里木-昆仑区"
+   ],
+   "page": [
+    "121-122",
+    "97 121"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "布拉克巴什群",
+    "达坂沟群"
+   ],
+   "codes": [
+    "S2-3"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "布拉克巴什群",
+   "region": [
+    "塔里木-昆仑区"
+   ],
+   "page": [
+    "97 121"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "布龙果尔组",
+    "布龙组"
+   ],
+   "codes": [
+    "S1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "布龙组",
+   "region": [
+    "西准噶尔-北天山区",
+    "阿尔泰-准噶尔区"
+   ],
+   "page": [
+    "69 90",
+    "90"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "帕卡布拉克组",
+    "阿图什组"
+   ],
+   "codes": [
+    "N2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "阿图什组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "243",
+    "243 252-253"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "帕尔岗塔格群",
+    "贝义西组"
+   ],
+   "codes": [
+    "Z1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "贝义西组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "38"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "帕尔岗塔格群",
+    "黄山群"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "黄山群",
+   "region": [
+    "北山"
+   ],
+   "page": [
+    "54"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "帕斯群",
+    "恰提尔群"
+   ],
+   "codes": [
+    "C2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "恰提尔群",
+   "region": [
+    "昆仑-喀喇昆仑区(喀喇昆仑)"
+   ],
+   "page": [
+    "153",
+    "155"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "帕斯群",
+    "提孜那甫组"
+   ],
+   "codes": [
+    "D3"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "帕斯群",
+   "region": [
+    "昆仑-喀喇昆仑区(喀喇昆仑)"
+   ],
+   "page": [
+    "153"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "干沙河组",
+    "野云沟组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "野云沟组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "120 149",
+    "149"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "平洼沟组",
+    "额兰塔格组"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "额兰塔格组",
+   "region": [
+    "昆仑-阿尔金山区",
+    "阿尔金山区"
+   ],
+   "page": [
+    "25 75",
+    "76"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库姆格列木群",
+    "恰克马克其组"
+   ],
+   "codes": [
+    "E"
+   ],
+   "contact": "不整合或平行不整合",
+   "contact_all": [
+    "不整合或平行不整合"
+   ],
+   "younger": "库姆格列木群",
+   "region": [
+    "塔里木区库车",
+    "天山南脉-塔里木区"
+   ],
+   "page": [
+    "229",
+    "229 245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库姆格列木群",
+    "苏布依组"
+   ],
+   "codes": [
+    "E3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "苏布依组",
+   "region": [
+    "塔里木区库车"
+   ],
+   "page": [
+    "229 245(表I-15)",
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库尔卡克组",
+    "恰克马克力克组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "微角度不整合"
+   ],
+   "younger": "库尔卡克组",
+   "region": [
+    "昆仑山区"
+   ],
+   "page": [
+    "42",
+    "42-43"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "库尔干组",
+    "比尤勒包谷孜群"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "比尤勒包谷孜群",
+   "region": [
+    "天山南脉-柯坪-叶城区(天山南脉)"
+   ],
+   "page": [
+    "177",
+    "177 198"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库尔良群",
+    "长城系变质岩"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "库尔良群",
+   "region": [
+    "昆仑-喀喇昆仑区(库尔良-苏纳克)"
+   ],
+   "page": [
+    "154"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库山河组",
+    "提孜那甫组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库山河组",
+   "region": [
+    "塔里木-昆仑区"
+   ],
+   "page": [
+    "121-122"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库普库兹满组",
+    "开派兹雷克组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "开派兹雷克组",
+   "region": [
+    "天山南脉-柯坪-叶城区(柯坪)"
+   ],
+   "page": [
+    "187 186(表I-11)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库普库兹满组",
+    "贝勒克勒克组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库普库兹满组",
+   "region": [
+    "天山南脉-柯坪-叶城区(柯坪)"
+   ],
+   "page": [
+    "187 186(表I-11)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库穆塔克组",
+    "苏巴什组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "角度不整合"
+   ],
+   "younger": "苏巴什组",
+   "region": [
+    "北天山-准噶尔区(吐鲁番)"
+   ],
+   "page": [
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "库穆塔克组",
+    "连木沁组"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合"
+   ],
+   "younger": "库穆塔克组",
+   "region": [
+    "北天山-准噶尔区",
+    "北天山-准噶尔区(吐鲁番)"
+   ],
+   "page": [
+    "228-229",
+    "229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库车组",
+    "康村组"
+   ],
+   "codes": [
+    "N2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库车组",
+   "region": [
+    "塔里木区库车"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库车组",
+    "西域组"
+   ],
+   "codes": [
+    "Qp1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "西域组",
+   "region": [
+    "塔里木区库车"
+   ],
+   "page": [
+    "245(表I-15)"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库马苏组",
+    "忙代恰群"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库马苏组",
+   "region": [
+    "阿尔泰区"
+   ],
+   "page": [
+    "114"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "库鲁木迪组",
+    "玛依勒山群"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "库鲁木迪组",
+   "region": [
+    "准噶尔-北天山区(西准噶尔)",
+    "西准噶尔-北天山区"
+   ],
+   "page": [
+    "92",
+    "92 117"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "康克林组",
+    "比京他乌群"
+   ],
+   "codes": [
+    "C3"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "康克林组",
+   "region": [
+    "塔里木区(柯坪)",
+    "天山南脉-柯坪"
+   ],
+   "page": [
+    "150-152",
+    "151 176-178"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "康克林组",
+    "贝勒克勒克组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "贝勒克勒克组",
+   "region": [
+    "天山南脉-柯坪",
+    "天山南脉-柯坪-叶城区(柯坪)"
+   ],
+   "page": [
+    "151 176-178",
+    "178"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "康布铁堡组",
+    "阿勒泰组"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "阿勒泰组",
+   "region": [
+    "阿尔泰区"
+   ],
+   "page": [
+    "113",
+    "113-114"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "康苏组",
+    "杨叶组"
+   ],
+   "codes": [
+    "J2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "杨叶组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "214"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "康苏组",
+    "莎里塔什组"
+   ],
+   "codes": [
+    "J1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "康苏组",
+   "region": [
+    "塔里木区",
+    "塔里木区(乌恰等)"
+   ],
+   "page": [
+    "213-214",
+    "214"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "弧形梁组",
+    "石钱滩组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "石钱滩组",
+   "region": [
+    "南准噶尔区"
+   ],
+   "page": [
+    "142",
+    "142-143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "忙代恰群",
+    "阿勒泰组"
+   ],
+   "codes": [
+    "D2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "忙代恰群",
+   "region": [
+    "阿尔泰区"
+   ],
+   "page": [
+    "113-114",
+    "114"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "恰克马克力克组",
+    "苏库罗克群"
+   ],
+   "codes": [
+    "Z1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "微角度不整合",
+    "角度不整合"
+   ],
+   "younger": "恰克马克力克组",
+   "region": [
+    "昆仑山区",
+    "西昆仑"
+   ],
+   "page": [
+    "28 42",
+    "42"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "恰克马克组",
+    "齐古组"
+   ],
+   "codes": [
+    "J3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "齐古组",
+   "region": [
+    "塔里木区(库车)",
+    "塔里木区(拜城)"
+   ],
+   "page": [
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "恰尔尕也组",
+    "科克萨依组"
+   ],
+   "codes": [
+    "S1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "恰尔尕也组",
+   "region": [
+    "西准噶尔-北天山区",
+    "阿尔泰-准噶尔区"
+   ],
+   "page": [
+    "68 90",
+    "90 92"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "恰提尔群",
+    "空喀山口组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "空喀山口组",
+   "region": [
+    "昆仑-喀喇昆仑区(喀喇昆仑)",
+    "昆仑山-喀喇昆仑区(喀喇昆仑)"
+   ],
+   "page": [
+    "155",
+    "155 182-183"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "扎摩克提组",
+    "特瑞爱肯组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "扎摩克提组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "36",
+    "36 38"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "扎摩克提组",
+    "育肯沟组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "育肯沟组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "36"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "托格买提组",
+    "阿尔腾柯斯组"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "托格买提组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "95 119"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "托让格库都克组",
+    "阿苏山组"
+   ],
+   "codes": [
+    "D1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "托让格库都克组",
+   "region": [
+    "准噶尔-北天山区(东准噶尔北部)"
+   ],
+   "page": [
+    "116"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "新二台组",
+    "果子沟组"
+   ],
+   "codes": [
+    "O1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "新二台组",
+   "region": [
+    "天山区(科古琴山)",
+    "天山区(科古琴山北)"
+   ],
+   "page": [
+    "53",
+    "53 70"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "新疆群",
+    "洪积层"
+   ],
+   "codes": [
+    "Qp3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "洪积层",
+   "region": [
+    "全疆"
+   ],
+   "page": [
+    "259-260"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "新疆群",
+    "湖积层"
+   ],
+   "codes": [
+    "Qp3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "新疆群",
+   "region": [
+    "乌伦古河-淖毛湖等",
+    "全疆"
+   ],
+   "page": [
+    "257",
+    "259-260"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "新疆群",
+    "风积"
+   ],
+   "codes": [
+    "Qp3"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合"
+   ],
+   "younger": "风积",
+   "region": [
+    "全疆"
+   ],
+   "page": [
+    "259-260"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "superseded_q_2026-09-17",
+   "_note": "用户 2026-09-17 裁定：乌苏群（Qp2W）/新疆群（Qp3X）特例做第四系处理，涉及边界按第四系界线（02）标定，本条志书规则停用"
+  },
+  {
+   "pair": [
+    "普斯格组",
+    "杜瓦组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "杜瓦组",
+   "region": [
+    "和田-巴楚区"
+   ],
+   "page": [
+    "179",
+    "180"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "曼格尔组",
+    "芒克鲁组"
+   ],
+   "codes": [
+    "D1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "芒克鲁组",
+   "region": [
+    "准噶尔-北天山区"
+   ],
+   "page": [
+    "115"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "杨吉布拉克群",
+    "爱尔基干群"
+   ],
+   "codes": [
+    "Jx"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "爱尔基干群",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "21"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "柯坪塔格组",
+    "音干组"
+   ],
+   "codes": [
+    "S1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "柯坪塔格组",
+   "region": [
+    "塔里木北缘区",
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "75",
+    "96"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "柳树沟组",
+    "祁家沟组"
+   ],
+   "codes": [
+    "C2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "祁家沟组",
+   "region": [
+    "南准噶尔区",
+    "南准噶尔区(乌鲁木齐-巴里坤)"
+   ],
+   "page": [
+    "142-143",
+    "143"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "桃树园子组",
+    "葡萄沟组"
+   ],
+   "codes": [
+    "N2"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合"
+   ],
+   "younger": "葡萄沟组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "241"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "桃树园子组",
+    "连坎组"
+   ],
+   "codes": [
+    "E3-N1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "桃树园子组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "240-241",
+    "241"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "梧桐沟组",
+    "泉子街组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "梧桐沟组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "175-176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "梧桐沟组",
+    "韭菜园组"
+   ],
+   "codes": [
+    "T1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "整合接触"
+   ],
+   "younger": "韭菜园组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)",
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "175 202",
+    "175-176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "棋盘组",
+    "达里约尔组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "达里约尔组",
+   "region": [
+    "天山南脉-柯坪-叶城区(叶城)"
+   ],
+   "page": [
+    "178",
+    "180"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "水泉组",
+    "汉格尔乔克组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "汉格尔乔克组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "35",
+    "35-36"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "水泉组",
+    "育肯沟组"
+   ],
+   "codes": [
+    "Z2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "水泉组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "35-36",
+    "36"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "汉格尔乔克组",
+    "西山布拉克组"
+   ],
+   "codes": [
+    "∈1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "西山布拉克组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "35",
+    "54-55"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "沙依里克组",
+    "阿瓦塔格群"
+   ],
+   "codes": [
+    "∈2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "阿瓦塔格群",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "58",
+    "58 72"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "河尾滩群",
+    "空喀山口组"
+   ],
+   "codes": [
+    "P1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "河尾滩群",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "183 202(表I-12) 203"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "泉子街组",
+    "红雁池组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "整合接触"
+   ],
+   "younger": "泉子街组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "175-176",
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "泉子街组",
+    "芦草沟组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "泉子街组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "175-176",
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "温泉沟组",
+    "达坂沟群"
+   ],
+   "codes": [
+    "S2-3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "达坂沟群",
+   "region": [
+    "昆仑-阿尔金山区"
+   ],
+   "page": [
+    "97"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "湖积层",
+    "第三系"
+   ],
+   "codes": [],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "湖积层",
+   "region": [
+    "乌伦古河-淖毛湖等"
+   ],
+   "page": [
+    "257"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "湖积层",
+    "西域组"
+   ],
+   "codes": [
+    "Qp1"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "湖积层",
+   "region": [
+    "乌伦古河-淖毛湖等"
+   ],
+   "page": [
+    "257"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "烧房沟组",
+    "韭菜园组"
+   ],
+   "codes": [
+    "T1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "烧房沟组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "175 202",
+    "202-203"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "照壁山组",
+    "贝义西组"
+   ],
+   "codes": [
+    "Z1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "照壁山组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "37-38",
+    "38"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "照壁山组",
+    "阿勒通沟组"
+   ],
+   "codes": [
+    "Z1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "阿勒通沟组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "37",
+    "37-38"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "特瑞爱肯组",
+    "阿勒通沟组"
+   ],
+   "codes": [
+    "Z1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "特瑞爱肯组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "36 38",
+    "37"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "独山子组",
+    "西域组"
+   ],
+   "codes": [
+    "Qp1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "西域组",
+   "region": [
+    "全疆(山麓及山间盆地)",
+    "准噶尔区"
+   ],
+   "page": [
+    "240",
+    "252-253"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "玉尔吐斯组",
+    "肖尔布拉克组"
+   ],
+   "codes": [
+    "∈1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "肖尔布拉克组",
+   "region": [
+    "塔里木区(柯坪)"
+   ],
+   "page": [
+    "57",
+    "57-58"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "环形山组",
+    "额兰塔格组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "环形山组",
+   "region": [
+    "昆仑-阿尔金山区"
+   ],
+   "page": [
+    "76",
+    "77"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "琼哈拉峻山组",
+    "科克苏群"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "琼哈拉峻山组",
+   "region": [
+    "伊犁-北天山"
+   ],
+   "page": [
+    "144"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "琼哈拉峻山组",
+    "阿克沙克组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "平行不整合",
+    "角度不整合"
+   ],
+   "younger": "阿克沙克组",
+   "region": [
+    "伊犁盆地-北天山区"
+   ],
+   "page": [
+    "144",
+    "144-146"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "白垩系",
+    "葡萄沟组"
+   ],
+   "codes": [],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "葡萄沟组",
+   "region": [
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "241"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "白山包组",
+    "红柳沟组"
+   ],
+   "codes": [
+    "S"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "红柳沟组",
+   "region": [
+    "阿尔泰-东准噶尔区"
+   ],
+   "page": [
+    "89"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "白山包组",
+    "荒草坡群"
+   ],
+   "codes": [
+    "S2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合",
+    "角度不整合"
+   ],
+   "younger": "白山包组",
+   "region": [
+    "阿尔泰-东准噶尔区",
+    "阿尔泰-准噶尔区"
+   ],
+   "page": [
+    "68 87 89",
+    "89"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "白鱼山组",
+    "雅满苏组"
+   ],
+   "codes": [
+    "C1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "白鱼山组",
+   "region": [
+    "伊犁盆地-北天山区(阿吾拉勒山)"
+   ],
+   "page": [
+    "147"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "石壁梁组",
+    "石马沟组"
+   ],
+   "codes": [
+    "N"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "石壁梁组",
+   "region": [
+    "昆仑山区",
+    "昆仑山区(若羌刀背梁)"
+   ],
+   "page": [
+    "243"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "磷矿沟组",
+    "霍城组"
+   ],
+   "codes": [
+    "∈1"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "霍城组",
+   "region": [
+    "天山区(科古琴山)"
+   ],
+   "page": [
+    "50"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "科克萨雷溪组",
+    "精河组"
+   ],
+   "codes": [
+    "O3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "精河组",
+   "region": [
+    "天山区(科古琴山北)"
+   ],
+   "page": [
+    "71"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "科克萨雷溪组",
+    "风沟组"
+   ],
+   "codes": [
+    "O2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "科克萨雷溪组",
+   "region": [
+    "天山区(科古琴山北)"
+   ],
+   "page": [
+    "71"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "科克铁克达坂组",
+    "阿尔腾柯斯组"
+   ],
+   "codes": [
+    "S3-D1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "阿尔腾柯斯组",
+   "region": [
+    "天山南脉区"
+   ],
+   "page": [
+    "94-95",
+    "95 119"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "突尔沙克塔格组",
+    "莫合尔山组"
+   ],
+   "codes": [
+    "∈3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "突尔沙克塔格组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "55",
+    "56"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "米什沟组",
+    "阿合布拉克群"
+   ],
+   "codes": [],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "米什沟组",
+   "region": [
+    "西准噶尔-北天山区"
+   ],
+   "page": [
+    "90"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "红其拉甫组",
+    "铁隆滩群"
+   ],
+   "codes": [
+    "K2"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "younger": "铁隆滩群",
+   "region": [
+    "喀喇昆仑区"
+   ],
+   "page": [
+    "207 231-232 237",
+    "207-208"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "红柳峡组",
+    "荒草坡群"
+   ],
+   "codes": [
+    "S2"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "红柳峡组",
+   "region": [
+    "阿尔泰-东准噶尔区",
+    "阿尔泰-准噶尔区"
+   ],
+   "page": [
+    "68 87 89",
+    "87-88"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "红柳河组",
+    "骆驼沟组"
+   ],
+   "codes": [],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "骆驼沟组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(北山-哈密型)"
+   ],
+   "page": [
+    "174"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "红雁池组",
+    "芦草沟组"
+   ],
+   "codes": [
+    "P2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "红雁池组",
+   "region": [
+    "准噶尔盆地-哈密-北山区(准噶尔盆地型)"
+   ],
+   "page": [
+    "176"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "肯萨依组",
+    "阿合恰特组"
+   ],
+   "codes": [
+    "∈2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "阿合恰特组",
+   "region": [
+    "天山区(科古琴山)"
+   ],
+   "page": [
+    "51",
+    "52"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "胜金口组",
+    "连木沁组"
+   ],
+   "codes": [
+    "K1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "连木沁组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "228",
+    "228-229"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "船形山组",
+    "莫合尔山组"
+   ],
+   "codes": [
+    "∈2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "莫合尔山组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "55"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "船形山组",
+    "西大山组"
+   ],
+   "codes": [
+    "∈2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "船形山组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "54-55",
+    "55"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "苏库罗克群",
+    "苏玛兰组"
+   ],
+   "codes": [
+    "Qn"
+   ],
+   "contact": "整合或平行不整合",
+   "contact_all": [
+    "整合或平行不整合",
+    "整合接触"
+   ],
+   "younger": "苏库罗克群",
+   "region": [
+    "西昆仑",
+    "西昆仑山北坡"
+   ],
+   "page": [
+    "27",
+    "28 42"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "落石沟组",
+    "达坂沟群"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "落石沟组",
+   "region": [
+    "喀喇昆仑山",
+    "昆仑-阿尔金山区"
+   ],
+   "page": [
+    "97",
+    "97 133"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "落石沟组",
+    "那克十七江干群"
+   ],
+   "codes": [
+    "D2"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "落石沟组",
+   "region": [
+    "喀喇昆仑山",
+    "昆仑-阿尔金山区"
+   ],
+   "page": [
+    "78 97",
+    "97 133"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "葡萄沟组",
+    "西域组"
+   ],
+   "codes": [
+    "Qp1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "西域组",
+   "region": [
+    "全疆(山麓及山间盆地)",
+    "天山区(吐哈盆地)"
+   ],
+   "page": [
+    "241",
+    "252-253"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "西域组",
+    "阿图什组"
+   ],
+   "codes": [
+    "Qp1"
+   ],
+   "contact": "不整合接触",
+   "contact_all": [
+    "不整合接触",
+    "整合接触"
+   ],
+   "younger": "西域组",
+   "region": [
+    "全疆(山麓及山间盆地)",
+    "塔里木区"
+   ],
+   "page": [
+    "243 252-253",
+    "252-253"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir_multi"
+  },
+  {
+   "pair": [
+    "西大山组",
+    "西山布拉克组"
+   ],
+   "codes": [
+    "∈1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "西大山组",
+   "region": [
+    "库鲁克塔格区"
+   ],
+   "page": [
+    "54-55"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "赛拉加兹塔格群",
+    "阿拉玛斯群"
+   ],
+   "codes": [
+    "Jx"
+   ],
+   "contact": "平行不整合",
+   "contact_all": [
+    "平行不整合"
+   ],
+   "younger": "阿拉玛斯群",
+   "region": [
+    "昆仑区"
+   ],
+   "page": [
+    "14 25-27",
+    "26-27"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "达坂沟群",
+    "那克十七江干群"
+   ],
+   "codes": [
+    "S2-3"
+   ],
+   "contact": "角度不整合",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "younger": "达坂沟群",
+   "region": [
+    "昆仑-阿尔金山区"
+   ],
+   "page": [
+    "78 97",
+    "97"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "郝家沟组",
+    "黄山街组"
+   ],
+   "codes": [
+    "T3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "郝家沟组",
+   "region": [
+    "北天山-准噶尔区"
+   ],
+   "page": [
+    "197 203",
+    "203 209"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "阳霞组",
+    "阿合组"
+   ],
+   "codes": [
+    "J1"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "阳霞组",
+   "region": [
+    "塔里木区(库车-拜城)"
+   ],
+   "page": [
+    "198 213",
+    "213"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "阿尔塔什组",
+    "齐姆根组"
+   ],
+   "codes": [
+    "E1-2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "齐姆根组",
+   "region": [
+    "塔里木区"
+   ],
+   "page": [
+    "230 241",
+    "241"
+   ],
+   "source": "《新疆区域地质志》地层接触关系表",
+   "confidence": "memoir"
+  },
+  {
+   "pair": [
+    "K1kz",
+    "C2ak"
+   ],
+   "pair_names": [
+    "克孜勒苏群",
+    "艾克提克组"
+   ],
+   "contact": "角度不整合",
+   "younger": "K1kz",
+   "source": "用户裁定（04#15，2026-09-08；K1kz=1001 新于 C2ak=602）",
+   "confidence": "verified",
+   "contact_all": [
+    "角度不整合"
+   ],
+   "region": [],
+   "page": []
+  },
+  {
+   "pair": [
+    "N1k",
+    "EK"
+   ],
+   "pair_names": [
+    "克孜洛依组",
+    "古近系"
+   ],
+   "contact": "不整合接触",
+   "younger": "N1k",
+   "source": "24#755 审计（EK|N1k，右=N1k 正确）",
+   "confidence": "verified",
+   "contact_all": [
+    "不整合接触"
+   ],
+   "region": [],
+   "page": []
+  },
+  {
+   "pair": [
+    "克孜勒陶组",
+    "奇自拉夫组"
+   ],
+   "codes": [
+    "D2kz",
+    "D3q"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "奇自拉夫组",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户裁定（色库同步；与志书记载一致互证（128-129 148-149 塔里木-昆仑区(铁克力克)））",
+   "confidence": "adjudicated",
+   "synced_from": "dzt0179_color_library.json",
+   "synced": "2026-09-20"
+  },
+  {
+   "pair": [
+    "库尔良群下段",
+    "库尔良群中段"
+   ],
+   "codes": [
+    "C2K1",
+    "C2K2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库尔良群中段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（库尔良群相邻段整合接触（C2K1 老 → C2K2 新））",
+   "confidence": "adjudicated"
+  },
+  {
+   "pair": [
+    "库尔良群中段",
+    "库尔良群上段"
+   ],
+   "codes": [
+    "C2K2",
+    "C2K3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "库尔良群上段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（库尔良群相邻段整合接触（C2K2 老 → C2K3 新））",
+   "confidence": "adjudicated"
+  },
+  {
+   "pair": [
+    "库尔良群下段",
+    "库尔良群上段"
+   ],
+   "codes": [
+    "C2K1",
+    "C2K3"
+   ],
+   "contact": "断层接触",
+   "contact_all": [
+    "断层接触"
+   ],
+   "younger": "库尔良群上段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（先裁定不整合、当日更正为：不能接触/仅断层接触）",
+   "confidence": "adjudicated",
+   "note": "库尔良群下段与上段不能（地层）接触——中间恒有 C2K2；若直接相贴仅可能为断层接触"
+  },
+  {
+   "pair": [
+    "克里塔克组下段",
+    "克里塔克组上段"
+   ],
+   "codes": [
+    "C1k1",
+    "C1k2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克里塔克组上段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "克里塔克组相邻段整合接触（C1k1 老 → C1k2 新）"
+  },
+  {
+   "pair": [
+    "乌鲁阿特组下段",
+    "乌鲁阿特组中段"
+   ],
+   "codes": [
+    "C1w1",
+    "C1w2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌鲁阿特组中段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "乌鲁阿特组相邻段整合接触（C1w1 老 → C1w2 新）"
+  },
+  {
+   "pair": [
+    "乌鲁阿特组下段",
+    "乌鲁阿特组上段"
+   ],
+   "codes": [
+    "C1w1",
+    "C1w3"
+   ],
+   "contact": "断层接触",
+   "contact_all": [
+    "断层接触"
+   ],
+   "younger": "乌鲁阿特组上段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "乌鲁阿特组C1w1 与 C1w3 不能（地层）接触——中间恒有 C1w2；若直接相贴仅可能为断层接触"
+  },
+  {
+   "pair": [
+    "乌鲁阿特组中段",
+    "乌鲁阿特组上段"
+   ],
+   "codes": [
+    "C1w2",
+    "C1w3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "乌鲁阿特组上段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "乌鲁阿特组相邻段整合接触（C1w2 老 → C1w3 新）"
+  },
+  {
+   "pair": [
+    "皮牙曼组",
+    "皮牙曼组"
+   ],
+   "codes": [
+    "C2p1",
+    "C2p2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "皮牙曼组",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "皮牙曼组相邻段整合接触（C2p1 老 → C2p2 新）"
+  },
+  {
+   "pair": [
+    "克孜勒陶组",
+    "克孜勒陶组"
+   ],
+   "codes": [
+    "D2kz1",
+    "D2kz2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克孜勒陶组",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "克孜勒陶组相邻段整合接触（D2kz1 老 → D2kz2 新）"
+  },
+  {
+   "pair": [
+    "克孜勒陶组",
+    "克孜勒陶组上段"
+   ],
+   "codes": [
+    "D2kz1",
+    "D2kz3"
+   ],
+   "contact": "断层接触",
+   "contact_all": [
+    "断层接触"
+   ],
+   "younger": "克孜勒陶组上段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "克孜勒陶组D2kz1 与 D2kz3 不能（地层）接触——中间恒有 D2kz2；若直接相贴仅可能为断层接触"
+  },
+  {
+   "pair": [
+    "克孜勒陶组",
+    "克孜勒陶组上段"
+   ],
+   "codes": [
+    "D2kz2",
+    "D2kz3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克孜勒陶组上段",
+   "region": [
+    "英吉沙幅（J43C002003）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "克孜勒陶组相邻段整合接触（D2kz2 老 → D2kz3 新）"
+  },
+  {
+   "pair": [
+    "克孜尔塔格组一段",
+    "克孜尔塔格组二段"
+   ],
+   "codes": [
+    "D3kz1",
+    "D3kz2"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克孜尔塔格组二段",
+   "region": [
+    "库尔干幅（J43C001002）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "克孜尔塔格组相邻段整合接触（D3kz1 老 → D3kz2 新）"
+  },
+  {
+   "pair": [
+    "克孜尔塔格组一段",
+    "克孜尔塔格组三段"
+   ],
+   "codes": [
+    "D3kz1",
+    "D3kz3"
+   ],
+   "contact": "断层接触",
+   "contact_all": [
+    "断层接触"
+   ],
+   "younger": "克孜尔塔格组三段",
+   "region": [
+    "库尔干幅（J43C001002）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "克孜尔塔格组D3kz1 与 D3kz3 不能（地层）接触——中间恒有 D3kz2；若直接相贴仅可能为断层接触"
+  },
+  {
+   "pair": [
+    "克孜尔塔格组二段",
+    "克孜尔塔格组三段"
+   ],
+   "codes": [
+    "D3kz2",
+    "D3kz3"
+   ],
+   "contact": "整合接触",
+   "contact_all": [
+    "整合接触"
+   ],
+   "younger": "克孜尔塔格组三段",
+   "region": [
+    "库尔干幅（J43C001002）"
+   ],
+   "page": [],
+   "source": "2026-09-20 用户核验（段间接触通则推广：相邻段整合、跨段仅断层）",
+   "confidence": "adjudicated",
+   "note": "克孜尔塔格组相邻段整合接触（D3kz2 老 → D3kz3 新）"
+  }
+ ],
+ "region_priors": [
+  {
+   "note": "K1 克孜勒苏群覆盖 J3 库孜贡苏组为区域平行不整合（局部整合被覆盖，志书 p213-214）",
+   "pairs_hint": "K1kz | J3*"
+  },
+  {
+   "note": "第四系（各成因类型）覆盖一切基岩，接触面一律为第四系界线",
+   "pairs_hint": "Qh*/Qp* | *"
+  }
+ ],
+ "alias_map": {
+  "克孜勒苏组": "克孜勒苏群",
+  "克孜尔塔格组一段": "克孜尔塔格组",
+  "克孜尔塔格组二段": "克孜尔塔格组",
+  "克孜尔塔格组三段": "克孜尔塔格组",
+  "帕克（卡）布拉克组": "帕卡布拉克组",
+  "帕克布拉克组": "帕卡布拉克组"
+ },
+ "gaps_pending": {
+  "note": "志书未收录、需补录或维持裁定优先的库尔干单元",
+  "units": [
+   "C2ak 艾克提克组",
+   "D1s 萨瓦亚尔顿组",
+   "S3-4t 塔尔特库里组",
+   "K2Y 英吉沙群（志中仅别名括注）"
+  ]
+ },
+ "quaternary_exclude": [
+  "Qp1X"
+ ],
+ "age_order_priors": {
+  "_readme": "地层新老次序知识（同步自 dzt0179_color_library.json stratigraphic_contacts，同步器 _sync_colorlib_to_priors.py，重跑即整节重建）。type: superposed=叠置次序（units/names 按老→新）；simultaneous=同时代；no_contact=不同地层分区、无接触（新老不可比）；conformable=整合接触（下老上新连续叠置）。basis 分级：adjudicated=用户核验（最高优先级知识源，2026-09-20 用户定） > memoir=志书核验 > inferred=推断*待核。用途：不整合界线年轻侧判定、层序一致性审计；接触类型判定期望仍以 unit_pair_rules 为准（superposed 仅载次序，不冒充接触类型）。",
+  "records": [
+   {
+    "units": [
+     "D2kz",
+     "D3q"
+    ],
+    "names": [
+     "克孜勒陶组",
+     "奇自拉夫组"
+    ],
+    "type": "conformable",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "adjudicated",
+    "note": "克孜勒陶组与奇自拉夫组整合接触（D2 老 → D3 新，连续叠置）",
+    "source": "2026-09-20 用户裁定",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "C1T",
+     "C1w"
+    ],
+    "names": [
+     "他龙群",
+     "乌鲁阿特组"
+    ],
+    "type": "simultaneous",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "adjudicated",
+    "note": "他龙群与乌鲁阿特组同时代",
+    "source": "2026-09-19 用户裁定",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "C1T|C1w",
+     "C1k"
+    ],
+    "names": [
+     "他龙群|乌鲁阿特组",
+     "克里塔克组"
+    ],
+    "type": "no_contact",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "adjudicated",
+    "note": "他龙群/乌鲁阿特组 与 克里塔克组分属不同地层分区、无接触关系",
+    "source": "2026-09-19 用户裁定",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "C2K",
+     "C2p"
+    ],
+    "names": [
+     "库尔良群",
+     "皮牙曼组"
+    ],
+    "type": "no_contact",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "adjudicated",
+    "note": "库尔良群 与 皮牙曼组分属不同地层分区、无接触关系",
+    "source": "2026-09-19 用户裁定",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "C2ak",
+     "C2kk"
+    ],
+    "names": [
+     "艾克提克组",
+     "康克林组"
+    ],
+    "type": "superposed",
+    "scope": "库尔干幅（J43C001002）",
+    "basis": "adjudicated",
+    "note": "阿孜干组（老）→ 康克林组（新）",
+    "source": "2026-09-19 用户裁定",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "D2t",
+     "D2kz"
+    ],
+    "names": [
+     "托格买提组",
+     "克孜勒陶组"
+    ],
+    "type": "superposed",
+    "scope": "库尔干幅（J43C001002）",
+    "basis": "adjudicated",
+    "note": "托格买提组（老）→ 克孜勒陶组（新）",
+    "source": "2026-09-19 用户裁定",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "D3kz",
+     "D3q"
+    ],
+    "names": [
+     "克孜尔塔格组一",
+     "奇自拉夫组"
+    ],
+    "type": "no_contact",
+    "scope": "库尔干幅（J43C001002）",
+    "basis": "adjudicated",
+    "note": "克孜尔塔格组与奇自拉夫组分属不同地层分区、无接触关系（新老不可比）",
+    "source": "2026-09-24 用户裁定",
+    "synced_from": "",
+    "synced": "2026-09-24"
+   },
+   {
+    "units": [
+     "K2k",
+     "K2w",
+     "K2y"
+    ],
+    "names": [
+     "库克拜组",
+     "乌依塔克组",
+     "依格孜牙组"
+    ],
+    "type": "superposed",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "memoir",
+    "note": "库克拜组→乌依塔克组→依格孜牙组（老→新）",
+    "source": "《新疆区域地质志》p230「英吉沙群由下到上划分为库克拜组、乌依塔克组、依格孜牙组和吐依洛克组」",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "K1j",
+     "K1w"
+    ],
+    "names": [
+     "江额结尔组",
+     "乌鲁克恰特组"
+    ],
+    "type": "superposed",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "adjudicated",
+    "note": "江额结尔组（老）→ 乌鲁克恰特组（新）；志书 p230 白垩系下统整群未细分（memoir 无据），次序以用户列举（与其余四群老→新列举惯例一致）为准",
+    "source": "2026-09-20 用户给定（2026-09-20 再确认）",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "E2k",
+     "E2w"
+    ],
+    "names": [
+     "卡拉塔尔组",
+     "乌拉根组"
+    ],
+    "type": "superposed",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "memoir",
+    "note": "卡拉塔尔组（老）→ 乌拉根组（新）",
+    "source": "《新疆区域地质志》p241「下-中始新统卡拉塔尔组、中-上始新统乌拉根组」",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "N1k",
+     "N1a",
+     "N1p"
+    ],
+    "names": [
+     "克孜洛依组",
+     "安居安组",
+     "帕克（卡）布拉克组"
+    ],
+    "type": "superposed",
+    "scope": "英吉沙幅（J43C002003）/库尔干幅（J43C001002）",
+    "basis": "memoir",
+    "note": "克孜洛依组→安居安组→帕克（卡）布拉克组（老→新）；克孜洛依组底以石膏层平行不整合覆于下第三系",
+    "source": "《新疆区域地质志》p243（原 2026-09-19 推定 a→k→p 有误，2026-09-20 依志书更正）",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "J1sh",
+     "J1k"
+    ],
+    "names": [
+     "莎里塔什组",
+     "康苏组"
+    ],
+    "type": "superposed",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "memoir",
+    "note": "莎里塔什组（老）→ 康苏组（新）",
+    "source": "《新疆区域地质志》p215「康苏组…与上覆中侏罗统杨叶组及下伏下侏罗统莎里塔什组均为整合接触」",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "J2y",
+     "J2t"
+    ],
+    "names": [
+     "杨叶组",
+     "塔尔尕组"
+    ],
+    "type": "superposed",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "memoir",
+    "note": "杨叶组（老）→ 塔尔尕组（新）",
+    "source": "《新疆区域地质志》p215「杨叶组…与上覆中侏罗统塔尔尕组整合接触」",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "P3d",
+     "P3k"
+    ],
+    "names": [
+     "达里约尔组",
+     "克斯库克组"
+    ],
+    "type": "superposed",
+    "scope": "英吉沙幅（J43C002003）",
+    "basis": "adjudicated",
+    "note": "达里约尔组（老）→ 克斯库克组（新）；志书 p180 载达里约尔组整合覆于下二叠统棋盘组之上（佐证）",
+    "source": "2026-09-19 用户裁定",
+    "synced_from": "dzt0179_color_library.json",
+    "synced": "2026-09-20"
+   },
+   {
+    "units": [
+     "Pt1",
+     "Ht"
+    ],
+    "names": [
+     "古元古代",
+     "滹沱纪"
+    ],
+    "type": "simultaneous",
+    "scope": "区域通用（新疆）",
+    "basis": "adjudicated",
+    "note": "滹沱纪 Ht 与古元古代 Pt1 同时代（埃连卡特岩群 HtA 等）",
+    "source": "2026-09-29 用户裁定"
+   }
+  ]
+ },
+ "group_composition": {
+  "_readme": "岩石地层群↔组隶属框架（本工程两幅图幅）：members 按由老到新排列；order_basis 标注次序来源（adjudicated=用户核验（最高） > memoir=志书核验 > inferred=推断*待核）。",
+  "groups": [
+   {
+    "group": "克孜勒苏群",
+    "code": "K1",
+    "scope": "英吉沙幅/库尔干幅",
+    "members": [
+     {
+      "code": "K1j",
+      "name": "江额结尔组"
+     },
+     {
+      "code": "K1w",
+      "name": "乌鲁克恰特组"
+     }
+    ],
+    "order_basis": "adjudicated",
+    "note": "成员构成与 j→w 次序 2026-09-20 用户给定（列举顺序老→新，与其余四群惯例一致）；志书 p230 整群未细分，memoir 无据"
+   },
+   {
+    "group": "叶尔羌群",
+    "code": "J",
+    "scope": "英吉沙幅/库尔干幅",
+    "members": [
+     {
+      "code": "J1sh",
+      "name": "莎里塔什组"
+     },
+     {
+      "code": "J1k",
+      "name": "康苏组"
+     },
+     {
+      "code": "J2y",
+      "name": "杨叶组"
+     },
+     {
+      "code": "J2t",
+      "name": "塔尔尕组"
+     },
+     {
+      "code": "J3kz",
+      "name": "库孜贡苏组"
+     }
+    ],
+    "order_basis": "memoir",
+    "note": "构成 2026-09-20 用户给定；次序：《新疆区域地质志》p215「康苏组…与上覆中侏罗统杨叶组及下伏下侏罗统莎里塔什组均为整合接触」「杨叶组…与上覆中侏罗统塔尔尕组整合接触」「塔尔尕组…与上覆上侏罗统库孜贡苏组整合接触」"
+   },
+   {
+    "group": "英吉沙群",
+    "code": "K2",
+    "scope": "英吉沙幅/库尔干幅",
+    "members": [
+     {
+      "code": "K2k",
+      "name": "库克拜组"
+     },
+     {
+      "code": "K2w",
+      "name": "乌依塔克组"
+     },
+     {
+      "code": "K2y",
+      "name": "依格孜牙组"
+     }
+    ],
+    "order_basis": "memoir",
+    "note": "《新疆区域地质志》p230「英吉沙群由下到上划分为库克拜组、乌依塔克组、依格孜牙组和吐依洛克组」；构成 2026-09-20 用户给定"
+   },
+   {
+    "group": "喀什群",
+    "code": "E",
+    "scope": "库尔干幅（EK）",
+    "members": [
+     {
+      "code": "E1a",
+      "name": "阿尔塔什组"
+     },
+     {
+      "code": "E1-2q",
+      "name": "齐姆根组"
+     },
+     {
+      "code": "E2k",
+      "name": "卡拉塔尔组"
+     },
+     {
+      "code": "E2w",
+      "name": "乌拉根组"
+     },
+     {
+      "code": "E2-3b",
+      "name": "巴什布拉克组"
+     }
+    ],
+    "order_basis": "memoir",
+    "note": "《新疆区域地质志》p241「统为喀什群，包括古新统阿尔塔什组、古-始新统齐木根组、下-中始新统卡拉塔尔组、中-上始新统乌拉根组、始新-渐新统巴什布拉克组」；构成 2026-09-20 用户给定"
+   },
+   {
+    "group": "乌恰群",
+    "code": "N1",
+    "scope": "英吉沙幅/库尔干幅",
+    "members": [
+     {
+      "code": "N1k",
+      "name": "克孜洛依组"
+     },
+     {
+      "code": "N1a",
+      "name": "安居安组"
+     },
+     {
+      "code": "N1p",
+      "name": "帕克（卡）布拉克组"
+     }
+    ],
+    "order_basis": "memoir",
+    "note": "《新疆区域地质志》p243 中新统 1.克孜洛依组 2.安居安组 3.帕卡布拉克组；构成 2026-09-20 用户给定"
+   }
+  ],
+  "_synced_from": "dzt0179_color_library.json",
+  "_synced": "2026-09-20"
+ }
+}

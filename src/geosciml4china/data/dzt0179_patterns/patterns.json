@@ -1,0 +1,837 @@
+{
+ "_meta": {
+  "title": "DZ/T 0179 SVG 花纹库",
+  "created": "2026-09-18",
+  "source": "表15 用户逐条给定（authoritative）；表5/表24 按转录参数机生（draft，待人工校核）",
+  "scale": "draft 瓦片按 4 px/mm 换算标准参数",
+  "id_scheme": "注册标识 = {family}.{code}；family 见 families 表",
+  "usage": "色库各节以 pattern_ref = {\"family\": ..., \"code\": ..., \"color\": 覆盖?} 引用本注册表；瓦片 SVG 透明底（t15 为带底色图例块），可直接作 <pattern> 平铺"
+ },
+ "families": {
+  "t24_net": {
+   "title": "表24 网纹",
+   "patterns": {
+    "strata_diag": {
+     "svg": "t24_strata_diag.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "地层专用网纹 45° 平行线；参数 1.5×1.5—2×2 / 2×2—2.5×2.5 mm"
+    },
+    "strata_diag_r": {
+     "svg": "t24_strata_diag_r.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "地层专用网纹 反角平行线"
+    },
+    "strata_vert": {
+     "svg": "t24_strata_vert.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "地层专用网纹 近直立平行线"
+    },
+    "strata_dots": {
+     "svg": "t24_strata_dots.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "地层专用网纹 稀疏点阵"
+    },
+    "strata_dots2": {
+     "svg": "t24_strata_dots2.svg",
+     "tile_size": [
+      30,
+      30
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "地层专用网纹 细密点格"
+    },
+    "strata_dash": {
+     "svg": "t24_strata_dash.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "地层专用网纹 水平虚线"
+    },
+    "cross_zigzag": {
+     "svg": "t24_cross_zigzag.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "跨时代地层单位专用网纹 之字线（4 个之 1，draft）"
+    },
+    "intr_xhatch": {
+     "svg": "t24_intr_xhatch.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "侵入岩专用网纹 交叉网格（6 个之 1，draft）"
+    },
+    "subvolc": {
+     "svg": "t24_subvolc.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "潜火山岩专用网纹 交叉网格；注：表18 示例网纹色 K50 [128,128,128]，表24 为 K70——两说并存"
+    },
+    "metaplut": {
+     "svg": "t24_metaplut.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "变质深成岩专用网纹 交叉网格，C100 青；3×3—4×4 mm"
+    },
+    "migmatite": {
+     "svg": "t24_migmatite.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "混合岩专用网纹 波浪线，C100 青；2×2—2.5×2.5 mm"
+    },
+    "hp_uhp": {
+     "svg": "t24_hp_uhp.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      0,
+      255,
+      0
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "高压-超高压变质岩专用网纹 交叉网格，表24 绿 [0,255,0]；注：表21 示例为 [128,135,255]——两说并存"
+    },
+    "melange": {
+     "svg": "t24_melange.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      143,
+      0,
+      191
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "混杂岩专用网纹 平行线，紫 [143,0,191]（2 个之 1，draft）"
+    }
+   }
+  },
+  "t05_quat": {
+   "title": "表5 第四系成因类型花纹",
+   "patterns": {
+    "dl": {
+     "svg": "t05_dl.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      217,
+      163,
+      139
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "坡积：▽ 小三角点阵；[217,163,139]；4×4—3.5×3.5"
+    },
+    "el": {
+     "svg": "t05_el.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "残积：点阵（母元待校核）"
+    },
+    "mr": {
+     "svg": "t05_mr.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      0,
+      166,
+      255
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "海积：横虚线；C100 M35 [0,166,255]；2.5×2.5—2×2"
+    },
+    "b": {
+     "svg": "t05_b.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "生物堆积：空心圆点阵（待校核）"
+    },
+    "cl": {
+     "svg": "t05_cl.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "崩塌堆积：三角（母元待校核）"
+    },
+    "df": {
+     "svg": "t05_df.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "泥石流堆积：点阵（待校核）"
+    },
+    "s": {
+     "svg": "t05_s.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "人工堆积：符号（待校核）"
+    },
+    "c": {
+     "svg": "t05_c.svg",
+     "tile_size": [
+      32,
+      32
+     ],
+     "color": [
+      77,
+      77,
+      77
+     ],
+     "background": "transparent",
+     "status": "draft",
+     "note": "洞穴堆积：倒三角（待校核）"
+    },
+    "al": {
+     "svg": "t05_al_tile.svg",
+     "tile_size": [
+      16.88,
+      16.88
+     ],
+     "color": [
+      102,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "冲积花纹：双椭圆（右上长轴45°、左下长轴135°，rx3 ry1.5 偏移±5.25、图形间距 14.9）22.5×22.5（定稿 2026-09-18；2026-09-19 两轮 ×0.75 等比缩小（累计 ×0.56，元素+间距+线宽同率）；表5 al；透明底叠加）"
+    },
+    "pl": {
+     "svg": "t05_pl_tile.svg",
+     "tile_size": [
+      16.88,
+      16.88
+     ],
+     "color": [
+      102,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "洪积花纹：冲积基础上水平加密一倍、添加基本单元的每个椭圆以圆点替代（原母元双椭圆 (14.25,6)/(3.75,16.5)；添加母元双圆点 (25.5,6) 环绕绘于 (3,6)/(15,16.5)，r1.1；两亚层各成 11.25 周期交替；定稿 2026-09-18；2026-09-19 两轮 ×0.75 等比缩小（累计 ×0.56）；表5 pl；透明底叠加）"
+    },
+    "alp": {
+     "svg": "t05_alp_tile.svg",
+     "tile_size": [
+      22.2,
+      22.2
+     ],
+     "color": [
+      92,
+      242,
+      242
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "冲洪积花纹：用户给定 SVG 定稿（元素间距 14.8、行距 7.4，跨瓦片连续：x=3.2/18.1 与 x=10.7/25.5（偶数行对齐上行元素中点），y=3.7/11.1/18.5/26.0）——6 点 r1.35 + 2 环 rx3.4 ry1.65 线宽 0.9（上环长轴 45°、下环长轴 135°；定稿 2026-09-18；2026-09-19 两轮 ×0.75 等比缩小（累计 ×0.56）），色 #5cf2f2，背景可选；表5 alp）"
+    },
+    "fl": {
+     "svg": "t05_fl_tile.svg",
+     "tile_size": [
+      139.5,
+      161.72
+     ],
+     "color": [
+      102,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "沼积花纹：单竖线建模 + 竖线间距缩减（142→100）+ 组间水平间距四次轻微扩大（瓦片 978→992、跨缝间距 78→92；x=18+100k 按序号重排、线高不变；线宽 2.81），21 条；2026-09-19 两轮 ×0.75 两轮 ×0.5（累计 ×0.14）；表5 标准色 C60 青；白底可选）"
+    },
+    "lfl": {
+     "svg": "t05_lfl_tile.svg",
+     "tile_size": [
+      104.62,
+      121.29
+     ],
+     "color": [
+      102,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "湖沼积花纹：沼积 fl 等比例缩小 25%（×0.75；间距 10.55、线宽 2.11、结构同 fl；2026-09-19 三轮 ×0.75 两轮 ×0.5（累计 ×0.11）；表5 lfl；白底可选）"
+    },
+    "gfl": {
+     "svg": "t05_gfl_tile.svg",
+     "tile_size": [
+      33.75,
+      22.5
+     ],
+     "color": [
+      102,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "冰水堆积花纹：棋盘交替——第一行 圆点/135°椭圆/圆点/45°椭圆、第二行 45°椭圆/竖线/135°椭圆/竖线（同冰碛第二行）；元素间距 11.25、行距 15、点 r1.5、竖线长 9、椭圆 rx3 ry1.5、线宽 1.1；2026-09-19 两轮 ×0.75 等比缩小（累计 ×0.56）；表5 冰水堆积标准色 C60 青；透明底叠加）"
+    },
+    "gl": {
+     "svg": "t05_gl_tile.svg",
+     "tile_size": [
+      33.75,
+      22.5
+     ],
+     "color": [
+      102,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "冰碛花纹：棋盘交替——第一行 竖线/45°椭圆/竖线/135°椭圆、第二行 45°椭圆/竖线/135°椭圆/竖线（类型错位一格）；元素间距 11.25、行距 15、竖线长 9、椭圆 rx3 ry1.5、线宽 1.1；2026-09-19 两轮 ×0.75 等比缩小（累计 ×0.56）；表5 冰碛标准色 C60 青；透明底叠加）"
+    },
+    "los": {
+     "svg": "t05_los_tile.svg",
+     "tile_size": [
+      48,
+      20
+     ],
+     "color": [
+      217,
+      163,
+      139
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "黄土花纹：基本单元 7 条等间距竖线（x=3+6k、线距 d=6、线长 20、线宽 1.5）；竖直间距为 0（行距=线长、连续竖列）；基本单元水平间距为线距 2 倍（跨缝线距 12=2d）；表5 黄土标准色 M25 Y36 K15 棕；透明底叠加）"
+    },
+    "vl": {
+     "svg": "t05_vl_tile.svg",
+     "tile_size": [
+      45,
+      45
+     ],
+     "color": [
+      255,
+      0,
+      0
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "火山堆积花纹：×（+ 旋转 45°）与 正三角形 △ 棋盘交替（参照 ηγJ1 模式、= 替换为 △，元素尺寸与间距较母版缩减 40%：45×45；半臂 6.75、△外接半径 6.75、线宽 0.9；表5 vl 标准色红；透明底叠加；2026-09-20 用户指定模式生成）"
+    },
+    "ch": {
+     "svg": "t05_ch_tile.svg",
+     "tile_size": [
+      18,
+      18
+     ],
+     "color": [
+      217,
+      163,
+      139
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "化学堆积花纹：双竖线、第二条下移 2.25（参照 δK2 模式元素替换为平行竖线；A(16.88,6.75)/B(5.63,16.5) 交错 50% 列距，线长 6.75 不变、平行竖线间距 1.8、基本单元间距 18、线宽 0.83；表5 ch 标准色 M25 Y36 K15 棕；透明底叠加；2026-09-20 用户指定模式生成）"
+    },
+    "eol": {
+     "svg": "t05_eol_tile.svg",
+     "tile_size": [
+      11.82,
+      15.75
+     ],
+     "color": [
+      217,
+      163,
+      139
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "风积花纹：参照 δK2 闪长岩模式、元素为圆点（r=3 实心，尺寸缩小）；A(16.5,7.5)/B(5.25,22.5) 交错 50% 列距，列距 11.82 行距 7.88、点 r1.18（2026-09-19 两轮 ×0.75 再 ×0.7，累计 ×0.39）；表5 风积标准色 M25 Y36 K15 棕；透明底叠加）"
+    },
+    "l": {
+     "svg": "t05_l_tile.svg",
+     "tile_size": [
+      11.25,
+      15.75
+     ],
+     "color": [
+      102,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "湖积花纹：仿照 δK2 闪长岩模式、基本元素为竖线；竖向间距为 0、行距 = 线长 10.5；基本单元竖向减半（每瓦片每列 1 段：x=11.25 y0–10.5 / x=3.75 y10.5–21，交错 50% 列距、连续性跨瓦片保持）；水平列距 11.25、线宽 0.83；2026-09-19 两轮 ×0.75 等比缩小（累计 ×0.56）；表5 l；透明底叠加）"
+    }
+   }
+  },
+  "t15_intrusive": {
+   "title": "表15 侵入岩填充花纹",
+   "patterns": {
+    "etagJ1": {
+     "svg": "t15_eta_gamma_J1_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "二长花岗岩花纹：+ 与双斜线 = 棋盘交替（用户给定 2026-09-18）"
+    },
+    "gdT2": {
+     "svg": "t15_gamma_delta_T2_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "花岗闪长岩花纹：+ 与 丄 棋盘交替（用户给定）"
+    },
+    "dK2": {
+     "svg": "t15_delta_K2_tile.svg",
+     "tile_size": [
+      50,
+      64
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "闪长岩花纹：丄 交错 50% 列距（用户给定优化版；母元横 20、上竖 10=2:1；列距 50、行距 32 加密；线宽 2 参照 ηγJ1）"
+    },
+    "nD3": {
+     "svg": "t15_nu_D3_tile.svg",
+     "tile_size": [
+      65,
+      82
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "辉长岩花纹：X 交错 50% 列距（用户给定定稿）"
+    },
+    "sS": {
+     "svg": "t15_sigma_S.svg",
+     "tile_size": [
+      65,
+      82
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "橄榄岩花纹：倒V 交错 50% 列距（用户给定+修改：夹角加大 dx11 dy10≈95°、线宽 2 参照 ηγJ1）"
+    },
+    "ksoC2": {
+     "svg": "t15_kappa_xi_o_C2_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      0,
+      0
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "石英碱长岩花纹：K（Arial 字体 28pt）与 品字形三点 棋盘交替（用户指定模式：参照 γδT2，+→K、丄→品点；红花纹）"
+    },
+    "cO1": {
+     "svg": "t15_chi_O1_tile.svg",
+     "tile_size": [
+      50,
+      64
+     ],
+     "color": [
+      255,
+      0,
+      0
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "煌斑岩花纹：L 交错 50% 列距（用户指定模式：参照 νD3，X→L、双臂等长 18 加大、竖细 2 横粗 5；列距 50、行距 32 加密；红花纹）"
+    },
+    "kcK1": {
+     "svg": "t15_kappa_c_K1_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      0,
+      0
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "碳酸岩花纹：C（Arial 字体 28pt）2×2 布点（用户指定模式：参照 ηγJ1，母元全部替换为 C；红花纹；表15 八条齐全）"
+    }
+   }
+  },
+  "custom": {
+   "title": "自定义花纹（非 DZ/T 0179 条目）",
+   "patterns": {
+    "gamma": {
+     "svg": "custom_gamma_tile.svg",
+     "tile_size": [
+      50,
+      64
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "花岗岩花纹：+ 交错 50% 列距（参照 δK2 闪长岩模式；线宽 2 参照 ηγJ1；自定义非标准条目，底色随图幅配色 R255 G0 B102）"
+    },
+    "gammaPi": {
+     "svg": "custom_gamma_pi_tile.svg",
+     "tile_size": [
+      50,
+      64
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "花岗斑岩花纹：+ 交错 50% 列距、横线加粗 5（参照 custom.gamma；同构库尔干 cross_bold_h；底色 γπ 族 R255 G102 B26）"
+    },
+    "xiGamma": {
+     "svg": "custom_xi_gamma_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "正长花岗岩花纹：+ 与 K（Arial 28pt）棋盘交替（参照 ηγJ1，=→K；自定义非标准条目，底色 ξγ 族现配色 R255 G77 B77）"
+    },
+    "deltaO": {
+     "svg": "custom_delta_o_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "石英闪长岩花纹：品字形三点（整体上移 3）与 丄 棋盘交替（参照 γδT2，+→品点；同构库尔干 dots3_up_tack；底色 δο 族 R190 G90 B170）"
+    },
+    "gammaDeltaO": {
+     "svg": "custom_gamma_delta_o_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "英云闪长岩花纹：+ 与 N（Arial 28pt）棋盘交替（参照 ηγJ1，=→N；自定义非标准条目，底色 γδο 族现配色 R204 G102 B204）"
+    },
+    "gammaO": {
+     "svg": "custom_gamma_o_tile.svg",
+     "tile_size": [
+      100,
+      100
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "英云闪长岩花纹：N（左竖+顶左→底右对角+右竖）与 丄 棋盘交替（原程序化 n_up_tack 转录 2026-09-19 用户定；臂长 10、线宽 2 参照 ηγJ1；自定义非标准条目，底色 γο 族现配色 R242 G85 B133；2026-09-26 用户裁定 γο=英云闪长岩，旧称斜长花岗岩作废）"
+    },
+    "omicronPhi": {
+     "svg": "custom_omicron_phi_tile.svg",
+     "tile_size": [
+      50,
+      50
+     ],
+     "color": [
+      255,
+      255,
+      255
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "角闪石岩花纹：--<（双短横+左尖角）均布（原程序化 dashdash_lt 转录 2026-09-19 用户定；列距行距 50、线宽 2 参照 ηγJ1；自定义非标准条目，底色 οφ 族现配色 R153 G102 B255）"
+    }
+   }
+  },
+  "t16_volcanic": {
+   "title": "表16 新生代以前火山岩花纹",
+   "patterns": {
+    "basalt": {
+     "svg": "t16_basalt_tile.svg",
+     "tile_size": [
+      32,
+      44
+     ],
+     "color": [
+      128,
+      128,
+      128
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "玄武岩花纹：倒L 交错 50% 列距（参照 δK2 模式；列距 32、行距 22 再加密（保臂长 10 的几何下限）；表16 规则灰纹 K50 on 年代地层色，示例底色 K1 统 R140 G255 B51）"
+    },
+    "trachyandesite": {
+     "svg": "t16_trachyandesite_tile.svg",
+     "tile_size": [
+      50,
+      64
+     ],
+     "color": [
+      128,
+      128,
+      128
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "粗安岩花纹：丅+平行横线（平行线在主横线上方间距 4，竖线仅与主横线相交、下垂 8 再缩短）交错 50% 列距（参照 δK2 模式；表16 规则灰纹 K50 on 年代地层色，示例底色 J2-3 统 R153 G255 B255）"
+    },
+    "andesite": {
+     "svg": "t16_andesite_tile.svg",
+     "tile_size": [
+      65,
+      82
+     ],
+     "color": [
+      128,
+      128,
+      128
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "安山岩花纹：V（σS 倒V 倒置，宽角 dx11 dy10）交错 50% 列距（参照 σS 橄榄岩模式；表16 规则灰纹 K50 on 年代地层色，示例底色 T2 统 R242 G179 B255）"
+    },
+    "rhyolite": {
+     "svg": "t16_rhyolite_tile.svg",
+     "tile_size": [
+      50,
+      64
+     ],
+     "color": [
+      128,
+      128,
+      128
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "流纹岩花纹：十字中心留小正方形缺口、旋转 45°（四斜臂 r4→r12 围中空菱形）交错 50% 列距（参照 custom.gamma 模式；表16 规则灰纹 K50 on 年代地层色，示例底色 P2 统 R247 G210 B49）"
+    }
+   }
+  },
+  "t17_volcanic_cz": {
+   "title": "表17 新生代火山岩花纹",
+   "patterns": {
+    "basalt": {
+     "svg": "t17_basalt_tile.svg",
+     "tile_size": [
+      32,
+      44
+     ],
+     "color": [
+      0,
+      179,
+      0
+     ],
+     "background": "swatch（带底色图例块）",
+     "status": "authoritative",
+     "note": "新生代玄武岩花纹：倒L 交错 50% 列距（依用户指令按玄武岩花纹生成；表17 花纹色深绿 [0,179,0]，区别于表16 灰；示例底色 N2f R255 G242 B166）"
+    }
+   }
+  }
+ }
+}

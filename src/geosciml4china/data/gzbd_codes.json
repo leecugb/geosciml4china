@@ -1,0 +1,95 @@
+{
+ "title": "LDZOFBA002.WL GZBD 代码含义表（用户核实定稿）",
+ "date": "2026-09-02",
+ "source_file": "LDZOFBA002.WL",
+ "total_features": 2222,
+ "codes": {
+  "01": {
+   "meaning": "实测地质界线",
+   "count": 165,
+   "render_group": "strata_boundary",
+   "evidence": "164/165 在地层单元边界上；44 条不邻接第四系",
+   "confidence": "verified"
+  },
+  "02": {
+   "meaning": "第四系松散沉积物界线",
+   "count": 986,
+   "render_group": "quaternary_boundary",
+   "evidence": "986/986 两侧均邻接第四系单元",
+   "confidence": "verified",
+   "geosciml_contacttype": "depositional_contact",
+   "verified_geosciml": "2026-09-26"
+  },
+  "04": {
+   "meaning": "角度不整合界线",
+   "count": 33,
+   "render_group": "unconformity_angular",
+   "evidence": "两侧组合均为大时代间断（ChA|J1sh、C2ak|K1kz 等）",
+   "confidence": "consistent"
+  },
+  "10": {
+   "meaning": "断层",
+   "count": 593,
+   "render_group": "fault",
+   "evidence": "593/593 与 LDZOFBA003 实测断层重合",
+   "confidence": "verified",
+   "note": "与 LDZOFBA003.WL 几何重复，渲染用 LDZOFBA003（含 GZEEB/GZECE 属性）"
+  },
+  "11": {
+   "meaning": "侵入接触界线",
+   "count": 79,
+   "render_group": "intrusive_contact",
+   "evidence": "75/79 与侵入岩面边界重合；两侧为地层|岩脉",
+   "confidence": "verified"
+  },
+  "16": {
+   "meaning": "推测地质界线",
+   "count": 1,
+   "render_group": "inferred_boundary",
+   "evidence": "仅 1 条（δοP|ηγT₂ 之间），样本少",
+   "confidence": "user_confirmed"
+  },
+  "24": {
+   "meaning": "平行不整合界线",
+   "count": 50,
+   "render_group": "unconformity_parallel",
+   "evidence": "两侧组合以 EK|N1k 假整合面为主",
+   "confidence": "consistent",
+   "geosciml_contacttype": "disconformable_contact",
+   "verified_geosciml": "2026-09-26"
+  },
+  "43": {
+   "meaning": "岩性过渡渐变界线",
+   "count": 2,
+   "render_group": "gradational_boundary",
+   "evidence": "仅 2 条，位于 ηγT₂ 花岗岩边缘（两侧同单元：时代 T2 同、岩性 ηγ 同）",
+   "confidence": "user_confirmed",
+   "constraint_2026_09_24": "用户核定：岩性过渡渐变是岩浆岩间的一种接触界线，两侧岩浆岩时代、岩性要求一致——判别约束（两侧均为岩浆岩层 + 希腊岩性码一致 + 时代码一致）已嵌入 _audit_gzbd_pipeline.py/_audit_gzbd_yingjisha.py 标定 B 段，违反者登记「分歧未裁定」不改码。库尔干 2/2 通过；英吉沙 66/69 通过、3 段违反待裁定（idx189/202 双侧 T3h2 沉积岩——疑编图错误；idx2286 ηδοP1│γδP1 岩性不同——疑应为 60 脉动接触）",
+   "geosciml_contacttype": "igneous_phase_contact",
+   "verified_geosciml": "2026-09-26"
+  },
+  "60": {
+   "meaning": "脉动接触界线",
+   "count": 2,
+   "render_group": "pulsating_contact",
+   "evidence": "仅 2 条，γοC₂│δοC₂ 两侵入体间（时代 C2 同、岩性异）",
+   "confidence": "user_confirmed",
+   "constraint_2026_09_24": "用户核定：脉动接触是岩浆岩间的一种接触界线，两侧岩浆岩要求时代一致（岩性不要求一致——不同岩性侵入体同代脉动注入）——判别约束（两侧均岩浆岩层 + 时代码一致）已嵌入两幅标定 B 段，违反者登记「分歧未裁定」不改码。库尔干 2/2 通过；英吉沙 22/25 通过、3 段违反待裁定（idx450 ηγP1│δC2、idx467 ηγP1│γδοC2、idx1585 δοP1│γδP2——时代异，疑应为 11 侵入接触）",
+   "geosciml_contacttype": "igneous_phase_contact",
+   "verified_geosciml": "2026-09-26"
+  },
+  "81": {
+   "meaning": "冰雪区界线",
+   "count": 311,
+   "render_group": "snow_ice_boundary",
+   "evidence": "311/311 与 LDLYAAE001 中 GB=73020（冰川/常年积雪）重合；纬度 39.00-39.64",
+   "confidence": "verified",
+   "note": "曾误记为断层/水系，已纠正"
+  }
+ },
+ "corrections": [
+  "LDLYAAE002.WP 为冰川/常年积雪面（GB=73020），非水体面",
+  "LDLYAAE001.WL 为混合层：21010 河流 609 + 21021 时令河 223 + 73020 冰雪界线 311",
+  "LDZOFBA016.WT 为产状点层（GZBBAB/GZBBAC/GZBBAD/GZBBGA），非断层标注点"
+ ]
+}
