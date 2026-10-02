@@ -35,13 +35,17 @@ def build_geosciml_map(
     bbox_margin_frac: float = 0.05,
     figsize: tuple[float, float] = (24.0, 16.0),
     dpi: int = 200,
-    color_mapping_path: str | Path = DEFAULT_COLOR_MAPPING,
+    color_mapping_path: str | Path | None = DEFAULT_COLOR_MAPPING,
+    title: str | None = None,
     zorder_tbl: dict | None = None,
 ) -> tuple[Map, dict]:
     """Lite 四视图 → (Map IR, 适配报告)。"""
+    if not color_mapping_path:
+        raise ValueError("color_mapping_path 必须显式传入（泛化 2026-10-02：无库尔干默认）")
     rmap = build_reverse_unit_map(color_mapping_path)
     ztbl = zorder_tbl or zorder_table()
-    m = Map(title="GeoSciML（Lite）库尔干幅", figsize=figsize, dpi=dpi)
+    # 泛化（2026-10-02 审计）：标题经参数传入（注册表 SHEET_TITLE）
+    m = Map(title=title or "GeoSciML (Lite)", figsize=figsize, dpi=dpi)
     report: dict = {"layers": {}}
     bounds = []
     for view, lname, role, z in _LAYER_TABLE:

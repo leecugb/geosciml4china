@@ -11,6 +11,7 @@ from pathlib import Path
 import geopandas as gpd
 
 from . import adapters, sources
+from ..convert.ids import CONTACT_CODES
 from .codemap import build_reverse_unit_map, feature_id, hex_to_rgb
 
 ND = 12  # 几何比对舍入（1e-12°，repr 14 位精度内，F2 实测零误差）
@@ -226,7 +227,6 @@ def assemble_l1_map(l1_dir: str | Path, bbox, *, dpi: int = 200):
     """
     import geopandas as gpd
     import numpy as np
-    from ..convert.ids import CONTACT_CODES
     from pymapgis.rendering import Layer, Map
 
     l1_dir = Path(l1_dir)

@@ -10,10 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-DEFAULT_COLOR_MAPPING = "output/geosciml/kurgan_style_generated.json"
-# 2026-09-28（F2）：断层样式单源化——渲染消费 stylegen_fault 生成件
-# （词表默认+overrides 裁定层），手工 fault_rendering_styles.json 保留供对账
-DEFAULT_FAULT_STYLES = "output/geosciml/kurgan_fault_styles_generated.json"
+# 泛化（2026-10-02 审计）：默认不再指向库尔干生成件——调用方（render.py/
+# mirror.run_mirror）一律显式传注册表路径；漏传即 FAIL（None 直读报错）
+DEFAULT_COLOR_MAPPING = None
+DEFAULT_FAULT_STYLES = None
 # SVG 花纹注册表=包数据（DZ/T 0179-2025 标准资产，随包分发）
 from ..data import DZT0179_PATTERN_REGISTRY as _SVG_REG
 DEFAULT_SVG_REGISTRY = str(_SVG_REG)

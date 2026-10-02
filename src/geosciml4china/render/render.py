@@ -191,7 +191,8 @@ def main() -> int:
     _regen_styles(args.sheet)
 
     m, report = build_geosciml_map(
-        lite_dir, dpi=args.dpi, color_mapping_path=color_mapping)
+        lite_dir, dpi=args.dpi, color_mapping_path=color_mapping,
+        title=config.SHEET_TITLE)
     for view, rep in report["layers"].items():
         print(f"  适配 {view}: loaded={rep['loaded']} adapted={rep['count']}"
               + (f" unmapped={rep['unmapped']}" if rep.get("unmapped") else "")

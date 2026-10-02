@@ -216,7 +216,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     asc_p = str(sh.root / prof_get("assoc_csv", "fault_aux_point_association.csv"))
     if os.path.exists(asc_p):
         asc = pd.read_csv(asc_p, dtype=str)
-        for _, ar in asc[asc["sub_no"].isin([str(prof_get("b_symbol_raw", 1894))]).iterrows():
+        for _, ar in asc[asc["sub_no"].isin([str(prof_get("b_symbol_raw", 1894))])].iterrows():
             try:
                 sg_i, da_f = int(float(ar.get("seg_idx"))), float(ar.get("dip_az"))
             except (TypeError, ValueError):

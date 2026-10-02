@@ -510,7 +510,7 @@ def _stale_inputs() -> list[str]:
          "inferred_faults"),
         # 泛化（2026-10-02 审计）：实体表名经剖面通道——原硬编码
         # 库尔干名致英吉沙/奥依亚依拉克/巴什库尔干 entities 时效闸被绕过
-        (root / (_prof().entities_csv or "fault_entities.csv"),
+        (root / (_prof(config.SHEET_KEY).entities_csv or "fault_entities.csv"),
          l1 / "faults.geojson", "entities"),
     ]
     if config.CALIBRATION_CSV is not None:
