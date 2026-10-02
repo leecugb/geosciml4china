@@ -41,6 +41,7 @@ from pymapgis.semantics.profile import get_profile
 
 from ..data import data_path
 from ..sheets import get_sheet
+from ..convert import model
 
 _STRATA_CLASS = {"LDZOFBB001.WP": "sediment", "LDZOFBB002.WP": "volcanic",
                  "LDZOFBB003.WP": "intrusive", "LDZOFBB004.WP": "metamorphic"}
@@ -137,7 +138,7 @@ def calibrate_fossils(sheet_key: str, out_dir=None) -> dict:
     rows, conflicts = [], []
     # 类别参数化（2026-10-02 泛化审计）：图幅类别名随幅（aux_filter 先例）
     _fossil_cats = list(getattr(prof, "fossil_categories", None)
-                        or ["化石", "泥火山"])
+                        or [model.SPECIMEN_KINDS["fossil"], model.SPECIMEN_KINDS["mudvolcano"]])
     targets = wt[wt["CHFCEC"].isin(_fossil_cats)]
     pts_cache = {}
     for idx, r in targets.iterrows():
@@ -150,7 +151,7 @@ def calibrate_fossils(sheet_key: str, out_dir=None) -> dict:
         hc, hl, hdist, method = host(g.x, g.y)
         checks, viol = [], []
         # A 宿主相容
-        if cat == "化石":
+        if cat == model.SPECIMEN_KINDS["fossil"]:
             if hl == "sediment":
                 checks.append(f"宿主{hc}(沉积)")
             elif hl == "volcanic":
@@ -206,10 +207,10 @@ def calibrate_fossils(sheet_key: str, out_dir=None) -> dict:
 
     # E 聚集性注记（非违规）：化石类内最近距 >iso_m
     fpts = [(r["idx"], pts_cache[r["idx"]]) for r in rows
-            if r["category"] == "化石" and r["idx"] in pts_cache]
+            if r["category"] == model.SPECIMEN_KINDS["fossil"] and r["idx"] in pts_cache]
     LON_M = 111320.0 * math.cos(math.radians(prof.center_lat_hint))
     for r in rows:
-        if r["category"] != "化石" or r["idx"] not in pts_cache:
+        if r["category"] != model.SPECIMEN_KINDS["fossil"] or r["idx"] not in pts_cache:
             continue
         x, y = pts_cache[r["idx"]]
         dmin = min((math.hypot((x - ox) * LON_M, (y - oy) * 111320.0)

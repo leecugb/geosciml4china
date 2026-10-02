@@ -67,7 +67,7 @@ def check_consistency(lite_dir: str | Path,
     # B1 对齐（2026-09-28）：Lite 侧剔除制图误差行后，L1 侧同口径过滤
     # status=excluded（此前 M2 掩膜承载的差异现为双侧一致排除）
     is_excl = l1_bnd["status"].astype(str) == "excluded"
-    conv8 = l1_bnd[gzbd_eff.isin(["01", "02", "04", "11", "16", "24", "43", "60"])
+    conv8 = l1_bnd[gzbd_eff.isin(list(CONTACT_CODES))
                    & ~is_excl]
 
     feats_u = sources.load_lite_features(lite_dir, "geologic_unit_view")
@@ -159,7 +159,7 @@ def check_consistency(lite_dir: str | Path,
     dist_s = Counter(gdf_s["GZEEB"])
     dist_s_l1 = Counter(l1_flt["gzeeb_eff"].astype(str).str.replace(".0", "", regex=False).str.zfill(2))
     dist_c = Counter(gdf_c["GZBD_eff"])
-    dist_c_l1 = Counter(gzbd_eff[gzbd_eff.isin(["01", "02", "04", "11", "16", "24", "43", "60"])
+    dist_c_l1 = Counter(gzbd_eff[gzbd_eff.isin(list(CONTACT_CODES))
                                  & ~is_excl])
     rep("C6 码分布一致",
         dist_s == dist_s_l1 and dist_c == dist_c_l1,
@@ -226,6 +226,7 @@ def assemble_l1_map(l1_dir: str | Path, bbox, *, dpi: int = 200):
     """
     import geopandas as gpd
     import numpy as np
+    from ..convert.ids import CONTACT_CODES
     from pymapgis.rendering import Layer, Map
 
     l1_dir = Path(l1_dir)

@@ -17,6 +17,7 @@ from typing import List, Optional, Tuple
 from lxml import etree
 
 from ..sheets import list_sheets
+from pymapgis.semantics.profile import get_profile
 from . import config, mapping, model, sources, validate
 from . import ids as semantic_ids
 from . import units as unit_mod
@@ -33,6 +34,7 @@ EXPECT = {
         units=57, poly_mfs=713, contacts=1316, contact_nil=0, sds=310,
         sds_nil_faulttype=0, planes=93, polarity=2, folds=4, fold_nil=0,
         members=4733, compositions=12, six_mode=(51, 5, 3, 0, 29, 5),
+        regional_norms=("ChA", "ChSt", "Pt1K"),
         banners=7, dv_blocks=97,  # 2026-10-02 实测：Qp1X 箭头归一修复后
         # 活动候选队列 8→1（F038/F070/F093/F032/F004/F001/F067 消解）
         ms_dist={"reverse": 54, "normal": 5, "no_movement_sense": 34,
@@ -49,6 +51,7 @@ EXPECT = {
         units=57, poly_mfs=713, contacts=1316, contact_nil=0, sds=310,
         sds_nil_faulttype=0, planes=93, polarity=2, folds=4, fold_nil=0,
         members=4733, compositions=12, six_mode=(51, 5, 3, 0, 29, 5),
+        regional_norms=("ChA", "ChSt", "Pt1K"),
         banners=7, dv_blocks=97,
         ms_dist={"reverse": 54, "normal": 5, "no_movement_sense": 34,
                  "dextral": 1, "sinistral": 3},
@@ -64,6 +67,7 @@ EXPECT = {
         units=95, poly_mfs=808, contacts=1199, contact_nil=0, sds=289,
         sds_nil_faulttype=51, planes=134, polarity=0, folds=7, fold_nil=0,
         members=4357, compositions=0, six_mode=(46, 22, 11, 7, 47, 1),
+        orphan_tolerance=True,  # 色库 95 > 图面引用（泛化审计 2026-10-02 画像化）
         banners=7, dv_blocks=137,  # 2026-10-02 语义 id 迁移实测
         # auxchain 版画像（2026-09-29 重测）；238/239 钩旋向未提取
         # （sinistral 3 丢失——登记缺口）
@@ -86,6 +90,7 @@ EXPECT = {
         units=40, poly_mfs=403, contacts=546, contact_nil=0, sds=213,
         sds_nil_faulttype=20, planes=20, polarity=0, folds=10, fold_nil=0,
         members=2525, compositions=0, six_mode=(8, 0, 1, 0, 0, 11),
+        orphan_tolerance=True,
         banners=3, dv_blocks=20,  # 2026-10-02 gzeeb 现版重跑实测
         # 2026-09-30 距离带四案+主路降级终版后画像：逆 6→7
         ms_dist={"reverse": 9, "no_movement_sense": 11},
@@ -109,6 +114,7 @@ EXPECT = {
         units=58, poly_mfs=543, contacts=734, contact_nil=0, sds=341,
         sds_nil_faulttype=73, planes=61, polarity=13, folds=60, fold_nil=0,
         members=3744, compositions=0, six_mode=(27, 6, 2, 0, 9, 17),
+        orphan_tolerance=True,
         banners=36, dv_blocks=65,  # 2026-10-02 gzeeb 现版重跑实测（Qp1X/注释通道裁定后）
         # 2026-10-02 slip_sense 接线后画像：a-b→a-b-a 升级（臂隙兜底）+
         # 走滑旋向块 sinistral 3/dextral 1（空间识别钩对出站）
@@ -206,7 +212,7 @@ def main() -> int:
 
     # --- A03: regional dual-track（库尔干 3 单元；英吉沙无此约定） -------------
     regional_bad = []
-    regional_norms = ("ChA", "ChSt", "Pt1K") if args.sheet == "kurgan" else ()
+    regional_norms = tuple(EXP.get("regional_norms", ()))
     for norm in regional_norms:
         u = next((x for x in units_el if _unit_norm(x) == norm), None)
         if u is None:
@@ -257,7 +263,7 @@ def main() -> int:
     poly_mfs = [h for h in spec_hrefs if h in unit_uris]
     used_units = {h for h in poly_mfs}
     orphans = unit_uris - used_units
-    orphan_fail = bool(orphans) and args.sheet == "kurgan"  # 英吉沙允许孤儿单元（色库 95 > 图面引用）
+    orphan_fail = bool(orphans) and EXP.get("orphan_tolerance", False) is False
     check("A06", len(poly_mfs) == EXP["poly_mfs"] and not unresolved and not orphan_fail,
           f"polygon MFs: {len(poly_mfs)}/{EXP['poly_mfs']}; unresolved: {len(unresolved)}; orphan units: {len(orphans)} {sorted(orphans)[:5]}")
 
@@ -570,7 +576,7 @@ def main() -> int:
             lat, lon = (float(v) for v in pos.text.split()[:2])
             gml_fp_pos[(round(lon, 9), round(lat, 9))] += 1  # GML 轴序 lat,lon → 还原 lon,lat
     offseg = offband = mismatch = clamps = 0
-    char = EXP["char_dist_b"]
+    char = float(get_profile(args.sheet).char_dists.get("b") or EXP["char_dist_b"])
     for _, r in b_sub.iterrows():
         aux_idx = int(r["_src_id"])
         seg = int(r["seg_idx"])

@@ -14,6 +14,7 @@ from shapely.geometry import shape
 from .codemap import (UnitEntry, feature_id, hex_to_rgb,
                       src_file_from_feature_id)
 from .sources import props
+from ..convert import model
 
 CRS = "EPSG:4326"
 
@@ -168,7 +169,7 @@ def adapt_specimens(features: list[dict]) -> tuple[gpd.GeoDataFrame, gpd.GeoData
             "sem_type": p.get("label"),
             "geometry": shape(feat["geometry"]),
         }
-        (rows_m if str(p.get("specimenType")) == "泥火山"
+        (rows_m if str(p.get("specimenType")) == model.SPECIMEN_KINDS["mudvolcano"]
          else rows_f).append(rec)
     return (_frame(rows_f), _frame(rows_m),
             {"count": len(rows_f) + len(rows_m),

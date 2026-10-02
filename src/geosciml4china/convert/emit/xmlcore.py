@@ -287,7 +287,7 @@ def new_document() -> etree._Element:
         "xsi": XSI,
     }
     root = etree.Element(qname("gsmlb:GSML"), nsmap=nsmap)
-    root.set(qname("gml:id"), f"kurgan.{config.SHEET}")
+    root.set(qname("gml:id"), f"{config.SHEET_KEY}.{config.SHEET}")
     root.set(f"{{{XSI}}}schemaLocation", SCHEMA_LOCATION)
     return root
 

@@ -133,6 +133,10 @@ class FaultAuxPlane:
     foot: Optional[dict] = None     # 测量点位=b 到所属段的垂足（GeoJSON Point；09-27 用户裁定保留）
 
 
+# 标本类别词单源（2026-10-02 泛化审计：原 "化石"/"泥火山" 五处散布）
+SPECIMEN_KINDS = {"fossil": "化石", "mudvolcano": "泥火山"}
+
+
 @dataclass
 class FaultRec:
     feature_id: str

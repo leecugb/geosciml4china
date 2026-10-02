@@ -453,7 +453,7 @@ def assemble_specimens(units: Dict[str, model.UnitRec],
             out.append(
                 model.SpecimenRec(
                     src_id=int(row["_src_id"]),
-                    kind={"fossil": "化石", "mudvolcano": "泥火山"}[theme],
+                    kind=model.SPECIMEN_KINDS[theme],
                     sem_type=_clean_optional_str(row.get("sem_type")) or "未知",
                     sub_no=str(row.get("symbol_no") or ""),
                     height=str(row.get("height") or "2.0"),
@@ -494,6 +494,8 @@ def _stale_inputs() -> list[str]:
     GML 将与最新判别不一致（b1950：assoc=fault_aux 表 F061，GML 却发 F065）。
     09-28 正典件装配链教训的硬闸：build 入口拒绝陈旧 L1，点名缺失阶段，
     不再静默装配。"""
+    from pymapgis.semantics.profile import get_profile as _prof
+
     root, l1 = config.SHEET_ROOT, config.GEOJSON_L1
     pairs = [
         (root / f"fault_aux_{config.SHEET_KEY}.csv", l1 / "fault_aux.geojson", "auxchain"),
@@ -506,7 +508,10 @@ def _stale_inputs() -> list[str]:
          "fossils"),
         (root / "_inferred_fault_calibration.csv", l1 / "faults.geojson",
          "inferred_faults"),
-        (root / "fault_entities.csv", l1 / "faults.geojson", "entities"),
+        # 泛化（2026-10-02 审计）：实体表名经剖面通道——原硬编码
+        # 库尔干名致英吉沙/奥依亚依拉克/巴什库尔干 entities 时效闸被绕过
+        (root / (_prof().entities_csv or "fault_entities.csv"),
+         l1 / "faults.geojson", "entities"),
     ]
     if config.CALIBRATION_CSV is not None:
         pairs.append((config.CALIBRATION_CSV, l1 / "boundaries.geojson", "gzbd"))

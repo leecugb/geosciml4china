@@ -186,8 +186,10 @@ def calibrate_fault_contact_activity(sheet_key: str, out_dir=None) -> dict:
         _flp = sh.root / "geojson" / "L0" / "LDZOFBA003.WL.geojson"
         if _flp.exists():
             fl = gpd.read_file(_flp)
-        _ent_p = sh.root / (f"fault_entities_{sh.key}.csv"
-                            if sh.key != "kurgan" else "fault_entities.csv")
+        # 泛化（2026-10-02 审计）：实体表名经剖面通道——原 key 分支对
+        # jws（profile 声明正典件名）会找错文件致登记册 fault_id 断链
+        from pymapgis.semantics.profile import get_profile as _gp
+        _ent_p = sh.root / (_gp(sh.key).entities_csv or "fault_entities.csv")
         _seg2fid = {}
         if _ent_p.exists():
             _edf = pd.read_csv(_ent_p, dtype=str)

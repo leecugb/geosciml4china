@@ -63,8 +63,10 @@ B_SECOND_HI_FRAC = 0.5   # 二次判别带 b(1894) 上限（2026-09-30 用户裁
                          # 下限不动、孤儿闸（>2×中位）不动；a 伙伴仍须首判带内
 ARM_MAX_M = 4000.0       # 三联体臂长上限
 PAIR_MAX_M = 2000.0      # 注释配对硬约束
-EXPECT_REVERSE = None  # GZEEB 逆断层期望码——注册表驱动（2026-10-01 泛化）：
-                     # 语义∈{逆断层,推覆体边界}的码，装载期自注册表推导
+EXPECT_REVERSE = {}   # GZEEB 逆断层期望码——注册表驱动（2026-10-01 泛化）：
+                     # 语义∈{逆断层,推覆体边界}的码，装载期自注册表推导；
+                     # 2026-10-02 泛化审计：按 sheet key 缓存（原全局单值
+                     # 同进程先后跑两幅会串码）
 
 
 def _band_limits(sub_no: str, med: float) -> tuple[float, float]:
@@ -217,7 +219,7 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     global EXPECT_REVERSE
     sh = get_sheet(sheet_key)
     prof = get_profile(sh.key)
-    if EXPECT_REVERSE is None:
+    if EXPECT_REVERSE.get(sh.key) is None:
         # 注册表驱动（2026-10-01 泛化）：逆期望码=语义∈{逆断层,推覆体边界}
         # 的码——推覆=逆冲分量，aux 组期望逆判（库尔干 05/07、英吉沙 05/35）
         import re as _re
@@ -226,8 +228,8 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             return _re.sub(r"[（(].*?[)）]", "", str(x)).strip()
 
         _gsem, _ = load_gzeeb_semantics(sh.root, sh.key)
-        EXPECT_REVERSE = reverse_codes(_gsem, _nsem)
-        print(f"GZEEB 逆期望码集（注册表驱动）: {sorted(EXPECT_REVERSE)}")
+        EXPECT_REVERSE[sh.key] = reverse_codes(_gsem, _nsem)
+        print(f"GZEEB 逆期望码集（注册表驱动）: {sorted(EXPECT_REVERSE[sh.key])}")
     lat = float(prof.center_lat_hint)
     LON_M = 111320.0 * math.cos(math.radians(lat))
     LAT_M = 111320.0
@@ -668,7 +670,7 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             gtype = seg_gzeeb[seg_of_b]
             chk = ""
             if not v.startswith("存疑"):
-                exp = "逆断层产状点" if gtype in EXPECT_REVERSE else ""
+                exp = "逆断层产状点" if gtype in EXPECT_REVERSE[sh.key] else ""
                 if exp:
                     chk = "互证" if v == exp else "冲突"
                     if chk == "冲突":
@@ -748,7 +750,7 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             gtype = seg_gzeeb[seg_of_b]
             chk = ""
             if not v.startswith("存疑"):
-                exp = "逆断层产状点" if gtype in EXPECT_REVERSE else ""
+                exp = "逆断层产状点" if gtype in EXPECT_REVERSE[sh.key] else ""
                 if exp:
                     chk = "互证" if v == exp else "冲突"
                     if chk == "冲突":

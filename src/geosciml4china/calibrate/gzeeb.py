@@ -216,7 +216,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     asc_p = str(sh.root / prof_get("assoc_csv", "fault_aux_point_association.csv"))
     if os.path.exists(asc_p):
         asc = pd.read_csv(asc_p, dtype=str)
-        for _, ar in asc[asc["sub_no"].isin(["1894", "1851"])].iterrows():
+        for _, ar in asc[asc["sub_no"].isin([str(prof_get("b_symbol_raw", 1894))]).iterrows():
             try:
                 sg_i, da_f = int(float(ar.get("seg_idx"))), float(ar.get("dip_az"))
             except (TypeError, ValueError):
@@ -645,13 +645,14 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     # （GZBD=10 不再遮蔽标志；seg248 案根因修复）。实体级聚合（多段加强）
     # + 单段强型（≥50% 段长且 ≥1km）+ 37 码佐证 + 制图误差跳过。
     from collections import defaultdict as _dd
-    Q2_TOL_M = 3.0
-    Q2_MIN_OV = 150.0        # 重合有效长度下限（m，取 max(150, 0.1×段长)）
-    Q2_STRONG_M = 1000.0     # 单段强型下限（且 ≥50% 段长）
-    Q2_LONG_M = 10000.0      # 长距离强证据下限（2026-10-02 用户裁定：「长距离
-                             # 与第四系松散沉积物边界重叠也是活动断层强证据」）：
-                             # 单段重合 ≥本值且 ≥50% 段长 → 活动（与实体多段
-                             # 加强同级强证据，不落候选待裁定）
+    # Q2 活动先验阈值入 priors（2026-10-02 泛化审计）：与同模块
+    # quaternary_rank_min/quaternary_exclude 同通道；裁定值作默认
+    Q2_TOL_M = float(_priors.get("q2_tol_m", 3.0))
+    Q2_MIN_OV = float(_priors.get("q2_min_ov", 150.0))   # 重合有效长度下限（m）
+    Q2_STRONG_M = float(_priors.get("q2_strong_m", 1000.0))  # 单段强型下限（且 ≥50% 段长）
+    Q2_LONG_M = float(_priors.get("q2_long_m", 10000.0))  # 长距离强证据下限
+    # （2026-10-02 用户裁定「长距离与第四系松散沉积物边界重叠也是活动断层
+    #   强证据」：单段重合 ≥本值且 ≥50% 段长 → 活动，与实体多段加强同级）
     coinc = _dd(list)        # fault_id → [(seg_idx, overlap_m, pct)]
     if quat_m is not None:
         _q_bound = quat_m.boundary

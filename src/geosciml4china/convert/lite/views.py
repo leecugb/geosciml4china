@@ -190,7 +190,9 @@ def fossil_specimen_view(s) -> Dict[str, Any]:
         "identifier": {"value": s.uri, "@codeSpace": config.CODE_SPACE},
         "label": s.sem_type,
         "description": desc,
-        "specimenType": "化石产地" if s.kind == "化石" else "泥火山",
+        "specimenType": (f"{model.SPECIMEN_KINDS['fossil']}产地"
+                         if s.kind == model.SPECIMEN_KINDS["fossil"]
+                         else model.SPECIMEN_KINDS["mudvolcano"]),
         "source": "LDZOFBB099.WT（1:25万建造构造图）",
         "specimenType_uri": NIL,
         "materialClass_uri": NIL,

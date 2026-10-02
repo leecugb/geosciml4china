@@ -1,14 +1,49 @@
 # geosciml4china
 
-Full-chain software package for Chinese regional geological map sheets:
-**MapGIS project folder → self-supporting geological-semantics calibration → GeoSciML 4.1 conversion → DZ/T 0179-2025 rendering verification**
-(scope ruling 2026-09-29: input = the MapGIS project document folder).
+**Self-supporting geological-semantics calibration and GeoSciML 4.1 interoperability for China's 1:250,000 regional geological map sheets.**
 
-- **Calibration** (`geosciml4china.calibrate`, staged migration + pymapgis semantics orchestration): prior-library driven (Xinjiang regional contact-relationship priors = dual-source highest-knowledge base, shipped as package data) + self-supporting discrimination (code-semantics registry / criterion applicability / semantic-dimension review); contradictions go to human adjudication, codes are never auto-changed.
-- **Conversion** (`geosciml4china.convert`): six feature classes emitted (GeologicUnit / MappedFeature / Contact / ShearDisplacementStructure / Foliation / Fold + fault attitude measurement points); full document validates against `geoSciMLExtension.xsd`; Lite seven views (GeoJSON, including the GeologicSpecimenView portrayal layer — the GeoSciML 4.1 Sampling package is unpublished, so specimens live in the official portrayal view).
-- **Styles** (`geosciml4china.render.stylegen` / `stylegen_fault`): GeoSciML geological semantics + DZ/T 0179-2025 unified color library → rendering style files; sheet-specific adjudications are frozen in an overrides layer (generated defaults < adjudication layer).
-- **Rendering** (`geosciml4china.render`): thin adapters reusing the pymapgis rendering pipeline; L1-mirror pixel reconciliation; strike-slip end hooks / fault attitude measurement-point symbols / fold-type symbols / cartographic-contradiction overlays.
-- **Verification** (`g4c verify`): XSD + 29 business assertions, empirically locked on four sheets (kurgan J43C001002 / yingjisha J43C002003 / aoyiyayilake J45C004001 / bashkurgan J46C001001).
+`geosciml4china` turns a legacy MapGIS project folder into trustworthy, confidence-graded geological semantics: **MapGIS → L0 GeoJSON → self-supporting semantic calibration → semantic L1 GeoJSON → GeoSciML 4.1 → semantics-driven rendering**, with every stage machine-verifiable (scope ruling 2026-09-29: input = the MapGIS project document folder).
+
+## The problem
+
+China's 1:250,000 geological map archives (729 map sheets covering the land area; Zuo et al., 2018) were digitized under a unified national code system (DZ/T 0179 symbology, DD2006-06 database specification), yet the *data* systematically deviates from the *specification*, and the dictionary needed to interpret the deviations is not publicly available. We observe four independent dimensions of drift:
+
+- **code values** — sheets introduce undocumented codes (e.g. Yingjisha J43C002003: four new fault codes on 83/289 segments, 29% of that sheet's faults);
+- **sub-number double meanings** — sub-type 1894 means *fault dip direction* on Kurgan but *fold auxiliary* on Yingjisha;
+- **reversed angle conventions** — 1894 uses a 0° convention, 1851 a 180° convention;
+- **category renaming** — the same point class appears under different names across sheets.
+
+The specification layer is uniform, the data layer is divergent, and the dictionary is missing. Schema matching assumes two formal specifications; map QA checks geometry only; conversion implementations assume the codes are already meaningful. To our knowledge, **semantic recovery of legacy map codes without the dictionary** is not addressed by any of these lines of work — including recent knowledge-graph efforts over Chinese vector maps, which all start from known field meanings (Qiu et al., 2024; Duan et al., 2024). Every sheet therefore carries a calibration debt that cannot be discharged by lookup, only by evidence from the map itself.
+
+## The approach: self-supporting semantic calibration
+
+Calibration proceeds from the map's own evidence — geometric invariants, spatial topology, and cross-channel corroboration — under four governing principles:
+
+1. **Generalization** — rule code has zero sheet-specific branches; sheet-specific values (character distances, exemptions, code-semantics registries) live in sheet profiles and registries.
+2. **MLE voting** — code semantics are assigned by a maximum-likelihood vote (code prior 3 / name 2 / signature 2 / kinematics 2 / dip 1 / auxiliary points 2 / cover 2; ties go to the prior; <2 votes fall back to the generic class).
+3. **Pipeline integrity** — fallback mechanisms keep the chain running (unresolvable codes → general fault + detailed archive).
+4. **Contradiction preservation** — evidence conflicts never auto-rewrite codes; they are registered pending human adjudication, and adjudications take effect through an overrides layer while the original vectors remain untouched.
+
+Seven calibration domains each carry an independent verification path: boundary semantics (GZBD, adaptive 40/100/250 m flanking-unit probes), fault kinematics in three dimensions (GZEEB, incl. activity strong-priors via polygon-topology and fault-contact boundary audits), fault aux-point chains (distance bands with median-nearest preference, a–b/a–b–a patterns, strike-slip hook pairs with interval semantics), attitudes (strike⊥dip hard invariant), fossils/mud volcanoes, fault entity grouping, and inferred faults. Every verdict carries a confidence grade from the unified S×I×F framework (source tier × evidence independence × fit; bands: verified / consistent / suspect / conflict), which gates rendering and GeoSciML consumption. Closed-loop adjudication also repairs encoding defects of the data itself — discovered, attributed, ruled, applied via the overrides layer, and re-checked.
+
+## Evidence
+
+- **Full-sheet calibration on Kurgan (J43C001002)**: 2222 boundary segments, 310 fault segments, 299 fault aux points, 305 attitudes, 78=78 annotation pairing — all verified at full scale.
+- **External anchor**: the calibrated layer set is 100% consistent with the official 《成矿地质背景研究数据模型》 data-model system (Zuo et al., 2018, *Geology in China* 45(S1):1–26, doi:10.12029/gc2018Z101).
+- **Knowledge generation, not only correction**: on Yingjisha, the discriminator generated a testable semantic hypothesis for an unregistered code (code 03 ↔ GZELD=102, a perfect 38:38 one-to-one correspondence, consistent with a normal fault).
+- **GeoSciML compliance**: output validates against the official `geoSciMLExtension.xsd` plus 29 business assertions on two sheets; 4733 elements source–target reconciled; Lite seven views emitted.
+- **Rendering fidelity**: the semantics-driven render is reconciled against the L1 mirror (pixel-level acceptance 99.99% on Kurgan).
+- **Regression suite**: 105 audit tests, each tracing a user adjudication or audit finding, including source-level drift guards.
+
+## Pipeline
+
+`g4c pipeline` runs ⓪ preflight (11-file contract) → ① MapGIS→L0 conversion → ② self-supporting calibration (two-phase materialization) → ③ style generation (semantics + DZ/T 0179-2025 color library → styles, single source) → ④ GeoSciML build (GML + Lite views + pending register) → ⑤ verification (XSD + assertions) → ⑥ semantics-driven rendering with mirror reconciliation.
+
+- **Calibration** (`geosciml4china.calibrate`): prior-library driven (Xinjiang regional contact-relationship priors = dual-source highest-knowledge base, shipped as package data) + the self-supporting domains above.
+- **Conversion** (`geosciml4china.convert`): six feature classes (GeologicUnit / MappedFeature / Contact / ShearDisplacementStructure / Foliation / Fold + fault attitude measurement points); specimens live in the official portrayal view because the GeoSciML 4.1 Sampling package is unpublished.
+- **Styles** (`geosciml4china.render.stylegen` / `stylegen_fault`): GeoSciML semantics + DZ/T 0179-2025 color library → rendering styles; sheet adjudications frozen in an overrides layer (generated defaults < adjudication layer).
+- **Rendering** (`geosciml4china.render`): thin adapters reusing the pymapgis rendering pipeline; strike-slip end hooks, fault attitude symbols, fold symbols, cartographic-contradiction overlays.
+- **Verification** (`g4c verify`): XSD + 29 assertions, empirically locked on four sheets (kurgan / yingjisha / aoyiyayilake / bashkurgan).
 
 ## Installation
 
@@ -17,7 +52,7 @@ pip install -e /d/JWD              # mapgis2shp (pymapgis semantics base)
 pip install -e /d/geosciml4china   # this package
 ```
 
-## Test case: jws (Kurgan sheet J43C001002, published L0 dataset)
+## Reproducible test case: jws (Kurgan sheet J43C001002)
 
 A public, reproducible test case ships with this repository:
 [`data/jws_l0_geojson/`](data/jws_l0_geojson/) — the **L0 GeoJSON of the
@@ -25,8 +60,6 @@ A public, reproducible test case ships with this repository:
 Kurgan sheet (J43C001002) MapGIS project. See
 [data/jws_l0_geojson/README.md](data/jws_l0_geojson/README.md) for the file
 catalogue and provenance.
-
-To run the pipeline against the test case:
 
 1. Clone this repository and place the sheet's **MapGIS source folder** at a
    local path (the L0 dataset is the published *conversion product*; the
@@ -88,6 +121,22 @@ Pipeline order for stepwise debugging: **stylegen → build → verify** (the re
 auto-regenerates stale styles via the F3 guard; overlays are the production
 default, disable with `--no-overlay`).
 
+## Related work
+
+- **Format layer**: the mapgis2shp package (this project's foundation, on PyPI) reverse-engineers the closed MapGIS 6.x/67 binary formats; its geometry-fidelity paper is under review.
+- **Interoperability layer**: Xu et al. (2020, *Journal of Geology* 44(4):337–344) proposed a semantic-fusion mapping from Chinese data models to GeoSciML; the China Geological Survey has operated OneGeology China (64 sheets at 1:1,000,000, three-star service) and publishes GeoSciML 4.1 translations — these assume code meanings are already known.
+- **International digitizing standards** (USGS OF 96-291/98-219B/99-438; GeMS; Geoscience Australia GA3362; GSC M183-2-8247-2) document dictionaries, topology rules, and orientation conventions — the very conventions this package recovers from geometry — but take the dictionary's availability for granted.
+- **Recent map-semantics research** (Qiu et al., 2024, *Geological Review*; Duan et al., 2024, *Geology in China* 59(2):588–602) builds knowledge graphs and QA systems over vector maps from explicitly mapped dbf fields — again assuming known code semantics.
+
+This package occupies the missing layer between them: dictionary-less semantic recovery of the codes themselves, with every recovered meaning graded by confidence and every contradiction preserved for human adjudication. The recovered invariants are not new to the digitizing standards; their use for semantic recovery without the dictionary is the contribution.
+
+## Boundary
+
+- Calibration outputs are **semantic hypotheses with confidence bands**, not ground truth: the final rulings remain human, and the confidence band gates what rendering and GeoSciML may consume directly.
+- The method is validated on two sheets (Kurgan, Yingjisha) and exercised on two more (aoyiyayilake, bashkurgan); the 729-sheet national extrapolation is an inference from a single-sheet 29% calibration-debt measurement and awaits further sheets.
+- If the dictionary becomes available, the discriminator does not become obsolete — it degrades gracefully into a deviation-grading engine anchored on the dictionary.
+- Sheet data is not bundled (data-ownership avoidance); the published jws L0 test dataset is an explicit owner-approved exception.
+
 ## Namespace gate (A19)
 
 Output identifiers currently use the placeholder domain
@@ -99,8 +148,18 @@ assertion fails the build while the placeholder string remains.
 
 GeoSciML 4.1 official XSD tree (72 files, offline validation) · CGI vocabulary
 caches · DZ/T 0179-2025 color library and SVG pattern tiles · ICS 2020 time
-scale. Sheet data is not bundled in the package (data-ownership avoidance);
-the published jws L0 test dataset is an explicit owner-approved exception.
+scale.
+
+## References
+
+- Zuo Qunchao, Ye Tianzhu, Feng Yanfang, Ge Zuo, Wang Yingchao. 2018. 中国陆域1∶25万分幅建造构造图空间数据库 [Spatial database of 1:250,000 map-sheet formation–structure maps covering China's land area]. *Geology in China* 45(S1): 1–26. doi:10.12029/gc2018Z101
+- Xu Yafeng, Hua Weihua, Li Yi. 2020. 面向GeoSciML的中国地质数据模型语义融合方法 [Semantic-fusion mapping from Chinese geological data models to GeoSciML]. *Journal of Geology* 44(4): 337–344
+- Qiu Qinjun et al. 2024. 多模态数据的地质图关联网络构建及知识服务 [Multi-modal data-driven geological map association networks and knowledge services]. *Geological Review* 70(2)
+- Duan Yuxi et al. 2024. Geological map-oriented knowledge graph construction and intelligent Q&A application. *Geology in China* 59(2): 588–602
+- USGS Open-File Report 96-291 / 98-219B / 99-438 (digital line-graph attribute dictionaries and look-up tables)
+- USGS GeMS (Geologic Map Schema) — ContactsAndFaults topology and digitizing-orientation conventions
+- Geoscience Australia GA3362 — composite feature-code decomposition rules
+- Geological Survey of Canada M183-2-8247-2 — subtype-controlled domain schema
 
 ## License
 
