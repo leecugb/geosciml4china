@@ -47,10 +47,12 @@ Seven calibration domains each carry an independent verification path: boundary 
 
 ## Dependencies
 
-geosciml4china depends on the **mapgis2shp** project (PyPI), which supplies the
-format layer: reverse-engineered readers for the closed MapGIS 6.x/67 binary
-vector formats, the `pymapgis.semantics` base (sheet profiles, L0 conversion,
-L1 materialization), and the shared rendering pipeline. geosciml4china adds the
+geosciml4china depends on the **mapgis2shp** project — the same author's
+open-source package ([GitHub](https://github.com/leecugb/mapgis2shp),
+[PyPI](https://pypi.org/project/mapgis2shp/)) — which supplies the format
+layer: reverse-engineered readers for the closed MapGIS 6.x/67 binary vector
+formats, the `pymapgis.semantics` base (sheet profiles, L0 conversion, L1
+materialization), and the shared rendering pipeline. geosciml4china adds the
 semantic-calibration, GeoSciML, and verification layers on top. The dependency
 is structural, not optional — package modules import mapgis2shp throughout and
 the installation is made against it (see below).
@@ -133,7 +135,7 @@ default, disable with `--no-overlay`).
 
 ## Related work
 
-- **Format layer**: the mapgis2shp package (this project's foundation, on PyPI) reverse-engineers the closed MapGIS 6.x/67 binary formats; its geometry-fidelity paper is under review.
+- **Format layer**: the [mapgis2shp](https://github.com/leecugb/mapgis2shp) package (the same author's project, this project's foundation) reverse-engineers the closed MapGIS 6.x/67 binary formats; its geometry-fidelity paper is under review.
 - **Interoperability layer**: Xu et al. (2020, *Journal of Geology* 44(4):337–344) proposed a semantic-fusion mapping from Chinese data models to GeoSciML; the China Geological Survey has operated OneGeology China (64 sheets at 1:1,000,000, three-star service) and publishes GeoSciML 4.1 translations — these assume code meanings are already known.
 - **International digitizing standards** (USGS OF 96-291/98-219B/99-438; GeMS; Geoscience Australia GA3362; GSC M183-2-8247-2) document dictionaries, topology rules, and orientation conventions — the very conventions this package recovers from geometry — but take the dictionary's availability for granted.
 - **Recent map-semantics research** (Qiu et al., 2024, *Geological Review*; Duan et al., 2024, *Geology in China* 59(2):588–602) builds knowledge graphs and QA systems over vector maps from explicitly mapped dbf fields — again assuming known code semantics.
