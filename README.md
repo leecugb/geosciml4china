@@ -45,6 +45,16 @@ Seven calibration domains each carry an independent verification path: boundary 
 - **Rendering** (`geosciml4china.render`): thin adapters reusing the pymapgis rendering pipeline; strike-slip end hooks, fault attitude symbols, fold symbols, cartographic-contradiction overlays.
 - **Verification** (`g4c verify`): XSD + 29 assertions, empirically locked on four sheets (kurgan / yingjisha / aoyiyayilake / bashkurgan).
 
+## Dependencies
+
+geosciml4china depends on the **mapgis2shp** project (PyPI), which supplies the
+format layer: reverse-engineered readers for the closed MapGIS 6.x/67 binary
+vector formats, the `pymapgis.semantics` base (sheet profiles, L0 conversion,
+L1 materialization), and the shared rendering pipeline. geosciml4china adds the
+semantic-calibration, GeoSciML, and verification layers on top. The dependency
+is structural, not optional — package modules import mapgis2shp throughout and
+the installation is made against it (see below).
+
 ## Installation
 
 ```bash
