@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "description": "化石/特异点子图码语义注册表（自支持标定先验）",
+    "adjudication": "2026-09-26 用户定英吉沙化石三类体系：植物化石/动物化石/孢粉化石；库尔干 1445/1415 动植对应为暂定（真字形需 SLIB）",
+    "principle": "码义为待证假设；标定证据只登记不改码，冲突交人工裁定"
+  },
+  "fossil_types": {
+    "1415": {"semantic": "植物化石", "symbol": "clover_leaf", "angle_conv": 0.0},
+    "1445": {"semantic": "动物化石", "symbol": "nautilus", "angle_conv": 0.0},
+    "3021": {"semantic": "孢粉化石", "symbol": "ring_dot",
+             "angle_conv": 180.0,
+             "note": "英吉沙独有码（库尔干无）；暂定画法外环+中心点，真字形待图式核验"}
+  },
+  "mud_volcano": {
+    "1304": {"semantic": "泥火山", "angle_conv": 0.0}
+  },
+  "host_rules": {
+    "fossil": "化石产于沉积地层：sediment 通过；volcanic 登记审查（火山碎屑夹层可产化石）；metamorphic/intrusive/无宿主 → 冲突候选",
+    "mud_volcano": "泥火山应落第四系松散沉积（Q 开头单元；库尔干 21/21 实测自洽）"
+  },
+  "angle_band_deg": 15.0,
+  "isolation_note_m": 10000.0
+}

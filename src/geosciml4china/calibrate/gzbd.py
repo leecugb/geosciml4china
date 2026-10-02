@@ -111,6 +111,10 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     LON_M = 111320.0 * math.cos(math.radians(_lat0))
     LAT_M = 111320.0
     PROBE_BASE = 0.0012          # 贴线探针 ~100m（#15 校准）
+    PROBE_STEPS = (0.0005, 0.0012, 0.003)  # 自适应贴线探针（≈40/100/250m，
+    # 2026-10-02 用户裁定「界线两侧地质单元探针要使用合理距离，避免跳过
+    # 界线两侧真实地质单元」：小距先试、命中即止——细窄真实单元不被
+    # 大步长越过；全步长无地层命中才走 units_at 最近面兜底）
     PROBE_WIDEN = (0.003, 0.006)  # 兜底逐级加宽
 
     # ---------- 数据加载 ----------
@@ -358,8 +362,21 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             p = coords[j] * (1 - t) + coords[j + 1] * t
             tg = coords[j + 1] - coords[j]
             nm = np.array([-tg[1], tg[0]])
-            left_all += units_at(p[0] + nm[0] * PROBE_BASE, p[1] + nm[1] * PROBE_BASE)
-            right_all += units_at(p[0] - nm[0] * PROBE_BASE, p[1] - nm[1] * PROBE_BASE)
+            for _sgn, _acc in ((1, left_all), (-1, right_all)):
+                _got = None
+                for _step in PROBE_STEPS:
+                    _got_step = units_at(p[0] + _sgn * nm[0] * _step,
+                                         p[1] + _sgn * nm[1] * _step)
+                    _strata = [(c, t) for c, t in _got_step if t != "冰雪"]
+                    if _strata:
+                        _got = _got_step
+                        break  # 最小距离地层命中即取——真实近侧单元优先
+                    if _got is None and _got_step:
+                        _got = _got_step  # 仅冰雪佐证记下，继续向外寻地层
+                if _got is None:
+                    _got = units_at(p[0] + _sgn * nm[0] * PROBE_BASE,
+                                    p[1] + _sgn * nm[1] * PROBE_BASE)
+                _acc += _got
         lu = sorted({c for c, _ in left_all})
         ru = sorted({c for c, _ in right_all})
         sides_rows.append({

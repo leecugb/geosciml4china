@@ -78,16 +78,21 @@ class MappedFeatureRec:
 
     @property
     def uri(self) -> str:
-        return f"{config_base()}mappedfeature/{self.feature_id}"
+        # 2026-10-02 语义 id：feature_id 可为 "F085.1"/"fp.F085.2"/"norm.3"——
+        # URI 侧 quote 保原始形态（gml:id 侧 NCName 安全由调用方保证）
+        return f"{config_base()}mappedfeature/{quote(self.feature_id, safe='')}"
 
     @property
     def gml_id(self) -> str:
-        return f"mf.{self.feature_id}"
+        # 2026-10-02 语义 id：feature_id 可含 "+"/希腊字符（norm 形态）——
+        # gml:id 须 NCName 安全（xs:ID），统一经 _safe_ncname
+        # （F085.1/c.04.3/fp.F085.2 等纯 alnum+点形态恒等通过）
+        return f"mf.{_safe_ncname(self.feature_id)}"
 
 
 @dataclass
 class ContactRec:
-    src_id: int
+    src_id: int  # L1 溯源（不发射——语义 id 裁定 2026-10-02）
     code: str  # GZBD_eff
     sem_label: str
     verdict: str
@@ -99,14 +104,15 @@ class ContactRec:
     observation_term: Optional[str] = None
     observation_label: str = ""
     pending_ref: Optional[str] = None
+    ord: int = 0  # 类内序（c.04.3 的 "3"）
 
     @property
     def uri(self) -> str:
-        return f"{config_base()}contact/{self.src_id}"
+        return f"{config_base()}contact/{self.code}.{self.ord}"
 
     @property
     def gml_id(self) -> str:
-        return f"c.{self.src_id}"
+        return f"c.{self.code}.{self.ord}"
 
 
 @dataclass
@@ -117,6 +123,13 @@ class FaultAuxPlane:
     mode: str = ""                  # 六类模式标签（a-b-a·逆断层产状点 等，09-26 定版）
     dip_source: str = ""            # 倾角来源：配对注释 / 配对待裁定 / 无（留空）——GZECE 回落已废止（09-29 裁定）
     movement_sense: str = ""        # faultmovementsense 词：normal/reverse/no_movement_sense
+    a_ids: str = ""                 # 三联体 a 成员（"1675/1676"）——a 依附于 b
+                                    # （2026-10-02 用户裁定「a 与倾角注释的地质语义与
+                                    # b 构成断层产状测量的地质语义」，不构成实体）
+    mp_id: str = ""                 # 语义 id（"fp.F085.1"，2026-10-02 裁定）
+    mp_label: str = ""              # "F085测点①"
+    a_label: str = ""               # "a①②"（a 成员语义化编号）
+    note_label: str = ""            # "注释①"
     foot: Optional[dict] = None     # 测量点位=b 到所属段的垂足（GeoJSON Point；09-27 用户裁定保留）
 
 
@@ -136,7 +149,8 @@ class FaultRec:
     gzehg: str = ""
     gzece: float = 0.0
     attitude_note: str = ""         # 产状点逐平面模式行+争议/矛盾横幅（进 GML/Lite 描述）
-    slip_sense: str = ""            # 238/239 钩旋向：dextral/sinistral（走滑段）
+    slip_sense: str = ""            # 钩旋向：dextral/sinistral（空间识别，走滑区间段）
+    slip_span: str = ""             # 滑移区段跨度注记（垂足区间，2026-10-02）
     planes: List[FaultAuxPlane] = field(default_factory=list)
     geometry: Dict[str, Any] = field(default_factory=dict)
 
@@ -162,15 +176,16 @@ class AttitudeRec:
     host_norm: Optional[str] = None
     host_name: Optional[str] = None
     note: str = ""   # B3：违反（待裁定）verdict 声明（如实标记，2026-09-28）
+    ord: int = 0     # 宿主内序（fol.{host}.{ord}，语义 id 裁定 2026-10-02）
     geometry: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def uri(self) -> str:
-        return f"{config_base()}foliation/{self.src_id}"
+        return f"{config_base()}foliation/{quote(self.host_norm or self.gzbbga, safe='')}.{self.ord}"
 
     @property
     def gml_id(self) -> str:
-        return f"fol.{self.src_id}"
+        return f"fol.{_safe_ncname(self.host_norm or self.gzbbga)}.{self.ord}"
 
 
 @dataclass
@@ -208,12 +223,13 @@ class SpecimenRec:
     host_norm: Optional[str] = None
     host_name: Optional[str] = None
     note: str = ""            # 违反（待裁定）verdict 声明（B3 同构）
+    ord: int = 0              # 宿主内序（sp.{host}.{ord}，语义 id 裁定 2026-10-02）
     geometry: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def uri(self) -> str:
-        return f"{config_base()}specimen/{self.src_id}"
+        return f"{config_base()}specimen/{quote(self.host_norm or 'sp', safe='')}.{self.ord}"
 
     @property
     def gml_id(self) -> str:
-        return f"sp.{self.src_id}"
+        return f"sp.{_safe_ncname(self.host_norm or 'sp')}.{self.ord}"

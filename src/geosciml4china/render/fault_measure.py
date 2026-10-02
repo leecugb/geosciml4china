@@ -31,7 +31,11 @@ RED = tuple(v / 255.0 for v in (180, 0, 0))   # pymapgis 辅助点层 (180,0,0)
 
 
 def load_measure_points(lite_dir: str | Path) -> list[dict]:
-    """fault_attitude_point_view.geojson → [{aux_idx, x, y, az, dip, mode, sds_uri}]"""
+    """fault_attitude_point_view.geojson → [{x, y, az, dip, mode, sds_uri}]
+
+    2026-10-02 语义 id 裁定：视图 identifier 不再承载 aux_idx（图元 id
+    不入产品）——原 aux_idx 解析删除（下游绘制未消费该字段）。
+    """
     p = Path(lite_dir) / "fault_attitude_point_view.geojson"
     if not p.exists():
         return []
@@ -47,7 +51,6 @@ def load_measure_points(lite_dir: str | Path) -> list[dict]:
         except (TypeError, ValueError):
             dip = None
         out.append({
-            "aux_idx": int(str(pr["identifier"]["value"]).rsplit(".", 1)[-1]),
             "x": x, "y": y,
             "az": float(pr.get("symbolRotation") or 0.0),
             "dip": dip,

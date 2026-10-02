@@ -169,7 +169,11 @@ def emit_sds(f: model.FaultRec) -> etree._Element:
     el = E("gsmlb:ShearDisplacementStructure", **{"gml:id": f.gml_id})
     # GML/lite 描述对称（2026-09-28）：description_append（28/31/37/41 活动/
     # 复活等结构层描述）此前仅 lite 出站——补齐 GML 通道
-    desc = "；".join(x for x in (f.gzehg, f.description_append, f.attitude_note)
+    _slip_note = ""
+    if f.slip_sense:
+        _slip_note = f"走滑旋向 {f.slip_sense}{f.slip_span}"
+    desc = "；".join(x for x in (f.gzehg, f.description_append, f.attitude_note,
+                                _slip_note)
                     if x)
     gml_head(el, desc or None, f.uri, [f.fault_name or f.fault_id])
     w = SlotWriter(el, sequences.SDS, repeatable=sequences.REPEATABLE["SDS"])
@@ -208,7 +212,7 @@ def emit_sds(f: model.FaultRec) -> etree._Element:
                 wv.add("movementSense", xlink_ref("gsmle:movementSense",
                                                   ms_uri, ms_lbl))
             w.add("stStructureDescription", E("gsmlb:stStructureDescription", dv))
-    # 走滑钩段：旋向折叠（238=dextral / 239=sinistral，与 faultType 互证）
+    # 走滑钩区间段：旋向折叠（空间识别 左行=sinistral / 右行=dextral，与 faultType 互证）
     if f.slip_sense:
         dv = E("gsmle:DisplacementValue")
         wv = SlotWriter(dv, sequences.DISPLACEMENT_VALUE)

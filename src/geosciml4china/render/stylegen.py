@@ -248,6 +248,33 @@ _CROSS_SYS_RE = re.compile(r"^([A-Z])(\d(?:-\d)?)([A-Z])(\d(?:-\d)?)(.*)$")
 _CROSS_CODES = {"CP", "SD", "DC", "OS", "JK", "TJ", "PT", "KE", "EN", "NQ",
                 "CmO", "ZCm"}
 
+# 界级/系级基色回落映射（2026-10-02 Pt1K 案）：元古界岩群（Pt1K）、长城系
+# 岩群（ChA/ChSt）无统级编码——按时代前缀取表2 system_base 基色。
+# 注意：_ERA_RE 交替序短码遮蔽长码（"P" 先于 "Pt\d?" 命中、C 先于 Ch），
+# 回落层须按**长前缀优先**自扫，不得复用 _ERA_RE 的 group(1)。
+_ERA_TO_BASE = {"Pt1": "Pt1", "Pt2": "Pt2", "Pt3": "Pt3",
+                "Ch": "Pt2", "Jx": "Pt2", "Qb": "Pt3",
+                "Nh": "Nh", "Z": "Z", "∈": "Cm",
+                "Qh": "Q", "Qp": "Q", "Q": "Q",
+                "N": "N", "E": "E", "K": "K", "J": "J", "T": "T",
+                "P": "P", "C": "Pz2", "D": "Pz2", "S": "Pz1", "O": "Pz1",
+                "Cm": "Cm"}
+_ERA_PREFIX_ORDER = tuple(sorted(_ERA_TO_BASE, key=len, reverse=True))
+
+
+def _era_base_spec(norm: str, lib: Lib) -> StyleSpec | None:
+    """界级基色回落：时代前缀（长优先）→ system_base 基色；
+    未命中 None（保持未分类占位链）。"""
+    for p in _ERA_PREFIX_ORDER:
+        if not norm.startswith(p):
+            continue
+        key = _ERA_TO_BASE[p]
+        if key not in lib.sys_base:
+            return None
+        return StyleSpec(rgb=list(lib.sys_base[key]), cls="strata_base",
+                         src=f"表2 界级基色 {key}")
+    return None
+
 
 @dataclass
 class StyleSpec:
@@ -465,6 +492,10 @@ def generate(sheet: str, lib: Lib | None = None,
             elif parsed and parsed[0] and parsed[0] in lib.fs:
                 spec = StyleSpec(rgb=list(lib.fs[parsed[0]]["rgb"]), cls="strata",
                                  src=f"统色 {parsed[0]}")
+            if spec.rgb is None:
+                # 界级基色回落（2026-10-02 Pt1K 案）：元古界/长城系岩群
+                # 无统级编码——时代前缀 → 表2 system_base 基色
+                spec = _era_base_spec(nm, lib) or spec
         specs[nm] = spec
 
     # ② 组间分色（同统多组）

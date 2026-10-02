@@ -5,7 +5,7 @@
 判别链，与校准产出逐组对照——共享结论不共享代码路径。
 基准（用户裁定链）：四步（实体归组/b-a 归属 a 依附 b/注释 1:1/三联体判别）
 + 距离四闸（孤儿 2×char_b/配对 2km/臂长 4km/侧别 20m/a-b 200m/中位距离带——
-b±20%、a 下限-20%上限+50%（2026-09-30 非对称带裁定））
+b -20%/+40%、a -35%/+75%（2026-09-30 系列裁定））
 + 同侧正异侧逆 + 存疑交人工零改码。
 """
 import math
@@ -13,8 +13,8 @@ import math
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import LineString as _LS
-from shapely.ops import unary_union as _uu
+from shapely.geometry import LineString as _LS, MultiLineString as _MLS, Point as _Pt
+from shapely.ops import transform as _stf, unary_union as _uu
 
 SHEETS = [
     ("aoyiyayilake", r"D:\J45C004001新疆奥依亚依拉克\J45C004001\MAPGIS\JWD", 36.5),
@@ -22,15 +22,19 @@ SHEETS = [
 ]
 NOISE_SIDE = 20.0
 MIN_AB = 200.0
-BAND_FRAC = 0.2        # 带下限（a/b 统一）
+BAND_FRAC = 0.2        # （保留名）
+B_BAND_LO_FRAC = 0.61  # b(1894) 带下限（2026-09-30 裁定，b1722 案：度量归真后 -60%→-61%）
 B_BAND_HI_FRAC = 0.4   # b(1894) 带上限 +40%（2026-09-30 裁定，b1745 案）
+A_BAND_LO_FRAC = 0.35  # a(1281) 带下限 -35%（2026-09-30 裁定，a1849 案）
 A_BAND_HI_FRAC = 0.75  # a(1281) 带上限（2026-09-30 裁定：+50%→+75%，a1742 案）
+B_SECOND_HI = 0.5      # 二次判别带 b 上限（2026-09-30 裁定，b1714 案）
 ARM_MAX = 4000.0
 
 
 def _band_limits(sn, med):
-    hi = A_BAND_HI_FRAC if str(sn) == "1281" else B_BAND_HI_FRAC
-    return (med * (1 - BAND_FRAC), med * (1 + hi))
+    if str(sn) == "1281":
+        return (med * (1 - A_BAND_LO_FRAC), med * (1 + A_BAND_HI_FRAC))
+    return (med * (1 - B_BAND_LO_FRAC), med * (1 + B_BAND_HI_FRAC))
 
 
 def _geo(root):
@@ -54,7 +58,8 @@ def _chain_fold(fl, ent):
         for (i, w), _p in eps.items():
             if (i, w) in used:
                 continue
-            used.add((i, w))
+            used.add((i, 0))  # 段级双端点消耗（C-① 镜像）
+            used.add((i, 1))
             coords = list(segs[i]) if w == 0 else list(reversed(segs[i]))
             cur = (i, 0 if w == 1 else 1)
             while True:
@@ -68,7 +73,8 @@ def _chain_fold(fl, ent):
                 if nxt is None:
                     break
                 j, wj = nxt
-                used.add((j, wj))
+                used.add((j, 0))
+                used.add((j, 1))
                 cj = list(segs[j]) if wj == 0 else list(reversed(segs[j]))
                 d_head = (cj[0][0] - coords[-1][0]) ** 2 + (cj[0][1] - coords[-1][1]) ** 2
                 d_tail = (cj[-1][0] - coords[-1][0]) ** 2 + (cj[-1][1] - coords[-1][1]) ** 2
@@ -77,11 +83,79 @@ def _chain_fold(fl, ent):
                 coords += cj[1:]
                 cur = (j, 0 if wj == 1 else 1)
             parts.append(_LS(coords))
-        chains[fid] = _uu(parts) if len(parts) > 1 else parts[0]
+        u = _uu(parts) if len(parts) > 1 else parts[0]
+        if u.geom_type == "MultiLineString":
+            u = _MLS(_order_parts(list(u.geoms)))  # C-②b 镜像：构建时一次排序
+        chains[fid] = u
     return chains
 
 
+def _part_len_m(part, LON_M, LAT_M):
+    cs = list(part.coords)
+    return sum(math.hypot((cs[i + 1][0] - cs[i][0]) * LON_M,
+                          (cs[i + 1][1] - cs[i][1]) * LAT_M)
+               for i in range(len(cs) - 1))
+
+
+def _order_parts(parts):
+    """MultiLineString 碎段排成最小缺口遍历序（发现 C-②b：union 输出序
+    任意，碎段线性参考须按物理邻接定向——F029 案 seg170 尾≈seg168 首
+    ~450m 数字化缺口，乱序致弧距虚增 15km）。
+    实现：端点坐标一次性缓存为浮点元组（枚举期不触 shapely 坐标序列）；
+    N≤40 全锚点×双朝向贪心取总缺口最小者；N>40 端点极径启发
+    （最远端点对即遍历两端）单锚贪心——F002 型 207 碎段实体由 229s 降至毫秒级。"""
+    if len(parts) <= 1:
+        return parts
+    _LS2 = _LS
+    E = [(p_.coords[0], p_.coords[-1]) for p_ in parts]
+
+    def _d2(c1, c2):
+        return (c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2
+
+    def _greedy(ai, rev0):
+        pool = set(range(len(parts)))
+        pool.discard(ai)
+        order = [(ai, rev0)]
+        tail = E[ai][0] if rev0 else E[ai][1]
+        gap = 0.0
+        while pool:
+            bi = min(pool, key=lambda i: min(_d2(tail, E[i][0]),
+                                             _d2(tail, E[i][1])))
+            pool.discard(bi)
+            if _d2(tail, E[bi][1]) < _d2(tail, E[bi][0]):
+                order.append((bi, True))
+                gap += _d2(tail, E[bi][1])
+                tail = E[bi][0]
+            else:
+                order.append((bi, False))
+                gap += _d2(tail, E[bi][0])
+                tail = E[bi][1]
+        return order, gap
+
+    if len(parts) <= 40:
+        best = None
+        for i in range(len(parts)):
+            for rev in (False, True):
+                cand = _greedy(i, rev)
+                if best is None or cand[1] < best[1]:
+                    best = cand
+        order = best[0]
+    else:
+        # 端点极径启发：最远端点对所在 part 即遍历两端
+        ends = [(i, w) for i in range(len(parts)) for w in (0, 1)]
+        i0, w0 = max(ends, key=lambda x: max(_d2(E[x[0]][x[1]], E[j][w])
+                                             for j in range(len(parts)) for w in (0, 1)))
+        order = _greedy(i0, w0 == 1)[0]
+    return [_LS2(list(reversed(parts[i].coords))) if r else parts[i]
+            for i, r in order]
 def _arc_and_side(geom, pt, LON_M, LAT_M):
+    # MultiLineString：最近 part 段内弧位 + 前置 part 长度，不跨跳（C-② 镜像）
+    if geom.geom_type == "MultiLineString":
+        parts = list(geom.geoms)  # 构建时已排序（C-②b 镜像）
+        k = min(range(len(parts)), key=lambda i: parts[i].distance(pt))
+        s_pre = sum(_part_len_m(pp, LON_M, LAT_M) for pp in parts[:k])
+        s_in, side, dperp = _arc_and_side(parts[k], pt, LON_M, LAT_M)
+        return s_pre + s_in, side, dperp
     n = 400
     pts = [geom.interpolate(i / n, normalized=True) for i in range(n + 1)]
     best = min(range(n + 1), key=lambda i:
@@ -110,14 +184,17 @@ def test_assoc_distance_and_band(key, root, lat):
     assoc = pd.read_csv(root + f"\\fault_aux_{key}.csv", dtype=str)
     ent = pd.read_csv(root + f"\\fault_entities_{key}.csv", dtype=str)
     chains = _chain_fold(fl, ent)
+    # 发现 A 镜像：米制链（逐轴缩放）上重算归属距离
+    chains_m = {f: _stf(lambda x, y: (x * LON_M, y * LAT_M), c)
+                for f, c in chains.items()}
     dists = {c: [] for c in ("1894", "1281")}
     for _, r in assoc.iterrows():
         if r["kind"] != "symbol" or r["dist_m"] is None or pd.isna(r["dist_m"]):
             continue
         pt = wt.iloc[int(r["aux_idx"])].geometry
-        ch = chains.get(r["fault_id"])
+        ch = chains_m.get(r["fault_id"])
         assert ch is not None
-        d_min = ch.distance(pt) * LON_M
+        d_min = ch.distance(_Pt(pt.x * LON_M, pt.y * LAT_M))
         assert abs(d_min - float(r["dist_m"])) < 1.0, \
             f"归属非最近链 aux={r['aux_idx']}: 记录 {r['dist_m']} vs 重算 {d_min:.1f}"
         sn = str(r["sub_no"])
@@ -170,7 +247,17 @@ def test_triplet_discrimination(key, root, lat):
         fid = t["fault_id"]
         b_id = int(t["a1894"])
         a_ids = [int(x) for x in str(t["a1281"]).split("/")]
-        if not all(band_ok(x, "1894" if x == b_id else "1281") for x in [b_id] + a_ids):
+        if str(t.get("src") or "") == "second_pass":
+            # 二次判别组：b 放宽至二次带（≥首判下限、≤(1+B_SECOND_HI)×中位），
+            # a 伙伴仍须首判带内
+            _bd = float(assoc[assoc["aux_idx"] == str(b_id)].iloc[0]["dist_m"])
+            _sp_ok = (band["1894"][0] <= _bd
+                      <= med["1894"] * (1 + B_SECOND_HI)) if "1894" in band else True
+            _members_ok = _sp_ok and all(band_ok(x, "1281") for x in a_ids)
+        else:
+            _members_ok = all(band_ok(x, "1894" if x == b_id else "1281")
+                              for x in [b_id] + a_ids)
+        if not _members_ok:
             exp = "存疑（距离偏离中位数距离带）"
         else:
             g = chains[fid]
@@ -201,6 +288,22 @@ def test_pairs_constraints(key, root, lat):
     pairs = pd.read_csv(root + r"\fault_aux_number_1894_pairs.csv", dtype=str)
     assert pairs["idx1894"].nunique() == len(pairs), "共享 b（1:1 违反）"
     assert pairs["num_idx"].nunique() == len(pairs), "共享注释（1:1 违反）"
+    assoc = pd.read_csv(root + rf"\fault_aux_{key}.csv", dtype=str)
+
+    def _n(v):
+        s = str(v).strip()
+        return None if s in ("", "nan", "None") else float(s)
+    # 双通道一致性（2026-10-02 b1778/b1699 案）：assoc.dip 必须镜像最终
+    # pairs 表——配对是倾角唯一来源，旧实现双通道漂移致同一注释倾角
+    # 在 GML 双发（b1699 经 pairs、b1778 经 assoc 残留）
+    adip = {int(r2["aux_idx"]): _n(r2.get("dip")) for _, r2 in assoc.iterrows()}
+    pb = set(int(x) for x in pairs["idx1894"])
+    for _, r in pairs.iterrows():
+        b = int(r["idx1894"])
+        assert adip.get(b) == _n(r["dip"]), \
+            f"assoc.dip 与 pairs 不一致 b{b}: assoc={adip.get(b)} vs pairs={_n(r['dip'])}"
+    stray = [b for b, v in adip.items() if b not in pb and v is not None]
+    assert not stray, f"未配对 b 残留 assoc.dip: {stray}"
     wt, _fl = _geo(root)
     LON_M = 111320.0 * math.cos(math.radians(lat))
     LAT_M = 111320.0
@@ -280,7 +383,7 @@ def test_reattributed_patterns_valid(key, root, lat):
 @pytest.mark.parametrize("key,root,lat", SHEETS)
 def test_distance_criteria_strict(key, root, lat):
     """a/b 与所属断层距离判据严格实行（独立重算）：
-    ① 带=逐类中位带（b±20%；a -20%/+50%）；② 带外成员禁止成组；
+    ① 带=逐类中位带（b -20%/+40%；a -35%/+75%）；② 带外成员禁止成组；
     ③ 超 2×中位=孤儿排除；④ 重归属行终态带内+资格来源合法。"""
     wt, fl = _geo(root)
     LON_M = 111320.0 * math.cos(math.radians(lat))
@@ -288,15 +391,15 @@ def test_distance_criteria_strict(key, root, lat):
     tri = pd.read_csv(root + rf"\_fault_triplets_{key}.csv", dtype=str)
 
     # ① 带独立重算（总体=符号行全量，与 auxchain 口径一致）
-    band = {}
+    band, _med = {}, {}
     for sn in ("1894", "1281"):
         ds = sorted(float(x) for x in assoc[(assoc["kind"] == "symbol")
                                             & (assoc["sub_no"].astype(str) == sn)
                                             & assoc["dist_m"].notna()]["dist_m"])
         if ds:
-            med = ds[len(ds) // 2] if len(ds) % 2 else (ds[len(ds) // 2 - 1] + ds[len(ds) // 2]) / 2
             med_any = sorted(ds)[len(ds) // 2]
             band[sn] = _band_limits(sn, med_any)
+            _med[sn] = med_any
     for _, r in assoc.iterrows():
         if r["kind"] != "symbol" or pd.isna(r["dist_m"]):
             continue
@@ -310,18 +413,29 @@ def test_distance_criteria_strict(key, root, lat):
             f"带标记不符 aux={r['aux_idx']} d={d:.1f} 带={band[sn]} 标={got!r}"
 
     # ② 带外成员禁止成组：产物三联体任一行所有成员带内
+    #    （second_pass 组例外：b 允许首判带外但须在二次带内——b1714 案裁定；
+    #     a 伙伴一律首判带内）
     bmap = assoc.set_index(assoc["aux_idx"].astype(int))["dist_band_ok"].to_dict()
+    dmap = assoc.set_index(assoc["aux_idx"].astype(int))["dist_m"].to_dict()
     for _, t in tri.iterrows():
-        members = [int(t["a1894"])] + [int(x) for x in str(t["a1281"]).split("/")]
+        sp = str(t.get("src") or "") == "second_pass"
+        b_id = int(t["a1894"])
+        members = [b_id] + [int(x) for x in str(t["a1281"]).split("/")]
         for m in members:
-            assert str(bmap.get(m) or "") != "out", \
+            mark = str(bmap.get(m) or "")
+            if sp and m == b_id:
+                d = float(dmap[m])
+                assert band["1894"][0] <= d <= _med["1894"] * (1 + B_SECOND_HI), \
+                    f"二次判别 b 超二次带 b{m} d={d:.1f}"
+                continue
+            assert mark != "out", \
                 f"带外成员成组 b{t['a1894']} {t['fault_id']} 成员 {m}"
 
     # ③ 孤儿闸：超 2×中位者 status_note=orphan 且不参组（前向：标记者必超闸）
     orphan_marks = assoc[assoc["status_note"].astype(str) == "orphan"]
     for _, r in orphan_marks.iterrows():
         sn = str(r["sub_no"])
-        med = band[sn][0] / (1 - BAND_FRAC)  # 下限恒为 med×0.8（非对称带同口径）
+        med = _med[sn]  # 中位数显式携带（a/b 下限系数不同，不可反推）
         assert float(r["dist_m"]) > 2 * med, \
             f"孤儿标记未超闸 aux={r['aux_idx']} d={r['dist_m']} med={med:.0f}"
     # 孤儿不参组
@@ -331,7 +445,7 @@ def test_distance_criteria_strict(key, root, lat):
         assert not (members & orphan_ids), f"孤儿参组 {t['a1894']}"
     # 反向：超闸者必标记孤儿
     for sn, (lo, hi) in band.items():
-        med = lo / (1 - BAND_FRAC)
+        med = _med[sn]  # 显式中位数（a/b 下限系数不同）
         far = assoc[(assoc["sub_no"].astype(str) == sn)
                     & (pd.to_numeric(assoc["dist_m"], errors="coerce") > 2 * med)]
         for _, r in far.iterrows():

@@ -210,12 +210,8 @@ def calibrate_entities(sheet_key: str, out_dir=None,
     # 218/216——2026-09-13 裁定交叉断层；2026-09-14 审计证实 218尾 贴于 216 内部
     # （触点距 216首 925m，同向延申的枝状分叉），L3 端点断口曾误桥其"923m 缺口"
     # （实为 216 自身段体）→ 漏洞修复：L3 亦查阅本清单 + T-触点守卫
-    LINK_BLOCK = ({frozenset((218, 216)), frozenset((240, 233)),
-                  frozenset((6, 7)), frozenset((43, 61)), frozenset((83, 87)),
-                  # 2026-09-14 用户裁定：210 为独立断层，切断 F48，不得并入
-                  # （208尾/210首 14.0° 接点系切截关系，非贯通）
-                  frozenset((208, 210))}
-                  if sh.key == "kurgan" else set()) | _EXTRA_BLOCK  # +图幅登记册
+    LINK_BLOCK = set(_EXTRA_BLOCK)  # 图幅登记册（2026-10-01 泛化：库尔干
+    # 内联清单已迁入 fault_group_overrides_kurgan.json——代码零图幅分支）
     import os as _os_g
     if _os_g.environ.get("G4C_NO_MANUAL") == "1" or             _os_g.environ.get("G4C_NO_BLOCK") == "1":  # 泛化探针：空载排除清单
         LINK_BLOCK = set()
@@ -513,19 +509,7 @@ def calibrate_entities(sheet_key: str, out_dir=None,
     # 2026-09-29 泛化守卫：新幅的跨段合并裁定另行入册）
     L5_MERGES = ([] if _os_g.environ.get("G4C_NO_MANUAL") == "1"
                  or _os_g.environ.get("G4C_NO_L5") == "1"
-                 else _EXTRA_MERGES + ([] if sh.key != "kurgan" else [
-        [218, 225, 231, 232, 235, 240],
-        [154, 155, 157, 158],
-        [219, 221, 222, 224, 226, 233],
-        [257, 276],
-        [252, 258, 275],
-        [227, 229, 242, 244, 246, 247, 243],
-        [180, 184],  # 2026-09-12 用户裁定：616m 断口 100% 覆盖，184 弧形段斜交接入
-        [281, 288, 303, 308, 309],  # 2026-09-13 用户裁定：14km 弧形断裂带，两断口 100% Q 覆盖
-        [254, 267],  # 2026-09-13 用户裁定：共点接合局部共线，F045+F028 合成 32km 逆冲带
-        [193, 194, 195],  # 2026-09-13 初裁含 191；同日复核：191 与 194 不并链（194 为 191 内部
-                          # 折点 22° 斜交分支），191 析出与 207 成链，193/194/195 保持
-    ]))
+                 else _EXTRA_MERGES)  # 图幅登记册（库尔干清单已迁 JSON）
     for grp in L5_MERGES:
         import os
         if os.environ.get("NO_L5") == "1":  # 规则覆盖度自检：NO_L5=1 时跳过人工裁定

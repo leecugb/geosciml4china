@@ -68,8 +68,13 @@ def adapt_geologic_units(features: list[dict],
 
 def adapt_contacts(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict]:
     """contact_view → 界线层（render_line_layer 契约；GZBD_eff 在场即关闭
-    gzbd_overrides 路径；不设 younger_side → 现场计算）。"""
+    gzbd_overrides 路径）。younger_side 结构化贯通（2026-10-02 渲染优化）：
+    04/24 不整合双线用标定侧；null → 渲染层探针回落（与参照管线同链）。"""
     rows, bad_geom = [], []
+
+    def _side(v):
+        return v if isinstance(v, str) and v in ("left", "right") else None
+
     for feat in features:
         p = props(feat)
         geom = shape(feat["geometry"])
@@ -81,6 +86,7 @@ def adapt_contacts(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict]:
             "GZBD": code,
             "GZBD_eff": code,
             "status": "normal",
+            "younger_side": _side(p.get("younger_side")),
             "contact_id": feature_id(p.get("identifier_value") or ""),
             "geometry": geom,
         })

@@ -106,12 +106,14 @@ def check_consistency(lite_dir: str | Path,
     rep("C3 面色 genericSymbolizer==反查 rgb", not bad and not unm,
         f"mismatch={len(bad)} unmapped={unm[:5]}（{len(gdf_u)}/{expect_counts[0]}）")
 
-    # ④ SDS.name == L1.GZEAB（FEATUREID join）
+    # ④ SDS.name == L1.GZEAB（语义 sds id join，2026-10-02 裁定）
+    from ..convert import ids as _ids
+    _seg_ord = _ids.fault_seg_ordinals(l1_flt)
     l1_name = {}
     for _, r in l1_flt.iterrows():
         v = r.get("GZEAB")
         v = "" if v is None or str(v).strip().lower() in ("nan", "none") else str(v).strip()
-        l1_name[str(r["FEATUREID"])] = v
+        l1_name[f"{r['fault_id']}.{_seg_ord[int(r['_src_id'])][1]}"] = v
     n_hit = n_tot = 0
     for _, r in gdf_s.iterrows():
         fid = str(r["FEATUREID"])
@@ -178,18 +180,20 @@ def check_consistency(lite_dir: str | Path,
                         & (l1_fa_x["status"].astype(str) == "normal")]
         n_view = len(feats)
         pos_bad = 0
+        # 垂足坐标多重集比对（语义 id 下不复用 URI 解析，2026-10-02 裁定）
+        from collections import Counter as _Counter
+        expect_feet = _Counter()
+        for _, r in b_sub.iterrows():
+            seg_geom = l1_fl.geometry.iloc[int(r["seg_idx"])]
+            expect = seg_geom.interpolate(seg_geom.project(r.geometry))
+            expect_feet[(round(expect.x, 9), round(expect.y, 9))] += 1
         for ft in feats:
-            uri = ft["properties"]["identifier"]["value"]
-            aux_idx = int(str(uri).rsplit(".", 1)[-1])
-            r = b_sub[b_sub["_src_id"] == aux_idx]
-            if not len(r):
-                pos_bad += 1
-                continue
-            seg_geom = l1_fl.geometry.iloc[int(r.iloc[0]["seg_idx"])]
-            expect = seg_geom.interpolate(seg_geom.project(r.geometry.iloc[0]))
             gx, gy = ft["geometry"]["coordinates"][:2]
-            if abs(gx - expect.x) > 1e-9 or abs(gy - expect.y) > 1e-9:
+            key = (round(gx, 9), round(gy, 9))
+            if expect_feet[key] <= 0:
                 pos_bad += 1
+            else:
+                expect_feet[key] -= 1
         rep("C7 测量点视图一致（计数/垂足）",
             n_view == len(b_sub) and pos_bad == 0,
             f"view={n_view}/{len(b_sub)} 错位={pos_bad}")
@@ -215,7 +219,8 @@ LAYER_TABLE_L1 = [
 def assemble_l1_map(l1_dir: str | Path, bbox, *, dpi: int = 200):
     """L1 侧镜像装配 + 中性化（仅改数据列，绘制路径不动）。
 
-    中性化：faults GZEEB:=gzeeb_eff、删 GZEEE 列；boundaries 删 younger_side
+    中性化：faults GZEEB:=gzeeb_eff、删 GZEEE 列；boundaries 保 younger_side
+    （双侧同用标定列，null → 双侧同探针）
     列（两侧均现场计算）；保留 10/81 码行（10 静默跳过、81 归 M1）；
     attitude 保留 sem_type（差异归 M3）；polygons 不动（zorder 稳定排序）。
     """
@@ -238,9 +243,10 @@ def assemble_l1_map(l1_dir: str | Path, bbox, *, dpi: int = 200):
                           .str.replace(".0", "", regex=False).str.zfill(2))
             g = g.drop(columns=[c for c in ("GZEEE",) if c in g.columns])
         elif theme == "boundaries":
-            # B1 对齐（2026-09-28）：双侧同口径剔除制图误差行
+            # B1 对齐（2026-09-28）：双侧同口径剔除制图误差行；
+            # 2026-10-02 渲染优化：保 younger_side（双侧同用标定列，
+            # null → 双侧同探针）——GZEEE 仍删（faults 分支，line_cfg 宽对齐）
             g = g[g["status"].astype(str) != "excluded"]
-            g = g.drop(columns=[c for c in ("younger_side",) if c in g.columns])
         m.add_layer(Layer(name=lname, geodataframe=g, zorder=z, role=role))
     m.bbox = bbox
     return m

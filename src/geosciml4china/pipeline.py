@@ -1,11 +1,13 @@
-"""全链编排器（2026-09-29 全链范围裁定）：MapGIS 工程文件夹 → 标定 → 转换 → 渲染。
+"""全链编排器（2026-10-02 用户对齐定版）：MapGIS 工程文件夹 → L0 → 自支持
+地质语义判别解析（L1）→ GeoSciML → 语义渲染。
 
-阶段序（管线纪律，逐段失败即中止）：
+阶段序（管线纪律，逐段失败即中止；与用户对齐链逐字对应）：
+  ⓪ preflight     MapGIS 文件完整性检查（11 文件契约，CORE 缺即中止）
   ① convert       MapGIS 原生 → geojson/L0（pymapgis.semantics.convert_sheet + validate_l0）
-  ② calibrate     L0 → 标定阶段链 → geojson/L1（pymapgis.semantics.calibrate_semantics；
-                  图幅剖面 l1_stages 驱动；标定规则库 geosciml4china.calibrate 渐进迁入）
-  ②a entities/auxchain 断层归组（登记册+G2）→ 辅助点实体链判别（全裁定）
-        → 写回 → L1 重物化
+  ② calibrate     自支持地质语义判别解析（geosciml4china.calibrate 五域全包原生）：
+                   gzbd（界线）→ entities（断层归组）→ auxchain（辅助点判别）
+                   → 写回 → gzeeb（断层三维）→ attitudes（产状）→ fossils（化石）
+  ②b materialize  L1 物化（语义标定写回 geojson/L1）
   ③ stylegen      语义→样式（lite 优先；lite 缺失时 --from-wp 引导——新幅首接）
   ④ build         L1 → GML + Lite + pending（含断层样式生成：其语义源=lite SDS 视图）
   ⑤ verify        XSD + 业务断言
@@ -13,6 +15,7 @@
 
 CLI: g4c pipeline --sheet <key> [--skip-convert] [--skip-calibrate-stages]
      [--skip-render] [--check-only（止于 verify）] [--dpi N]
+（登记缺口：推测断层标定 _calibrate_inferred_faults 未入包——挂账）
 """
 from __future__ import annotations
 
@@ -54,23 +57,41 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
     else:
         print("① 跳过（--skip-convert）")
 
-    # ② calibrate：标定阶段链 + 物化 L1 + 核验（pymapgis 编排器）
-    from pymapgis.semantics.calibrate import calibrate_semantics
-    print("② 标定阶段链 + L1 物化")
-    if not calibrate_semantics(sh.root, skip_stages=skip_calibrate_stages):
-        print("!! 标定/物化/核验失败，中止")
-        return 1
-
-    # ②a 断层实体归组（四步链第①步）+ 辅助点实体链判别（第②③④步）
-    from .calibrate.entities import calibrate_entities
-    from .calibrate.auxchain import calibrate_auxchain
+    # ② 自支持地质语义判别解析（geosciml4china.calibrate 六域全包原生，
+    # 2026-10-02 用户对齐定版）——两相物化：基线 L1（实体/辅助链消费源）
+    # → 实体/辅助链 → gzeeb/产状/化石/推测断层 → 终态 L1
     from pymapgis.semantics.materialize import materialize_sheet
-    print("②a 断层归组 + 辅助点实体链判别")
-    calibrate_entities(sh.key)
-    calibrate_auxchain(sh.key)
-    calibrate_entities(sh.key, triplets_csv=f"_fault_triplets_{sh.key}.csv",
-                       triplet_attitude_csv=f"_fault_triplets_{sh.key}.csv")
-    materialize_sheet(sh.root)  # 重物化（实体/aux 判别写回进 L1）
+    if skip_calibrate_stages:
+        print("② 跳过（--skip-calibrate-stages）")
+        print("②b L1 物化")
+        materialize_sheet(sh.root)
+    else:
+        from .calibrate.gzbd import calibrate_boundaries
+        from .calibrate.entities import calibrate_entities
+        from .calibrate.auxchain import calibrate_auxchain
+        from .calibrate.gzeeb import calibrate_faults
+        from .calibrate.attitudes import calibrate_attitudes
+        from .calibrate.fossils import calibrate_fossils
+        from .calibrate.inferred_faults import calibrate_inferred_faults
+        print("② 自支持地质语义判别解析")
+        calibrate_boundaries(sh.key)               # 界线（GZBD）
+        print("②a 基线 L1 物化（实体/辅助链消费源）")
+        materialize_sheet(sh.root)
+        calibrate_entities(sh.key)                 # 断层归组（实体）
+        calibrate_auxchain(sh.key)                 # 辅助点实体链判别
+        calibrate_entities(sh.key,                 # aux 写回（A1）
+                          triplets_csv=f"_fault_triplets_{sh.key}.csv",
+                          triplet_attitude_csv=f"_fault_triplets_{sh.key}.csv")
+        from .calibrate.fault_contact_activity import \
+            calibrate_fault_contact_activity
+        calibrate_fault_contact_activity(sh.key)   # 断裂接触审计兜底（活动断层判别；
+        # 2026-10-02 A7：置于实体归组之后——候选归因需 fault_entities 表）
+        calibrate_faults(sh.key)                   # 断层三维（GZEEB）
+        calibrate_attitudes(sh.key)                # 产状类型
+        calibrate_fossils(sh.key)                  # 化石/泥火山
+        calibrate_inferred_faults(sh.key)          # 推测断层（覆盖度核定）
+        print("②b 终态 L1 物化（语义标定写回 geojson/L1）")
+        materialize_sheet(sh.root)
 
     # ③ stylegen（lite 优先；缺 lite 走 WP 引导——新幅首接通道）
     from .render import stylegen as _sg

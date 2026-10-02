@@ -79,6 +79,10 @@ def _bind(sheet_key: str) -> dict:
         "AUX_ASSOC_CSV": sh.aux_assoc,
         "AUX_TRIPLETS_CSV": sh.aux_triplets,
         "AUX_SEMANTICS_JSON": sh.aux_semantics_json,  # 编图矛盾登记册
+        "CONFLICTS_CSV": sh.root / f"_gzeeb_conflicts_{sh.key}.csv",  # 段级横幅源（2026-10-02）
+        # 断裂接触活动候选册（2026-10-02 活动断层审计 A7：双册消费——
+        # 断裂接触层独有实体的候选经此到达 build 横幅）
+        "CONTACT_CONFLICTS_CSV": sh.root / f"_fault_contact_activity_conflicts_{sh.key}.csv",
         "CALIBRATION_CSV": sh.calibration,            # 界线标定报告（关系装配源）
         "EXPECTED_UNITS": sh.expected_units,          # 色库单元数断言
         # 面图层文件分布断言（装载期漂移闸）

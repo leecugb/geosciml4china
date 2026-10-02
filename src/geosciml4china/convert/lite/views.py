@@ -67,7 +67,7 @@ def contact_view(c: model.ContactRec) -> Dict[str, Any]:
     else:
         ct_uri, ct_label = NIL, "unknown"
     desc = (c.verdict or "") + (f"；年轻侧 {c.younger_side}" if c.younger_side else "")
-    return {
+    props = {
         "@featureType": "ContactView",
         "identifier": {"value": c.uri, "@codeSpace": config.CODE_SPACE},
         "name": c.sem_label or c.code,
@@ -79,6 +79,11 @@ def contact_view(c: model.ContactRec) -> Dict[str, Any]:
         "genericSymbolizer": c.code,
         "shape": c.geometry,
     }
+    # 结构化年轻侧（2026-10-02 渲染优化）：04/24 不整合双线须用标定侧
+    # （渲染层不再现场探针）；仅 truthy 发射——null 行属性缺席→探针回落
+    if c.younger_side:
+        props["younger_side"] = c.younger_side
+    return props
 
 
 def sds_view(f: model.FaultRec) -> Dict[str, Any]:
@@ -92,6 +97,8 @@ def sds_view(f: model.FaultRec) -> Dict[str, Any]:
         desc = (desc + "；" if desc else "") + f.description_append
     if f.attitude_note:
         desc = (desc + "；" if desc else "") + f.attitude_note
+    if f.slip_sense:
+        desc = (desc + "；" if desc else "") +             f"走滑旋向 {f.slip_sense}{f.slip_span}"
     return {
         "@featureType": "ShearDisplacementStructureView",
         "identifier": {"value": f.uri, "@codeSpace": config.CODE_SPACE},

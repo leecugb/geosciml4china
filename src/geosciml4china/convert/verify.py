@@ -17,7 +17,8 @@ from typing import List, Optional, Tuple
 from lxml import etree
 
 from ..sheets import list_sheets
-from . import config, mapping, sources, validate
+from . import config, mapping, model, sources, validate
+from . import ids as semantic_ids
 from . import units as unit_mod
 
 GSMLB = "{http://www.opengis.net/gsml/4.1/GeoSciML-Basic}"
@@ -27,10 +28,27 @@ XLINK = "{http://www.w3.org/1999/xlink}"
 
 # 双幅期望画像（2026-09-27 英吉沙接入实测核定）
 EXPECT = {
+    # 库尔干幅副本（全管线测试幅，2026-10-02）——画像=库尔干镜像
+    "jws": dict(
+        units=57, poly_mfs=713, contacts=1316, contact_nil=0, sds=310,
+        sds_nil_faulttype=0, planes=93, polarity=2, folds=4, fold_nil=0,
+        members=4733, compositions=12, six_mode=(51, 5, 3, 0, 29, 5),
+        banners=7, dv_blocks=97,  # 2026-10-02 实测：Qp1X 箭头归一修复后
+        # 活动候选队列 8→1（F038/F070/F093/F032/F004/F001/F067 消解）
+        ms_dist={"reverse": 54, "normal": 5, "no_movement_sense": 34,
+                 "dextral": 1, "sinistral": 3},
+        hwd=93, relations=160, measure_points=93, char_dist_b=277.0,
+        lite_counts={"geologic_unit_view": 713, "contact_view": 1316,
+                     "shear_displacement_structure_view": 310,
+                     "site_observation_view": 305,
+                     "fault_attitude_point_view": 93,
+                     "fossil_specimen_view": 48},
+        fossil_violations=1,
+    ),
     "kurgan": dict(
         units=57, poly_mfs=713, contacts=1316, contact_nil=0, sds=310,
         sds_nil_faulttype=0, planes=93, polarity=2, folds=4, fold_nil=0,
-        members=4733, compositions=12, six_mode=(54, 5, 0, 0, 29, 5),
+        members=4733, compositions=12, six_mode=(51, 5, 3, 0, 29, 5),
         banners=7, dv_blocks=97,
         ms_dist={"reverse": 54, "normal": 5, "no_movement_sense": 34,
                  "dextral": 1, "sinistral": 3},
@@ -40,16 +58,20 @@ EXPECT = {
                      "site_observation_view": 305,
                      "fault_attitude_point_view": 93,
                      "fossil_specimen_view": 48},
+        fossil_violations=1,
     ),
     "yingjisha": dict(
         units=95, poly_mfs=808, contacts=1199, contact_nil=0, sds=289,
         sds_nil_faulttype=51, planes=134, polarity=0, folds=7, fold_nil=0,
-        members=4357, compositions=0, six_mode=(37, 16, 14, 7, 58, 2),
-        banners=9, dv_blocks=134,
+        members=4357, compositions=0, six_mode=(46, 22, 11, 7, 47, 1),
+        banners=7, dv_blocks=137,  # 2026-10-02 语义 id 迁移实测
         # auxchain 版画像（2026-09-29 重测）；238/239 钩旋向未提取
         # （sinistral 3 丢失——登记缺口）
-        # 2026-09-30 非对称 a 带（-20%/+50%）+重归属伙伴带内闸后画像
-        ms_dist={"reverse": 51, "normal": 23, "no_movement_sense": 60},
+        # 2026-09-30 距离带四案+主路降级终版后画像
+        # 2026-10-02 slip_sense 接线后画像（+sinistral 3 走滑旋向块）；
+        # 语义 id 迁移实测更新
+        ms_dist={"reverse": 57, "normal": 29, "no_movement_sense": 48,
+                 "sinistral": 3},
         hwd=134, relations=23, measure_points=134, char_dist_b=297.0,
         lite_counts={"geologic_unit_view": 808, "contact_view": 1199,
                      "shear_displacement_structure_view": 289,
@@ -63,10 +85,10 @@ EXPECT = {
     "bashkurgan": dict(
         units=40, poly_mfs=403, contacts=546, contact_nil=0, sds=213,
         sds_nil_faulttype=20, planes=20, polarity=0, folds=10, fold_nil=0,
-        members=2525, compositions=0, six_mode=(6, 0, 0, 0, 0, 14),
-        banners=0, dv_blocks=20,
-        # 2026-09-30 非对称 a 带（-20%/+50%）后画像：逆 3→6
-        ms_dist={"reverse": 6, "no_movement_sense": 14},
+        members=2525, compositions=0, six_mode=(8, 0, 1, 0, 0, 11),
+        banners=3, dv_blocks=20,  # 2026-10-02 gzeeb 现版重跑实测
+        # 2026-09-30 距离带四案+主路降级终版后画像：逆 6→7
+        ms_dist={"reverse": 9, "no_movement_sense": 11},
         hwd=20, relations=78, measure_points=20, char_dist_b=190.4,
         lite_counts={"geologic_unit_view": 403, "contact_view": 546,
                      "shear_displacement_structure_view": 213,
@@ -86,10 +108,12 @@ EXPECT = {
     "aoyiyayilake": dict(
         units=58, poly_mfs=543, contacts=734, contact_nil=0, sds=341,
         sds_nil_faulttype=73, planes=61, polarity=13, folds=60, fold_nil=0,
-        members=3744, compositions=0, six_mode=(18, 2, 7, 3, 9, 22),
-        banners=0, dv_blocks=61,
-        # 2026-09-30 非对称 a 带（-20%/+50%）+重归属伙伴带内闸后画像
-        ms_dist={"reverse": 25, "normal": 5, "no_movement_sense": 31},
+        members=3744, compositions=0, six_mode=(27, 6, 2, 0, 9, 17),
+        banners=36, dv_blocks=65,  # 2026-10-02 gzeeb 现版重跑实测（Qp1X/注释通道裁定后）
+        # 2026-10-02 slip_sense 接线后画像：a-b→a-b-a 升级（臂隙兜底）+
+        # 走滑旋向块 sinistral 3/dextral 1（空间识别钩对出站）
+        ms_dist={"reverse": 29, "normal": 6, "no_movement_sense": 26,
+                 "sinistral": 3, "dextral": 1},
         hwd=61, relations=0, measure_points=61, char_dist_b=209.6,
         lite_counts={"geologic_unit_view": 543, "contact_view": 734,
                      "shear_displacement_structure_view": 341,
@@ -113,6 +137,12 @@ def _text(el, path: str) -> Optional[str]:
 
 
 def main() -> int:
+    # GBK 控制台容忍（2026-10-02 重渲崩溃案）：✓/⚠ 标记在 cp936 stdout
+    # 下 UnicodeEncodeError 中止 verify——统一降级 replace，报告文件不受影响
+    try:
+        sys.stdout.reconfigure(errors="replace")
+    except Exception:
+        pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--gml", default=None)
     ap.add_argument("--lite-dir", default=None)
@@ -288,7 +318,11 @@ def main() -> int:
         polys = sources.read_theme("polygons")
         first = polys.iloc[0]
         src = first.geometry.__geo_interface__
-        target_id = first["FEATUREID"]
+        # 语义 id 重算（2026-10-02 裁定）：mf.{safe_norm}.{ord}——与 build 同源
+        poly_ids = semantic_ids.polygon_mf_ids(polys, unit_mod.raw_to_norm_map())
+        _safe = model._safe_ncname(poly_ids[0].split(".")[0])
+        _ord = poly_ids[0].split(".")[1]
+        target_id = f"{_safe}.{_ord}"
         mf = next((el for el in mf_el if el.get(f"{GML}id") == f"mf.{target_id}"), None)
         if mf is None:
             return False, f"MF {target_id} not found"
@@ -521,13 +555,20 @@ def main() -> int:
     b_sub = l1_fa[(l1_fa["kind"] == "symbol")
                   & (l1_fa["sub_no"].astype(str).str.replace(".0", "", regex=False) == "1894")
                   & (l1_fa["status"].astype(str) == "normal")]
-    gml_fp_pos = {}
+    # 语义 id 集合比对（2026-10-02 裁定）：mf.fp.{fault_id}.{序}——与 build 同源
+    _auxchain_csv = config.SHEET_ROOT / f"fault_aux_{config.SHEET_KEY}.csv"
+    _auxchain_df = __import__("pandas").read_csv(_auxchain_csv, dtype=str)         if _auxchain_csv.exists() else None
+    mp_of = semantic_ids.measure_point_ids(l1_fa, _auxchain_df, l1_fl)
+    expect_mp_ids = {f"mf.{v['mp_id']}" for v in mp_of.values()}
+    got_mp_ids = {m.get(f"{GML}id") for m in fp_mfs}
+    mp_id_bad = sorted(got_mp_ids ^ expect_mp_ids)
+    # 垂足硬校验（坐标多重集比对——语义 id 下不复用 aux_idx 解析）
+    gml_fp_pos = Counter()
     for m in fp_mfs:
-        fid = (m.get(f"{GML}id") or "")[6:]
         pos = m.find(f".//{GML}pos")
         if pos is not None and pos.text:
             lat, lon = (float(v) for v in pos.text.split()[:2])
-            gml_fp_pos[int(fid)] = (lon, lat)  # GML 轴序 lat,lon → 还原 lon,lat
+            gml_fp_pos[(round(lon, 9), round(lat, 9))] += 1  # GML 轴序 lat,lon → 还原 lon,lat
     offseg = offband = mismatch = clamps = 0
     char = EXP["char_dist_b"]
     for _, r in b_sub.iterrows():
@@ -535,10 +576,12 @@ def main() -> int:
         seg = int(r["seg_idx"])
         seg_geom = l1_fl.geometry.iloc[seg]
         expect_pt = seg_geom.interpolate(seg_geom.project(r.geometry))
-        got = gml_fp_pos.get(aux_idx)
-        if got is None:
+        got_key = (round(expect_pt.x, 9), round(expect_pt.y, 9))
+        if gml_fp_pos[got_key] <= 0:
             mismatch += 1
             continue
+        gml_fp_pos[got_key] -= 1
+        got = got_key
         d_pt = ((got[0] - expect_pt.x) ** 2 + (got[1] - expect_pt.y) ** 2) ** 0.5
         if d_pt > 1e-9:
             mismatch += 1
@@ -557,6 +600,7 @@ def main() -> int:
         if not (0.5 * char <= d_b_foot <= 3.0 * char):
             offband += 1
     check("A26", len(fp_mfs) == EXP["measure_points"] and not fp_bad
+          and not mp_id_bad
           and mismatch == 0 and offseg == 0,
           f"测量点 MF: {len(fp_mfs)}/{EXP['measure_points']}; specification 未解析: {len(fp_bad)}; "
           f"垂足错位/缺失: {mismatch}; 离线: {offseg}; 出特征带: {offband}; 端点钳制: {clamps}")
@@ -585,7 +629,8 @@ def main() -> int:
                 sp_bad.append(f"geometry 非点: {ident[-30:]}")
             if "违反（待裁定）" in str(pr.get("description", "")):
                 sp_viol += 1
-    exp_viol = 1 if args.sheet == "kurgan" else 0  # 库尔干 idx2009 违反化石 1 处
+    exp_viol = int(EXP.get("fossil_violations", 0))  # 画像驱动（库尔干
+    # idx2009 违反化石 1 处；2026-10-02 泛化：jws 副本同 1）
     check("A27", sp_n == EXP["lite_counts"]["fossil_specimen_view"]
           and not sp_bad and sp_viol == exp_viol,
           f"标本视图: {sp_n}/{EXP['lite_counts']['fossil_specimen_view']}; "

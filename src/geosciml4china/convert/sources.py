@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import geopandas as gpd
+import pandas as pd
 
 from . import config
 
@@ -124,21 +125,50 @@ def read_aux_triplets() -> Dict[int, dict]:
             if b_idx in out and out[b_idx]["form"] == "a-b-a" and form == "a-b":
                 continue
             out[b_idx] = {"form": form, "verdict": (row.get("verdict") or "").strip(),
-                          "fault_id": (row.get("fault_id") or "").strip()}
+                          "fault_id": (row.get("fault_id") or "").strip(),
+                          "a1281": (row.get("a1281") or "").strip()}
     assert out, f"triplets table loaded empty from {config.AUX_TRIPLETS_CSV}"
     return out
 
 
 def read_fault_conflict_entities() -> set:
-    """编图矛盾登记册（fault_aux_code_semantics.json）-> {fault_id}
-
-    辅助点判别与 GZEEB 码值矛盾的实体（当前 F019/F050/F067）——
-    矛盾交人工裁定、永不自动改码；管线仅在描述中携带登记横幅。
+    """编图矛盾登记（段级，2026-10-02 泛化修复——jws 全管线测试暴露）：
+    冲突册 _gzeeb_conflicts_<key>.csv pending 行 -> {(fault_id, seg_idx)}。
+    横幅按冲突段精确挂载（原实体级广播在 F001 型大实体上过度横幅——
+    24 vs 7 实证）；fault_aux_code_semantics.json 作裁定文档层。
+    2026-10-02 活动断层审计 A7：双册消费——_gzeeb_conflicts_ +
+    _fault_contact_activity_conflicts_（断裂接触层活动候选，已归因
+    fault_id/断层段索引空间）。
     """
-    if config.AUX_SEMANTICS_JSON is None or not config.AUX_SEMANTICS_JSON.exists():
-        return set()
-    doc = json.loads(config.AUX_SEMANTICS_JSON.read_text(encoding="utf-8"))
-    return set(doc.get("编图矛盾", {}).get("entities", []))
+    out = set()
+    for cand in (getattr(config, "CONFLICTS_CSV", None),
+                 getattr(config, "CONTACT_CONFLICTS_CSV", None)):
+        if cand is None or not cand.exists():
+            continue
+        try:
+            df = pd.read_csv(cand, dtype=str)
+        except Exception:
+            continue
+        for _, r in df.iterrows():
+            if str(r.get("status") or "") != "pending_review":
+                continue
+            fid = str(r.get("fault_id") or "").strip()
+            # 2026-10-02 活动断层审计：空 fault_id 经 pandas 读回 NaN →
+            # str() 成 "nan"（真值非空）会以 ("nan", seg) 入横幅集合——
+            # 显式过滤
+            if fid in ("", "nan", "None"):
+                continue
+            import re as _re
+            _segs_raw = str(r.get("segs") or "")
+            _segs_raw = _re.sub(r"[\[\]]", "", _segs_raw)
+            for sg in _segs_raw.split(","):
+                sg = sg.strip()
+                if sg and fid:
+                    try:
+                        out.add((fid, int(float(sg))))
+                    except ValueError:
+                        continue
+    return out
 
 
 def read_calibration_report() -> list:

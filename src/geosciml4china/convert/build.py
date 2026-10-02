@@ -10,8 +10,10 @@ import argparse
 import sys
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
 from ..sheets import list_sheets
-from . import config, mapping, model, sources
+from . import config, ids, mapping, model, sources
 from . import units as unit_mod
 from .emit import document, features
 from .model import (
@@ -102,6 +104,9 @@ def assemble_polygon_mfs(
     else:
         print(f"  面分布首接实测（未注册闸）: {dist}")
     out: List[MappedFeatureRec] = []
+    # 语义 id（2026-10-02 裁定）：mf.{norm}.{ord}——图元 FEATUREID 不入产品
+    poly_ids = ids.polygon_mf_ids(gdf, raw2norm)
+    ids.assert_no_norm_collisions(raw2norm.values())
     for i, (_, row) in enumerate(gdf.iterrows()):
         if sample is not None and i >= sample:
             break
@@ -112,7 +117,7 @@ def assemble_polygon_mfs(
         unit = units[norm]
         out.append(
             MappedFeatureRec(
-                feature_id=row["FEATUREID"],
+                feature_id=poly_ids[i],
                 specification_uri=unit.uri,
                 specification_title=unit.name,
                 geometry=row.geometry.__geo_interface__,
@@ -142,6 +147,8 @@ _EXCLUDED_CONTACTS: List[int] = []
 
 def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
     gdf = sources.read_theme("boundaries")
+    # 语义 id（2026-10-02 裁定）：c.{GZBD_eff}.{类内序}——图元 _src_id 不入产品
+    c_ids = ids.contact_ids(gdf)
     out: List[ContactRec] = []
     for _, row in gdf.iterrows():
         code = row["GZBD_eff"]
@@ -156,10 +163,12 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
         if sample is not None and len(out) >= sample:
             break
         decided = status == "decided" and row_map.get("term")
+        _cid = c_ids[int(row["_src_id"])]
         out.append(
             ContactRec(
                 src_id=int(row["_src_id"]),
                 code=code,
+                ord=int(_cid.split(".")[1]),
                 sem_label=row["sem_label"],
                 verdict=row["verdict"],
                         younger_side=(
@@ -185,6 +194,12 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
     pairs, pair_conflicts = sources.read_aux_pairs()   # 共享 b 隔离待裁定（09-26）
     triplets = sources.read_aux_triplets()             # 六类模式标签（09-26 定版）
     conflict_entities = sources.read_fault_conflict_entities()  # 编图矛盾登记册
+    # 语义 id（2026-10-02 裁定）：sds.{fault_id}.{段序} / fp.{fault_id}.{沿弧序}
+    seg_ord_of = ids.fault_seg_ordinals(gdf)
+    _auxchain_csv = config.SHEET_ROOT / f"fault_aux_{config.SHEET_KEY}.csv"
+    _auxchain_df = pd.read_csv(_auxchain_csv, dtype=str) \
+        if _auxchain_csv.exists() else None
+    mp_of = ids.measure_point_ids(aux_gdf, _auxchain_df, gdf)
 
     # 1894 arrows grouped by seg_idx: azimuth=dip_az;
     # dip=配对注释(1:1 合规) -> GZECE>0（含配对待裁定隔离回落） -> None
@@ -206,16 +221,24 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         aux_idx = int(row["_src_id"])
         aux_geom[aux_idx] = row.geometry
         dip, dip_src = None, ""
+        _nid = None
         if aux_idx in pair_conflicts:
             pass  # 注释配对争议隔离：回落段 GZECE（在下方实体循环内回填）
         elif aux_idx in pairs and pairs[aux_idx]["dip"] is not None:
-            dip, dip_src = pairs[aux_idx]["dip"], "配对注释"
+            _nid = pairs[aux_idx].get("note_idx")
+            # 语义化来源（2026-10-02 裁定）：注释① 而非 MapGIS 注释号
+            dip, dip_src = pairs[aux_idx]["dip"], (
+                "注释①" if _nid is not None else "配对注释")
         elif aux_idx in assoc and assoc[aux_idx]["dip"] is not None:
             dip, dip_src = assoc[aux_idx]["dip"], "配对注释"
-        # 六类模式标签+movement_sense（辅助点非实体原则：a 折叠为判定值）
+        # 六类模式标签+movement_sense（2026-10-02 用户裁定：a 依附于 b，
+        # 与注释共同构成 b 的断层产状测量地质语义——a 不构成实体，
+        # 其语义经三联体 verdict 折叠入 b 的 mode，成员号随注记出站）
         tri = triplets.get(aux_idx)
+        a_ids = ""
         if tri:
             mode = f"{tri['form']}·{tri['verdict']}"
+            a_ids = tri.get("a1281", "")
             # 三态显式判别（2026-09-29 修）：存疑（点近线侧别不可判等）
             # 不得落入 reverse——原 `"正" in verdict else reverse` 缺陷
             if "正断层" in tri["verdict"]:
@@ -233,22 +256,34 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         else:
             mode = "倾向产状点（仅倾向，无倾角无运动指示）"
             msense = "no_movement_sense"
+        _mp = mp_of.get(aux_idx, {})
         planes_by_seg.setdefault(seg, []).append(
             FaultAuxPlane(azimuth=float(az), dip=dip, aux_idx=aux_idx,
-                          mode=mode, dip_source=dip_src, movement_sense=msense))
+                          mode=mode, dip_source=dip_src, movement_sense=msense,
+                          a_ids=a_ids,
+                          mp_id=_mp.get("mp_id", f"fp.{aux_idx}"),
+                          mp_label=_mp.get("label", f"b{aux_idx}"),
+                          a_label=ids.a_designation(a_ids),
+                          note_label=("注释①" if _nid is not None else "")))
 
-    # 238/239 走滑钩 → slip_sense（同原则：钩不存实体，旋向折叠为 movementSense）
+    # 走滑钩旋向 → slip_sense（2026-10-02 接线：空间识别 CSV 消费——auxchain
+    # 产出 _fault_hooks_<key>.csv，按区间段号展开；旋向=垂足区间内区段的
+    # 运动学性质（钩对表征所属断层的某段，用户想法 2026-10-01）；
+    # 左行→sinistral / 右行→dextral，区间跨度随注记出站）
     slip_by_seg: Dict[int, str] = {}
-    for _, row in aux_gdf.iterrows():
-        if row.get("kind") != "symbol" or row.get("seg_idx") is None:
-            continue
-        if str(row.get("status") or "normal") not in ("normal", ""):
-            continue
-        sn = int(row.get("sub_no") or 0)
-        if sn == 238:
-            slip_by_seg[int(row["seg_idx"])] = "dextral"
-        elif sn == 239:
-            slip_by_seg[int(row["seg_idx"])] = "sinistral"
+    slip_span_by_seg: Dict[int, str] = {}
+    _hpath = config.SHEET_ROOT / f"_fault_hooks_{config.SHEET_KEY}.csv"
+    if _hpath.exists():
+        _hdf = pd.read_csv(_hpath, dtype=str)
+        for _, _hr in _hdf.iterrows():
+            _segs = [int(x) for x in str(_hr.get("segs") or "").split(",")
+                     if x.strip()]
+            _sense = ("sinistral" if str(_hr["sense"]) == "左行" else "dextral")
+            _span = (f"（滑移区段 {float(_hr['foot_arc1_m'])/1000:.1f}–"
+                     f"{float(_hr['foot_arc2_m'])/1000:.1f}km）")
+            for _sg in _segs:
+                slip_by_seg[_sg] = _sense
+                slip_span_by_seg[_sg] = _span
 
     out: List[FaultRec] = []
     for i, (_, row) in enumerate(gdf.iterrows()):
@@ -276,22 +311,34 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
             if bg is not None and seg_geom is not None and not seg_geom.is_empty:
                 foot_pt = seg_geom.interpolate(seg_geom.project(bg))
                 foot = foot_pt.__geo_interface__
-            note = f"产状点 b{plane.aux_idx}：{plane.mode}；倾向 {plane.azimuth:g}°"
+            note = f"产状点 {plane.mp_label}：{plane.mode}"
+            if plane.a_label:
+                note += f"（{plane.a_label}）"
+            note += f"；倾向 {plane.azimuth:g}°"
             if dip is not None:
-                note += f"∠{dip:g}°（{src}）"
+                note += f"∠{dip:g}°（{plane.note_label or src}）"
             else:
                 note += "（仅倾向）"
             if plane.aux_idx in pair_conflicts:
                 cands = "、".join(f"{n}={d:g}°" for n, d in pair_conflicts[plane.aux_idx])
-                note += f"；注释配对二义（候选 {cands}）交人工裁定（P-PAIR-b{plane.aux_idx}）"
+                _fid = mp_of.get(plane.aux_idx, {}).get("fault_id",
+                                                        str(row["fault_id"]))
+                _ord = mp_of.get(plane.aux_idx, {}).get("ord", 0)
+                note += (f"；注释配对二义（候选 {cands}）交人工裁定"
+                         f"（P-PAIR-{_fid}-{_ord}）")
             notes.append(note)
             filled.append(FaultAuxPlane(azimuth=plane.azimuth, dip=dip,
                                         aux_idx=plane.aux_idx, mode=plane.mode,
                                         dip_source=src,
                                         movement_sense=plane.movement_sense,
+                                        a_ids=plane.a_ids,
+                                        mp_id=plane.mp_id,
+                                        mp_label=plane.mp_label,
+                                        a_label=plane.a_label,
+                                        note_label=plane.note_label,
                                         foot=foot))
         # 编图矛盾横幅（登记册驱动，不改码）
-        if row["fault_id"] in conflict_entities:
+        if (str(row["fault_id"]), int(row["_src_id"])) in conflict_entities:
             notes.append("【编图矛盾登记】本实体辅助点产状判别与 GZEEB 编码矛盾，"
                          "已登记交人工裁定、不改码（fault_aux_code_semantics.json）")
         # B3（2026-09-28 用户裁定）：违反（待裁定）行如实标记——与矛盾横幅
@@ -310,11 +357,15 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         _ch = _clean_optional_str(row.get("checks"))
         if _ch:
             for _tok in _ch.split("；"):
-                if "第四系界线重合" in _tok or "活动性佐证" in _tok:
+                if ("第四系界线重合" in _tok or "活动性佐证" in _tok
+                        or "Q-地层边界重合" in _tok):
+                    # 2026-10-02 活动断层审计：补面元拓扑通道证据串出站
                     notes.append(_tok)
         out.append(
             FaultRec(
-                feature_id=row["FEATUREID"],
+                feature_id=(f"{row['fault_id']}.{seg_ord_of[int(row['_src_id'])][1]}"
+                            if int(row["_src_id"]) in seg_ord_of
+                            else row["FEATUREID"]),
                 fault_id=row["fault_id"],
                 fault_name=_clean_optional_str(row.get("fault_name")),
                 gzeeb_eff=code,
@@ -329,6 +380,7 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
                 gzece=gzece,
                 attitude_note="；".join(notes),
                 slip_sense=slip_by_seg.get(seg_idx, ""),
+                slip_span=slip_span_by_seg.get(seg_idx, ""),
                 planes=filled,
                 geometry=row.geometry.__geo_interface__,
             )
@@ -341,6 +393,8 @@ def assemble_attitudes(
 ) -> List[AttitudeRec]:
     gdf = sources.read_theme("attitude")
     raw2norm = unit_mod.raw_to_norm_map()
+    # 语义 id（2026-10-02 裁定）：fol.{host}.{宿主内序}
+    fol_ids = ids.foliation_ids(gdf, raw2norm)
     out: List[AttitudeRec] = []
     for i, (_, row) in enumerate(gdf.iterrows()):
         if sample is not None and i >= sample:
@@ -370,6 +424,7 @@ def assemble_attitudes(
                 host_norm=host_norm,
                 host_name=units[host_norm].name if host_norm in units else None,
                 note=note,
+                ord=fol_ids[int(row["_src_id"])]["ord"],
                 geometry=row.geometry.__geo_interface__,
             )
         )
@@ -381,10 +436,12 @@ def assemble_specimens(units: Dict[str, model.UnitRec],
     """化石/泥火山产地标本（2026-09-28 转入，lite 第六视图 GeologicSpecimenView）。"""
     raw2norm = unit_mod.raw_to_norm_map()
     out: List[model.SpecimenRec] = []
+    _frames = []
     for theme in ("fossil", "mudvolcano"):
-        if not (config.GEOJSON_L1 / f"{theme}.geojson").exists():
-            continue
-        gdf = sources.read_theme(theme)
+        if (config.GEOJSON_L1 / f"{theme}.geojson").exists():
+            _frames.append((theme, sources.read_theme(theme)))
+    sp_ids = ids.specimen_ids(_frames, raw2norm)
+    for theme, gdf in _frames:
         for i, (_, row) in enumerate(gdf.iterrows()):
             if sample is not None and i >= sample:
                 break
@@ -406,6 +463,7 @@ def assemble_specimens(units: Dict[str, model.UnitRec],
                     host_name=(units[host_norm].name
                                if host_norm in units else None),
                     note=note,
+                    ord=sp_ids[(theme, i)]["ord"],
                     geometry=row.geometry.__geo_interface__,
                 )
             )
@@ -420,7 +478,7 @@ def assemble_folds(sample: Optional[int] = None) -> List[model.FoldRec]:
             break
         out.append(
             model.FoldRec(
-                feature_id=row["FEATUREID"],
+                feature_id=str(i + 1),  # 语义 id（fold.N，2026-10-02 裁定）
                 name=row["GZCAB"],
                 gzce=row["GZCE"],
                 profile_term=mapping.load()["gzce_foldprofile"][row["GZCE"]]["term"],
@@ -428,6 +486,37 @@ def assemble_folds(sample: Optional[int] = None) -> List[model.FoldRec]:
             )
         )
     return out
+
+
+def _stale_inputs() -> list[str]:
+    """时效守卫（2026-10-02 b1950 案）：装配输入（L1 主题件）不得旧于其
+    标定源。违例=某标定域在 L1 物化后被单域重跑而 materialize 未跟进——
+    GML 将与最新判别不一致（b1950：assoc=fault_aux 表 F061，GML 却发 F065）。
+    09-28 正典件装配链教训的硬闸：build 入口拒绝陈旧 L1，点名缺失阶段，
+    不再静默装配。"""
+    root, l1 = config.SHEET_ROOT, config.GEOJSON_L1
+    pairs = [
+        (root / f"fault_aux_{config.SHEET_KEY}.csv", l1 / "fault_aux.geojson", "auxchain"),
+        (root / f"_fault_triplets_{config.SHEET_KEY}.csv", l1 / "fault_aux.geojson",
+         "auxchain 三联体"),
+        (root / f"_gzeeb_calibration_{config.SHEET_KEY}.csv", l1 / "faults.geojson",
+         "gzeeb"),
+        (root / "_attitude_calibration.csv", l1 / "attitude.geojson", "attitudes"),
+        (root / f"_fossil_calibration_{config.SHEET_KEY}.csv", l1 / "fossil.geojson",
+         "fossils"),
+        (root / "_inferred_fault_calibration.csv", l1 / "faults.geojson",
+         "inferred_faults"),
+        (root / "fault_entities.csv", l1 / "faults.geojson", "entities"),
+    ]
+    if config.CALIBRATION_CSV is not None:
+        pairs.append((config.CALIBRATION_CSV, l1 / "boundaries.geojson", "gzbd"))
+    stale = []
+    for src, tgt, stage in pairs:
+        if not src.exists() or not tgt.exists():
+            continue
+        if src.stat().st_mtime > tgt.stat().st_mtime + 2.0:
+            stale.append(f"{stage}（{src.name} 新于 {tgt.name}）")
+    return stale
 
 
 def build_gml(sample: Optional[int] = None) -> None:
@@ -461,7 +550,7 @@ def build_gml(sample: Optional[int] = None) -> None:
     for f in assemble_faults(sample):
         features_out.append(features.emit_sds(f))
         mf = MappedFeatureRec(
-            feature_id=f.gml_id,
+            feature_id=f.feature_id,  # 语义 id（mf.F085.1，2026-10-02 裁定）
             specification_uri=f.uri,
             specification_title=f.fault_name or f.fault_id,
             geometry=f.geometry,
@@ -472,13 +561,17 @@ def build_gml(sample: Optional[int] = None) -> None:
             if plane.foot is None:
                 continue
             pmf = MappedFeatureRec(
-                feature_id=f"fp.{plane.aux_idx}",
+                feature_id=plane.mp_id,
                 specification_uri=f.uri,
                 specification_title=f.fault_name or f.fault_id,
                 geometry=plane.foot,
                 observation_term=f.observation_term,
-                description=(f"断层产状测量点 b{plane.aux_idx} 位置"
-                             f"（{plane.mode}；到所属断层段垂足）"),
+                description=(
+                    f"断层产状测量点 {plane.mp_label} 位置（{plane.mode}"
+                    + (f"，{plane.a_label}" if plane.a_label else "")
+                    + (f"，∠{plane.dip:g}°（{plane.note_label or plane.dip_source}）"
+                       if plane.dip is not None and (plane.note_label or plane.dip_source) else "")
+                    + "；到所属断层段垂足）"),
             )
             features_out.append(features.emit_mapped_feature(pmf))
 
@@ -522,6 +615,14 @@ def main() -> int:
     args = parser.parse_args()
 
     config.init_sheet(args.sheet)  # 图幅参数集切换（一切装载之前）
+
+    _stale = _stale_inputs()
+    if _stale:
+        print("!! 时效守卫中止：标定件新于 L1，装配将产出与最新判别不一致的 GML。")
+        for _s in _stale:
+            print("   -", _s)
+        print("   请先按管线序重跑 materialize（必要时连同上游标定域）再 build。")
+        return 2
 
     if args.only in (None, "gml"):
         build_gml(args.sample)

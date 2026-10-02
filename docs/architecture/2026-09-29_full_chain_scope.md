@@ -1,3 +1,20 @@
+# geosciml4china 全链范围（2026-10-02 用户对齐定版）
+
+## 用户对齐链（2026-10-02 定版）
+
+> geosciml4china 首先检查 mapgis 文件的完整性，转为 L0 geojson；
+> 然后使用自支持地质语义判别逻辑完成解析，生成基于地质语义的 L1 geojson；
+> 转为 geosciml 格式；使用基于地质语义的 geosciml 渲染引擎，渲染成图。
+
+| 对齐链 | 管线阶段 | 实现 |
+|---|---|---|
+| ① 完整性检查 | ⓪ preflight | 11 文件契约（CORE 缺即中止） |
+| ② 转 L0 geojson | ① convert | pymapgis.semantics.convert_sheet + validate_l0 |
+| ③ 自支持地质语义判别解析 → L1 | ②+②b | geosciml4china.calibrate 五域全包原生：gzbd（界线）→ entities（断层归组）→ auxchain（辅助点判别）→ gzeeb（断层三维）→ attitudes（产状）→ fossils（化石）→ materialize L1 |
+| ④ 转 GeoSciML | ③+④+⑤ | stylegen（语义→样式）→ build（GML+Lite+pending）→ verify（XSD+断言） |
+| ⑤ 语义渲染成图 | ⑥ | render（基于地质语义的 GeoSciML 渲染引擎+叠加层） |
+
+登记缺口：推测断层标定（_calibrate_inferred_faults）未入包——挂账。
 # 全链范围裁定（2026-09-29，用户裁定）
 
 > 「geosciml4china 的输入是 MapGIS 工程文档（文件夹），它完成对 MapGIS 地质语义的

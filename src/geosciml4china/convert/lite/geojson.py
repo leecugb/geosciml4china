@@ -69,7 +69,7 @@ def build_all(sample: Optional[int] = None) -> None:
                 continue
             fmp_features.append(
                 _feature(
-                    f"{config.BASE_URI}mappedfeature/fp.{plane.aux_idx}",
+                    f"{config.BASE_URI}mappedfeature/{plane.mp_id}",
                     views.fault_measure_point_view(plane, f.uri,
                                                    f.fault_name or f.fault_id),
                 )
@@ -130,8 +130,12 @@ def build_all(sample: Optional[int] = None) -> None:
         except FileNotFoundError:
             g = None
         if g is not None:
+            _wcnt = {}
             for _, r in g.iterrows():
-                fid = f"{config.BASE_URI}{theme}/{r['_src_file']}.{int(r['_src_id'])}"
+                _sf = str(r['_src_file'])
+                _wcnt[_sf] = _wcnt.get(_sf, 0) + 1
+                # 语义 id（2026-10-02 裁定）：_src_file.序，弃图元 _src_id
+                fid = f"{config.BASE_URI}{theme}/{_sf}.{_wcnt[_sf]}"
                 feats.append(_feature(fid, {
                     "@featureType": vname,
                     "identifier": {"value": fid, "@codeSpace": config.CODE_SPACE},

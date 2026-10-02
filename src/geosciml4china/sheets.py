@@ -252,6 +252,8 @@ def _apply_user_config(sh: Sheet) -> Sheet:
             continue
         if "root" in ent:
             ent["root"] = Path(ent["root"])
+        if ent.get("lite_expect_counts"):
+            ent["lite_expect_counts"] = tuple(ent["lite_expect_counts"])
         sh = replace(sh, **{k: v for k, v in ent.items() if hasattr(sh, k)})
     return sh
 
@@ -265,12 +267,51 @@ _register_defaults()
 
 
 def get_sheet(key: str = "kurgan") -> Sheet:
-    """按短名取图幅参数（用户配置与环境变量已施加）。"""
+    """按短名取图幅参数（用户配置与环境变量已施加；TOML 新增幅可取）。"""
     sh = _REGISTRY.get(key)
+    if sh is None:
+        sh = _toml_defined_sheets().get(key)
     if sh is None:
         raise KeyError(f"unknown sheet {key!r}（已注册 {list(_REGISTRY)}；"
                        f"新图幅请用 register_sheet 或 geosciml4china.toml）")
     return _apply_env(_apply_user_config(sh))
+
+
+def _toml_defined_sheets() -> dict:
+    """TOML 新增图幅（文档承诺「持久化请写 geosciml4china.toml」的落实，
+    2026-10-02 修复：此前 TOML 只能覆盖内置幅、不能新增）。"""
+    out = {}
+    for cfg in _USER_CONFIG_CANDIDATES:
+        if not cfg.exists():
+            continue
+        try:
+            doc = tomllib.loads(cfg.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for key, ent in (doc.get("sheets") or {}).items():
+            if key in _REGISTRY or key in out:
+                continue  # 内置注册优先；多配置文件首个优先
+            try:
+                root = Path(ent["root"])
+                code = str(ent.get("code") or "")
+            except (KeyError, TypeError):
+                continue
+            if not code:
+                continue
+            out[key] = Sheet(
+                key=key, code=code,
+                title=str(ent.get("title") or code),
+                root=root,
+                expected_units=ent.get("expected_units"),
+                expected_polygon_dist=ent.get("expected_polygon_dist"),
+                lite_expect_counts=(tuple(ent["lite_expect_counts"])
+                                    if ent.get("lite_expect_counts") else None),
+                aux_pairs_csv=ent.get("aux_pairs_csv"),
+                aux_assoc_csv=ent.get("aux_assoc_csv"),
+                aux_triplets_csv=ent.get("aux_triplets_csv"),
+                calibration_csv=ent.get("calibration_csv"),
+                base_uri=str(ent.get("base_uri") or ""))
+    return out
 
 
 def register_sheet(sh: Sheet) -> None:
@@ -279,4 +320,6 @@ def register_sheet(sh: Sheet) -> None:
 
 
 def list_sheets() -> list[Sheet]:
-    return [get_sheet(k) for k in _REGISTRY]
+    keys = list(_REGISTRY) + [k for k in _toml_defined_sheets()
+                              if k not in _REGISTRY]
+    return [get_sheet(k) for k in keys]

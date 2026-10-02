@@ -4,6 +4,7 @@
 
 - ``g4c sheets``                     列出已注册图幅（root 解析后）
 - ``g4c calibrate-gzbd --sheet K``    GZBD 界线先验标定（业务逻辑第一步）
+- ``g4c calibrate-gzeeb --sheet K``   GZEEB 断层三维标定（aux 语义反演，业务第三步）
 - ``g4c check --sheet K``            图幅预检（11 文件完整性，处理前必过）
 - ``g4c data``                       列出包数据路径与存在性
 - ``g4c stylegen ...``               面元样式生成（render.stylegen）
@@ -60,6 +61,13 @@ _DELEGATES = {
     "calibrate-gzbd": ("geosciml4china.calibrate.gzbd", "main"),
     "entities": ("geosciml4china.calibrate.entities", "main"),
     "auxchain": ("geosciml4china.calibrate.auxchain", "main"),
+    "calibrate-gzeeb": ("geosciml4china.calibrate.gzeeb", "main"),
+    "calibrate-attitudes": ("geosciml4china.calibrate.attitudes", "main"),
+    "calibrate-fossils": ("geosciml4china.calibrate.fossils", "main"),
+    "calibrate-inferred-faults":
+        ("geosciml4china.calibrate.inferred_faults", "main"),
+    "calibrate-fault-contact-activity":
+        ("geosciml4china.calibrate.fault_contact_activity", "main"),
     "stylegen": ("geosciml4china.render.stylegen", "main"),
     "stylegen-fault": ("geosciml4china.render.stylegen_fault", "main"),
     "build": ("geosciml4china.convert.build", "main"),
