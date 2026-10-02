@@ -22,17 +22,22 @@ This directory is the output of the first step above (L0).
 
 | File | Feature class | Contract |
 |---|---|---|
-| `LDLYAAE001.WL.geojson` | Water system (lines) | CONDITIONAL 1143 |
-| `LDLYAAE002.WP.geojson` | Water system (polygons) | CONDITIONAL 128 |
-| `LDZOFBA002.WL.geojson` | Geological boundaries | CORE 2222 |
-| `LDZOFBA003.WL.geojson` | Fault lines | CORE 310 |
-| `LDZOFBA005.WL.geojson` | Fold lines | CONDITIONAL 4 |
-| `LDZOFBA016.WT.geojson` | Attitude symbols | CORE 305 |
-| `LDZOFBB001.WP.geojson` | Strata (sedimentary) | CORE 608 |
-| `LDZOFBB002.WP.geojson` | Volcanic rocks | CONDITIONAL 10 |
-| `LDZOFBB003.WP.geojson` | Intrusive rocks | CONDITIONAL 46 |
-| `LDZOFBB004.WP.geojson` | Metamorphic rocks | CONDITIONAL 49 |
-| `LDZOFBB099.WT.geojson` | Annotations (incl. fault aux points) | CORE 2024 |
+| `LDLYAAE001.geojson` | Water system (lines) | CONDITIONAL 1143 |
+| `LDLYAAE002.geojson` | Water system (polygons) | CONDITIONAL 128 |
+| `LDZOFBA002.geojson` | Geological boundaries | CORE 2222 |
+| `LDZOFBA003.geojson` | Fault lines | CORE 310 |
+| `LDZOFBA005.geojson` | Fold lines | CONDITIONAL 4 |
+| `LDZOFBA016.geojson` | Attitude symbols | CORE 305 |
+| `LDZOFBB001.geojson` | Strata (sedimentary) | CORE 608 |
+| `LDZOFBB002.geojson` | Volcanic rocks | CONDITIONAL 10 |
+| `LDZOFBB003.geojson` | Intrusive rocks | CONDITIONAL 46 |
+| `LDZOFBB004.geojson` | Metamorphic rocks | CONDITIONAL 49 |
+| `LDZOFBB099.geojson` | Annotations (incl. fault aux points) | CORE 2024 |
+
+## Naming
+
+File names drop the MapGIS layer suffix - `LDLYAAE001.geojson` is the
+GeoJSON of `LDLYAAE001.WL`, and so on.
 
 ## Notes
 
