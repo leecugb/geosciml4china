@@ -1,0 +1,304 @@
+{
+  "_meta": {
+    "title": "库尔干幅副本（J43C001002）全管线测试断裂构造渲染样式（语义生成 · DZ/T 0179-2025）",
+    "standard": "DZ/T 0179-2025",
+    "scale": "1:250000",
+    "created": "2026-09-28",
+    "color_source": "GeoSciML sds_view + geosciml.mapping 词表 + overrides 裁定层",
+    "generator": "geosciml_render.stylegen_fault（语义→样式；overrides 见 fault_style_overrides_jws.json）",
+    "supersedes": "fault_rendering_styles.json（手工规则版，保留供对账）"
+  },
+  "default_color": [
+    220,
+    20,
+    20
+  ],
+  "default_width": 0.6,
+  "width_by_gzeee": {
+    "field": "GZEEE",
+    "rule": "线宽按规模级别（用户 2026-09-06 改）：101=一般 / 102=区域性 / 103=边界级",
+    "widths": {
+      "101": 0.5,
+      "102": 0.9,
+      "103": 1.5
+    },
+    "default": 0.5
+  },
+  "fault_types": {
+    "01": {
+      "name": "断层",
+      "source_field": "GZEEB",
+      "count": 156,
+      "line": {
+        "rgb": [
+          220,
+          20,
+          20
+        ],
+        "width": 0.6,
+        "style": "solid"
+      },
+      "decoration": "none"
+    },
+    "02": {
+      "name": "正断层（本幅未出现，代码为候选待确认）",
+      "source_field": "GZEEB",
+      "count": 0,
+      "line": {
+        "rgb": [
+          220,
+          20,
+          20
+        ],
+        "width": 0.6,
+        "style": "solid"
+      },
+      "decoration": "none",
+      "confidence": "pending: 图例有此类、本幅 0 条；GZELD 无张性取值（102 未出现）互证"
+    },
+    "04": {
+      "name": "推测断层",
+      "source_field": "GZEEB",
+      "count": 25,
+      "line": {
+        "rgb": [
+          220,
+          20,
+          20
+        ],
+        "width": 0.5,
+        "style": "dashed",
+        "dash_pattern": [
+          4,
+          2
+        ]
+      },
+      "decoration": "none",
+      "confidence": "verified: 25条全部无实测倾角"
+    },
+    "05": {
+      "name": "逆断层",
+      "source_field": "GZEEB",
+      "count": 49,
+      "line": {
+        "rgb": [
+          220,
+          20,
+          20
+        ],
+        "width": 0.6,
+        "style": "solid"
+      },
+      "decoration": "none",
+      "confidence": "verified: GZELD=101(压性)一一对应；2026-09-04 起按简化逻辑去装饰"
+    },
+    "07": {
+      "name": "推覆体边界",
+      "source_field": "GZEEB",
+      "count": 9,
+      "line": {
+        "rgb": [
+          180,
+          0,
+          0
+        ],
+        "width": 0.7,
+        "style": "solid"
+      },
+      "decoration": {
+        "type": "reverse_fault_teeth",
+        "side": "right",
+        "rgb": [
+          180,
+          0,
+          0
+        ],
+        "filled": true,
+        "tooth_length_frac": 0.0012,
+        "spacing_frac": 0.014
+      },
+      "confidence": "verified: 低角度25°/26°+老盖新(ChSt|D2kz/C1w/P2q)；2026-09-07 用户定：尖三角尺寸再缩 20%（0.0015→0.0012）、间距 0.014、固定右侧；去掉 side 即回到老地层一侧自动判定"
+    },
+    "16": {
+      "name": "右型走滑断层",
+      "source_field": "GZEEB",
+      "count": 1,
+      "line": {
+        "rgb": [
+          220,
+          20,
+          20
+        ],
+        "width": 0.5,
+        "style": "solid"
+      },
+      "decoration": "none",
+      "confidence": "verified: GZELD=103(右行走滑)一一对应；2026-09-04 起按简化逻辑去装饰"
+    },
+    "18": {
+      "name": "左型走滑断层",
+      "source_field": "GZEEB",
+      "count": 3,
+      "line": {
+        "rgb": [
+          220,
+          20,
+          20
+        ],
+        "width": 0.5,
+        "style": "solid"
+      },
+      "decoration": "none",
+      "confidence": "verified: GZELD=104(左行走滑)一一对应；2026-09-04 起按简化逻辑去装饰"
+    },
+    "28": {
+      "name": "区域性大断裂",
+      "source_field": "GZEEB",
+      "count": 20,
+      "line": {
+        "rgb": [
+          200,
+          80,
+          0
+        ],
+        "width": 0.8,
+        "style": "solid"
+      },
+      "decoration": "none",
+      "confidence": "verified: GZEEE=102(区域性)全类统一；蛇绿混杂带。2026-09-04 起按'线型按GZEEB=实线'去剪切带斜线装饰，待核定"
+    },
+    "31": {
+      "name": "复活断层",
+      "source_field": "GZEEB",
+      "count": 26,
+      "line": {
+        "rgb": [
+          255,
+          0,
+          0
+        ],
+        "width": 0.6,
+        "style": "solid"
+      },
+      "decoration": {
+        "type": "short_ticks",
+        "side": "left",
+        "rgb": [
+          255,
+          0,
+          0
+        ],
+        "tick_length_frac": 0.001,
+        "spacing_frac": 0.004
+      },
+      "confidence": "user_confirmed；2026-09-07 用户定：复活断层一侧加短线（固定左侧，长度降为 1/3=0.001）"
+    },
+    "41": {
+      "name": "边界断裂",
+      "source_field": "GZEEB",
+      "count": 21,
+      "line": {
+        "rgb": [
+          180,
+          0,
+          0
+        ],
+        "width": 0.8,
+        "style": "solid"
+      },
+      "decoration": "none",
+      "confidence": "verified: GZEEE=103(边界级)；切割多单元蛇绿混杂带"
+    }
+  },
+  "named_faults": {
+    "F9": {
+      "name": "F9断裂",
+      "types": [
+        "41"
+      ],
+      "count": 5,
+      "note": "边界断裂（北部39.6-39.7°N）"
+    },
+    "F48": {
+      "name": "F48断裂",
+      "types": [
+        "28",
+        "05"
+      ],
+      "count": 15,
+      "zone_strike_deg": 130.56,
+      "note": "区域性大断裂主体（蛇绿混杂岩带/缝合带性质），局部叠加逆冲复活；倾角50°/58°/65°"
+    },
+    "F50": {
+      "name": "F50断裂",
+      "types": [
+        "41",
+        "04"
+      ],
+      "count": 22,
+      "note": "边界断裂为主，6段推测；切割布伦阔勒岩群至二叠系多个单元"
+    }
+  },
+  "deep_faults": {
+    "source_file": "LDZOFBB009.WP",
+    "count": 20,
+    "fill": {
+      "rgb": [
+        200,
+        200,
+        200
+      ],
+      "alpha": 0.3
+    },
+    "stroke": {
+      "rgb": [
+        180,
+        0,
+        0
+      ],
+      "width": 0.8,
+      "style": "dashdot"
+    },
+    "names": [
+      "吉根-坦木其能萨依断裂",
+      "空贝利-木器厂扎令断裂",
+      "乌赤别里山口-阿克彻依断裂"
+    ],
+    "note": "分隔构造单元的深大断裂"
+  },
+  "remote_sensing_faults": {
+    "source_file": "LYGREBA001.WL",
+    "count": 71,
+    "line": {
+      "rgb": [
+        200,
+        50,
+        50
+      ],
+      "width": 0.4,
+      "style": "dashed",
+      "dash_pattern": [
+        3,
+        2
+      ]
+    },
+    "named": [
+      "乌赤别里山口断裂",
+      "布伦口断裂"
+    ]
+  },
+  "dip_label": {
+    "enabled": false,
+    "field": "GZECE",
+    "fontsize": 4.5,
+    "color": [
+      180,
+      0,
+      0
+    ],
+    "format": "{value}°",
+    "placement": "offset",
+    "offset_distance": 1.5,
+    "skip_zero": true
+  }
+}

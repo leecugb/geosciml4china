@@ -1,0 +1,1075 @@
+{
+  "_meta": {
+    "title": "库尔干幅副本（J43C001002）全管线测试地质单元配色映射（语义生成 · DZ/T 0179-2025 色库）",
+    "scale": "1:250000",
+    "standard": "DZ/T 0179-2025",
+    "color_source": "data/dzt0179_color_library.json + geosciml_render/stylegen.py",
+    "created": "2026-09-27",
+    "generator": "geosciml_render.stylegen（语义→样式；overrides 裁定层见 style_overrides_jws.json）",
+    "supersedes": "geological_unit_color_mapping_jws_dzt0179.json（手写规则版，保留供对账）"
+  },
+  "polygon_layers": {
+    "LDZOFBB001.WP": {
+      "role": "沉积岩建造",
+      "code_field": "QDUECC",
+      "name_field": "QDUECD",
+      "units": {
+        "→D↓2→t": {
+          "norm": "D2t",
+          "name": "托格买提组",
+          "rgb": [
+            191,
+            153,
+            153
+          ]
+        },
+        "→D↓1→s": {
+          "norm": "D1s",
+          "name": "萨瓦亚尔顿组",
+          "rgb": [
+            166,
+            115,
+            115
+          ]
+        },
+        "→S↓3-4→t": {
+          "norm": "S3-4t",
+          "name": "塔尔特库里组",
+          "rgb": [
+            206,
+            240,
+            108
+          ]
+        },
+        "→K↓1→kz": {
+          "norm": "K1kz",
+          "name": "克孜勒苏组",
+          "rgb": [
+            140,
+            255,
+            51
+          ]
+        },
+        "→C↓2→ak": {
+          "norm": "C2ak",
+          "name": "艾克提克组",
+          "rgb": [
+            176,
+            191,
+            191
+          ]
+        },
+        "→C↓2→kk": {
+          "norm": "C2kk",
+          "name": "康克林组",
+          "rgb": [
+            176,
+            191,
+            191
+          ]
+        },
+        "→C↓1→y": {
+          "norm": "C1y",
+          "name": "野云沟组",
+          "rgb": [
+            135,
+            153,
+            153
+          ]
+        },
+        "→D↓3→kz↑3": {
+          "norm": "D3kz3",
+          "name": "克孜尔塔格组三段",
+          "rgb": [
+            232,
+            202,
+            210
+          ]
+        },
+        "→D↓3→kz↑2": {
+          "norm": "D3kz2",
+          "name": "克孜尔塔格组二段",
+          "rgb": [
+            222,
+            179,
+            191
+          ]
+        },
+        "→D↓3→kz↑1": {
+          "norm": "D3kz1",
+          "name": "克孜尔塔格组一段",
+          "rgb": [
+            200,
+            161,
+            172
+          ]
+        },
+        "→Qh↑al": {
+          "norm": "Qhal",
+          "name": "第四系冲积层",
+          "rgb": [
+            255,
+            255,
+            191
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "al"
+          }
+        },
+        "→J↓2→t": {
+          "norm": "J2t",
+          "name": "塔尔尕组",
+          "rgb": [
+            140,
+            255,
+            242
+          ]
+        },
+        "→J↓1→sh": {
+          "norm": "J1sh",
+          "name": "莎里塔什组",
+          "rgb": [
+            77,
+            242,
+            255
+          ]
+        },
+        "→J↓1→k": {
+          "norm": "J1k",
+          "name": "康苏组",
+          "rgb": [
+            77,
+            242,
+            255
+          ]
+        },
+        "→J↓2→y": {
+          "norm": "J2y",
+          "name": "杨叶组",
+          "rgb": [
+            140,
+            255,
+            242
+          ]
+        },
+        "→J↓3→kz": {
+          "norm": "J3kz",
+          "name": "库孜贡苏组",
+          "rgb": [
+            204,
+            255,
+            255
+          ]
+        },
+        "→K↓2→Y": {
+          "norm": "K2Y",
+          "name": "英吉莎群",
+          "rgb": [
+            204,
+            255,
+            115
+          ]
+        },
+        "→T↓3→t": {
+          "norm": "T3t",
+          "name": "塔里奇克组",
+          "rgb": [
+            255,
+            222,
+            255
+          ]
+        },
+        "→Qp↓3↑pal": {
+          "norm": "Qp3pal",
+          "name": "第四系洪冲积层",
+          "rgb": [
+            247,
+            247,
+            166
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "alp"
+          }
+        },
+        "→EK": {
+          "norm": "EK",
+          "name": "喀什群",
+          "rgb": [
+            255,
+            255,
+            163
+          ]
+        },
+        "→N↓1→k": {
+          "norm": "N1k",
+          "name": "克孜洛依组",
+          "rgb": [
+            255,
+            237,
+            115
+          ]
+        },
+        "→N↓1→a": {
+          "norm": "N1a",
+          "name": "安居安组",
+          "rgb": [
+            255,
+            237,
+            115
+          ]
+        },
+        "→Qp↓1→X": {
+          "norm": "Qp1X",
+          "name": "西域组",
+          "rgb": [
+            242,
+            242,
+            109
+          ]
+        },
+        "→N↓1→p": {
+          "norm": "N1p",
+          "name": "帕卡布拉克组",
+          "rgb": [
+            255,
+            237,
+            115
+          ]
+        },
+        "→N↓2→a": {
+          "norm": "N2a",
+          "name": "阿图什组",
+          "rgb": [
+            255,
+            242,
+            179
+          ]
+        },
+        "→Qp↓2→W": {
+          "norm": "Qp2W",
+          "name": "乌苏群",
+          "rgb": [
+            245,
+            245,
+            135
+          ]
+        },
+        "→Qh↑gl": {
+          "norm": "Qhgl",
+          "name": "第四系冰川堆积层",
+          "rgb": [
+            255,
+            255,
+            191
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "gl"
+          }
+        },
+        "→Qh↑pal": {
+          "norm": "Qhpal",
+          "name": "第四系洪冲积层",
+          "rgb": [
+            255,
+            255,
+            191
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "alp"
+          }
+        },
+        "→Qh↑pl": {
+          "norm": "Qhpl",
+          "name": "第四系洪积层",
+          "rgb": [
+            255,
+            255,
+            191
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "pl"
+          }
+        },
+        "→Qp↓3↑gfl": {
+          "norm": "Qp3gfl",
+          "name": "第四系冰水堆积层",
+          "rgb": [
+            247,
+            247,
+            166
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "gfl"
+          }
+        },
+        "→P↓2→q": {
+          "norm": "P2q",
+          "name": "棋盘组",
+          "rgb": [
+            242,
+            206,
+            48
+          ]
+        },
+        "→C↓2→P↓1→t": {
+          "norm": "C2P1t",
+          "name": "塔哈奇组",
+          "rgb": [
+            153,
+            204,
+            204
+          ]
+        },
+        "→Qp↓3↑gl": {
+          "norm": "Qp3gl",
+          "name": "第四系冰碛层",
+          "rgb": [
+            247,
+            247,
+            166
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "gl"
+          }
+        },
+        "→D↓2→kz": {
+          "norm": "D2kz",
+          "name": "克孜勒陶组",
+          "rgb": [
+            191,
+            153,
+            153
+          ]
+        },
+        "→Qh↑fl": {
+          "norm": "Qhfl",
+          "name": "第四系湖沼堆积层",
+          "rgb": [
+            255,
+            255,
+            191
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "fl"
+          }
+        },
+        "→D↓3→q": {
+          "norm": "D3q",
+          "name": "奇自拉夫组",
+          "rgb": [
+            222,
+            179,
+            191
+          ]
+        },
+        "→Qh↑vl→-Qh↑ch": {
+          "norm": "Qhvl-Qhch",
+          "name": "第四系泥火山堆积-化",
+          "rgb": [
+            255,
+            255,
+            191
+          ]
+        },
+        "→Qp↓2↑l": {
+          "norm": "Qp2l",
+          "name": "湖积层",
+          "rgb": [
+            245,
+            245,
+            135
+          ],
+          "pattern_ref": {
+            "family": "t05_quat",
+            "code": "l"
+          }
+        }
+      }
+    },
+    "LDZOFBB002.WP": {
+      "role": "火山岩性岩相",
+      "code_field": "QDUECC",
+      "name_field": "QDUECD",
+      "units": {
+        "→C↓1→w": {
+          "norm": "C1w",
+          "name": "乌鲁阿特组",
+          "rgb": [
+            135,
+            153,
+            153
+          ]
+        }
+      }
+    },
+    "LDZOFBB003.WP": {
+      "role": "侵入岩",
+      "code_field": "QDUECC",
+      "name_field": "QDUECD",
+      "units": {
+        "→δ": {
+          "norm": "δ",
+          "name": "闪长岩岩脉",
+          "rgb": [
+            0,
+            255,
+            255
+          ]
+        },
+        "→υ": {
+          "norm": "υ",
+          "name": "辉长岩岩脉",
+          "rgb": [
+            0,
+            255,
+            0
+          ]
+        },
+        "→τα": {
+          "norm": "τα",
+          "name": "粗面安山岩",
+          "rgb": [
+            255,
+            102,
+            0
+          ]
+        },
+        "→γοC↓2": {
+          "norm": "γοC2",
+          "name": "石炭纪斜长花岗岩石",
+          "rgb": [
+            242,
+            85,
+            133
+          ],
+          "pattern_ref": {
+            "family": "custom",
+            "code": "gammaO"
+          }
+        },
+        "→γπT↓3": {
+          "norm": "γπT3",
+          "name": "三叠纪花岗斑岩",
+          "rgb": [
+            255,
+            102,
+            217
+          ],
+          "pattern_ref": {
+            "family": "custom",
+            "code": "gammaPi"
+          }
+        },
+        "→βμ": {
+          "norm": "βμ",
+          "name": "辉绿岩脉",
+          "rgb": [
+            0,
+            255,
+            0
+          ]
+        },
+        "→δοC↓2": {
+          "norm": "δοC2",
+          "name": "石炭纪石英闪长岩",
+          "rgb": [
+            25,
+            217,
+            255
+          ],
+          "pattern_ref": {
+            "family": "custom",
+            "code": "deltaO"
+          }
+        },
+        "→δοP": {
+          "norm": "δοP",
+          "name": "二叠纪石英闪长岩",
+          "rgb": [
+            25,
+            217,
+            255
+          ],
+          "pattern_ref": {
+            "family": "custom",
+            "code": "deltaO"
+          }
+        },
+        "→ηγT↓2": {
+          "norm": "ηγT2",
+          "name": "三叠纪黑云母二长花岗岩",
+          "rgb": [
+            255,
+            77,
+            204
+          ],
+          "pattern_ref": {
+            "family": "t15_intrusive",
+            "code": "etagJ1"
+          }
+        },
+        "→γρ": {
+          "norm": "γρ",
+          "name": "花岗伟晶岩脉",
+          "rgb": [
+            255,
+            0,
+            0
+          ]
+        },
+        "→οφD↓1": {
+          "norm": "οφD1",
+          "name": "泥盆纪角闪石岩",
+          "rgb": [
+            153,
+            102,
+            255
+          ],
+          "pattern_ref": {
+            "family": "custom",
+            "code": "omicronPhi"
+          }
+        },
+        "→νD": {
+          "norm": "νD",
+          "name": "泥盆纪角闪辉长岩",
+          "rgb": [
+            25,
+            255,
+            51
+          ],
+          "pattern_ref": {
+            "family": "t15_intrusive",
+            "code": "nD3"
+          }
+        },
+        "→ηγP": {
+          "norm": "ηγP",
+          "name": "二叠纪二长花岗岩",
+          "rgb": [
+            242,
+            73,
+            109
+          ],
+          "pattern_ref": {
+            "family": "t15_intrusive",
+            "code": "etagJ1"
+          }
+        },
+        "→γδT↓1": {
+          "norm": "γδT1",
+          "name": "三叠纪黑云母花岗闪长岩",
+          "rgb": [
+            255,
+            51,
+            191
+          ],
+          "pattern_ref": {
+            "family": "t15_intrusive",
+            "code": "gdT2"
+          }
+        },
+        "→δT↓1": {
+          "norm": "δT1",
+          "name": "三叠纪闪长岩",
+          "rgb": [
+            51,
+            217,
+            255
+          ],
+          "pattern_ref": {
+            "family": "t15_intrusive",
+            "code": "dK2"
+          }
+        }
+      }
+    },
+    "LDZOFBB004.WP": {
+      "role": "变质岩建造",
+      "code_field": "QDUECC",
+      "name_field": "QDUECD",
+      "units": {
+        "→ChA.": {
+          "norm": "ChA",
+          "name": "阿克苏岩群",
+          "rgb": [
+            255,
+            166,
+            77
+          ]
+        },
+        "→ChSt.": {
+          "norm": "ChSt",
+          "name": "赛图拉岩群",
+          "rgb": [
+            255,
+            166,
+            77
+          ]
+        },
+        "→Pt↓1→K.": {
+          "norm": "Pt1K",
+          "name": "喀拉喀什岩群",
+          "rgb": [
+            159,
+            138,
+            74
+          ]
+        }
+      }
+    },
+    "LDZOFBB009.WP": {
+      "role": "深部断裂",
+      "code_field": "DDDEO",
+      "name_field": "DDDEP",
+      "fill": [
+        200,
+        200,
+        200
+      ],
+      "fill_alpha": 0.3,
+      "stroke": [
+        180,
+        0,
+        0
+      ],
+      "stroke_style": "dashdot"
+    },
+    "LDZOFBB010.WP": {
+      "role": "构造岩浆岩带",
+      "code_field": "DDCDLV",
+      "fill": [
+        240,
+        240,
+        240
+      ],
+      "fill_alpha": 0.0,
+      "stroke": [
+        100,
+        100,
+        100
+      ],
+      "stroke_style": "solid"
+    },
+    "LDLYAAE002.WP": {
+      "role": "冰川/常年积雪面",
+      "fill": [
+        240,
+        248,
+        255
+      ],
+      "stroke": [
+        0,
+        114,
+        189
+      ],
+      "stroke_width": 0.4,
+      "stroke_style": "dashed"
+    }
+  },
+  "line_layers": {
+    "LDZOFBA002.WL": {
+      "role": "地质界线（GZBD 定稿）",
+      "type_field": "GZBD",
+      "line_styles": {
+        "01": {
+          "name": "实测地质界线",
+          "rgb": [
+            51,
+            51,
+            51
+          ],
+          "width": 0.45,
+          "style": "solid"
+        },
+        "02": {
+          "name": "第四系界线",
+          "rgb": [
+            51,
+            51,
+            51
+          ],
+          "width": 0.3,
+          "style": "solid"
+        },
+        "04": {
+          "name": "角度不整合",
+          "rgb": [
+            51,
+            51,
+            51
+          ],
+          "width": 0.5,
+          "style": "solid",
+          "note": "双线：实线+平行点线，点线在年轻地层一侧（渲染器自动判侧）"
+        },
+        "11": {
+          "name": "侵入接触",
+          "rgb": [
+            51,
+            51,
+            51
+          ],
+          "width": 0.45,
+          "style": "solid"
+        },
+        "16": {
+          "name": "推测界线",
+          "rgb": [
+            100,
+            100,
+            100
+          ],
+          "width": 0.4,
+          "style": "dashed",
+          "note": "断线（推测）：断长×3、间距×2",
+          "dash_pattern": [
+            11.1,
+            3.2
+          ]
+        },
+        "24": {
+          "name": "平行不整合",
+          "rgb": [
+            51,
+            51,
+            51
+          ],
+          "width": 0.5,
+          "style": "solid",
+          "note": "双线：实线+平行断线，断线在年轻地层一侧（渲染器自动判侧）"
+        },
+        "43": {
+          "name": "渐变界线",
+          "rgb": [
+            100,
+            100,
+            100
+          ],
+          "width": 0.6,
+          "style": "dotted",
+          "note": "点线（渐变）：点径×1.5、点距×2",
+          "dash_pattern": [
+            0.01,
+            3.3
+          ],
+          "capstyle": "round"
+        },
+        "60": {
+          "name": "脉动接触",
+          "rgb": [
+            51,
+            51,
+            51
+          ],
+          "width": 0.45,
+          "style": "dashdot"
+        },
+        "81": {
+          "name": "冰雪区界线",
+          "rgb": [
+            0,
+            255,
+            255
+          ],
+          "width": 0.5,
+          "style": "solid"
+        }
+      },
+      "note": "GZBD=10(断层593条)与LDZOFBA003重复，不渲染；样式见 data/gzbd_codes.json"
+    },
+    "LDZOFBA003.WL": {
+      "role": "断层",
+      "type_field": "GZEEB",
+      "line_styles": {
+        "01": {
+          "name": "实测断层",
+          "rgb": [
+            220,
+            20,
+            20
+          ],
+          "width": 0.6,
+          "style": "solid"
+        },
+        "02": {
+          "name": "推测断层",
+          "rgb": [
+            220,
+            20,
+            20
+          ],
+          "width": 0.5,
+          "style": "dashed"
+        },
+        "04": {
+          "name": "性质不明断层",
+          "rgb": [
+            200,
+            50,
+            50
+          ],
+          "width": 0.4,
+          "style": "dashed"
+        },
+        "05": {
+          "name": "正断层",
+          "rgb": [
+            220,
+            20,
+            20
+          ],
+          "width": 0.6,
+          "style": "solid"
+        },
+        "07": {
+          "name": "逆断层",
+          "rgb": [
+            220,
+            20,
+            20
+          ],
+          "width": 0.6,
+          "style": "solid"
+        },
+        "16": {
+          "name": "平移断层",
+          "rgb": [
+            220,
+            20,
+            20
+          ],
+          "width": 0.5,
+          "style": "solid"
+        },
+        "18": {
+          "name": "推覆断层",
+          "rgb": [
+            180,
+            0,
+            0
+          ],
+          "width": 0.7,
+          "style": "solid"
+        },
+        "28": {
+          "name": "韧性剪切带",
+          "rgb": [
+            200,
+            80,
+            0
+          ],
+          "width": 0.5,
+          "style": "dashdot"
+        },
+        "31": {
+          "name": "活动断层",
+          "rgb": [
+            255,
+            0,
+            0
+          ],
+          "width": 0.6,
+          "style": "solid"
+        },
+        "41": {
+          "name": "隐伏断层",
+          "rgb": [
+            200,
+            50,
+            50
+          ],
+          "width": 0.4,
+          "style": "dashed"
+        }
+      }
+    },
+    "LDZOFBA005.WL": {
+      "role": "褶皱",
+      "type_field": "GZCE",
+      "line_styles": {
+        "02": {
+          "name": "背斜轴",
+          "rgb": [
+            80,
+            80,
+            80
+          ],
+          "width": 0.5,
+          "style": "solid"
+        },
+        "03": {
+          "name": "向斜轴",
+          "rgb": [
+            80,
+            80,
+            80
+          ],
+          "width": 0.5,
+          "style": "solid"
+        },
+        "04": {
+          "name": "隐伏背斜",
+          "rgb": [
+            80,
+            80,
+            80
+          ],
+          "width": 0.4,
+          "style": "dashed"
+        }
+      }
+    },
+    "LDZOFBB098.WL": {
+      "role": "引线（标注引出线）",
+      "rgb": [
+        100,
+        100,
+        100
+      ],
+      "width": 0.2,
+      "style": "solid"
+    },
+    "LYGREBA001.WL": {
+      "role": "遥感解译断层",
+      "rgb": [
+        200,
+        50,
+        50
+      ],
+      "width": 0.4,
+      "style": "dashed"
+    },
+    "LDLYAAE001.WL": {
+      "role": "水系线",
+      "type_field": "GB",
+      "line_styles": {
+        "21010": {
+          "name": "常流河",
+          "rgb": [
+            0,
+            102,
+            200
+          ],
+          "width": 0.3,
+          "style": "solid"
+        },
+        "21021": {
+          "name": "时令河",
+          "rgb": [
+            0,
+            102,
+            200
+          ],
+          "width": 0.2,
+          "style": "dashed"
+        }
+      },
+      "note": "GB=73020(冰雪界线311条)与LDZOFBA002 GZBD=81重复，由002渲染"
+    },
+    "LHTQGTA001.WL": {
+      "role": "地球化学界线",
+      "rgb": [
+        150,
+        100,
+        50
+      ],
+      "width": 0.3,
+      "style": "dashdot"
+    }
+  },
+  "point_layers": {
+    "LDZOFBB099.WT": {
+      "role": "地质代号标注与产状符号",
+      "type_field": "CHFCEC",
+      "code_field": "CHFCED",
+      "point_styles": {
+        "代号": {
+          "symbol": "label",
+          "fontsize": 6.0,
+          "note": "1362个地层代号标注点，CHFCED含归一化代号如 C#-1=C1, K#-1=K1 等"
+        },
+        "产状": {
+          "symbol": "attitude",
+          "color": [
+            0,
+            0,
+            0
+          ],
+          "note": "307个产状符号，CHFCED数值为倾角（度）"
+        },
+        "断层辅助点": {
+          "symbol": "fault_dip",
+          "color": [
+            220,
+            20,
+            20
+          ],
+          "note": "299个断层产状点，CHFCED数值为倾角"
+        },
+        "化石": {
+          "symbol": "fossil",
+          "color": [
+            100,
+            100,
+            100
+          ],
+          "marker": "*"
+        },
+        "泥火山": {
+          "symbol": "mud_volcano",
+          "color": [
+            150,
+            75,
+            0
+          ],
+          "marker": "^"
+        },
+        "褶皱辅助点": {
+          "symbol": "fold_aux",
+          "color": [
+            80,
+            80,
+            80
+          ],
+          "marker": "s"
+        }
+      }
+    },
+    "LDZOFBA016.WT": {
+      "role": "断层标注点",
+      "symbol": "fault_label",
+      "fontsize": 5.0
+    },
+    "LDLYAAI002.WT": {
+      "role": "水系标注点",
+      "symbol": "water_label",
+      "fontsize": 5.0,
+      "color": [
+        0,
+        102,
+        200
+      ]
+    }
+  },
+  "code_normalization": {
+    "description": "MapGIS 控制字符归一化规则",
+    "rules": {
+      "→": "前缀标记，删除",
+      "↓": "下标标记，删除（后续字符为下标）",
+      "↑": "上标标记，删除（后续字符为上标）",
+      "#-": "下标分隔符，转换为下标数字（如 C#-1 → C₁）",
+      "#=": "下标分隔符",
+      "#+": "上标分隔符",
+      ".": "岩群标记，删除"
+    }
+  }
+}
