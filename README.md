@@ -4,7 +4,7 @@
 
 `geosciml4china` turns a legacy MapGIS project folder into trustworthy, confidence-graded geological semantics: **MapGIS → L0 GeoJSON → self-supporting semantic calibration → semantic L1 GeoJSON → GeoSciML 4.1 → semantics-driven rendering**, with every stage machine-verifiable (scope ruling 2026-09-29: input = the MapGIS project document folder).
 
-![Semantics-driven render crop of the jws test case (Kurgan sheet J43C001002)](docs/images/jws_render_crop.png)
+![Semantics-driven render crop of the jws test case (Kurgan sheet J43C001002)](docs/images/jws_render_crop.svg)
 
 *Render crop of the published [jws test case](data/jws_l0_geojson/README.md): calibrated strata polygons in DZ/T 0179-2025 colors, geological boundaries (incl. GZBD 04/24 unconformity double-lines), fault lines with decorations and fault attitude measurement points (a–b–a composite semantics).*
 
