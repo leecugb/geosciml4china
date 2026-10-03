@@ -75,8 +75,8 @@ EXPECT = {
         sds_nil_faulttype=0, planes=134, polarity=0, folds=7, fold_nil=0,
         members=4357, compositions=0, six_mode=(46, 22, 11, 7, 47, 1),
         orphan_tolerance=True,
-        banners=136,  # 2026-10-03 实测：老盖新/钩对进回归+码义全段继承后，
-                      # GZELD 期望核对矛盾（推覆/走滑段）与继承段登记如实入册
+        banners=140,  # 2026-10-03 实测：倾向侧改属+01 码义归一后（归一登记
+                      # 21 条+倾向侧改属连锁-过期期望冲突转注）新基线
         dv_blocks=137,
         ms_dist={"reverse": 57, "normal": 29, "no_movement_sense": 48,
                  "sinistral": 3},

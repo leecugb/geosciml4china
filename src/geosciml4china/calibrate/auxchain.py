@@ -406,6 +406,94 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     if _n_med:
         print(f"中位数最近优先: {_n_med} 点改属（带内多链取距中位数最近者）")
 
+    # 倾向侧约定校验（2026-10-03 用户裁定「该断层倾向指示点应归属 F171」
+    # + 全幅实证 97% 的 b 箭头位于倾向侧）：**仅作用 1894（b）箭头**——
+    # 1281（a）双短线的侧别由三联体判别管辖（dip_az 公式不同）、0 号为
+    # 文本注记，均不适用本约定。b 箭头应位于归属断层的倾向一侧——射线
+    # （线→点）方位与 dip_az 差 >90° 即违反约定；违反者在带内/邻近链中
+    # 按「射线≈倾向（≤45°）」重寻宿主，唯一候选自动改属
+    # （method=dip_side）、多候选/无候选维持原归属——全部入审查册待裁定。
+    def _ray_bearing(chain, pt):
+        _foot = chain.interpolate(chain.project(pt))
+        return (math.degrees(math.atan2(pt.x - _foot.x, pt.y - _foot.y)) % 360.0)
+
+    def _angdiff(a, b):
+        return min(abs(a - b), 360.0 - abs(a - b))
+
+    _n_dip = _n_dip_hold = _n_dip_multi = _n_dip_none = 0
+    for _idx in assoc.index:
+        if str(assoc.at[_idx, "kind"]) != "symbol":
+            continue
+        if str(int(assoc.at[_idx, "sub_no"])) != "1894":
+            continue  # 约定仅适用 b 箭头
+        try:
+            _da = float(assoc.at[_idx, "dip_az"])
+        except (TypeError, ValueError):
+            continue
+        if _da != _da:  # NaN
+            continue
+        _pt = wt.iloc[int(assoc.at[_idx, "aux_idx"])].geometry
+        _fid0 = str(assoc.at[_idx, "fault_id"])
+        _ch0 = chains.get(_fid0)
+        if _ch0 is None:
+            continue
+        _rb0 = _ray_bearing(_ch0, _pt)
+        if _angdiff(_rb0, _da) <= 90.0:
+            continue  # 倾向侧 ✓
+        # 违反约定：按带限与邻近段重寻宿主
+        _sn = str(int(assoc.at[_idx, "sub_no"]))
+        _lo, _hi = band.get(_sn, (0.0, 500.0))
+        _pt_m = _pm(_pt)
+        _cands = []
+        for _fid in chains_m:
+            _d = chains_m[_fid].distance(_pt_m)
+            if _d > max(_hi, 1000.0):
+                # 搜索带 1km（aux64 案：真宿主 525m 恰超 500m 硬截断；
+                # 唯一候选才自动改属，放宽带不外溢）
+                continue
+            _rb = _ray_bearing(chains[_fid], _pt)
+            if _angdiff(_rb, _da) <= 45.0:
+                _cands.append((_d, _rb, _fid))
+        if len(_cands) == 1 and _cands[0][2] != _fid0:
+            _d, _rb, _fid = _cands[0]
+            _s_, _side_, _dp = _arc_side(chains[_fid], _pt, LON_M, LAT_M)
+            assoc.at[_idx, "fault_id"] = _fid
+            assoc.at[_idx, "dist_m"] = round(_d, 1)
+            assoc.at[_idx, "arc_s"] = round(_s_, 0)
+            assoc.at[_idx, "side"] = int(_side_) if _side_ is not None else None
+            assoc.at[_idx, "dist_band_ok"] = ""
+            assoc.at[_idx, "method"] = "dip_side"
+            assoc.at[_idx, "seg_idx"] = min(
+                (int(_sg) for _sg in ent[ent["fault_id"] == _fid]["seg_idx"]),
+                key=lambda _sg: fl_m.iloc[_sg].distance(_pt_m))
+            review.append({"aux_idx": int(assoc.at[_idx, "aux_idx"]),
+                           "sub_no": int(_sn),
+                           "note": (f"倾向侧约定：{_fid0} 侧射线 {_rb0:.0f}° "
+                                    f"vs 倾向 {_da:.0f}°（反侧），改属 {_fid}"
+                                    f"（射线 {_rb:.0f}° 差 "
+                                    f"{_angdiff(_rb, _da):.0f}°）")})
+            _n_dip += 1
+        elif len(_cands) > 1:
+            review.append({"aux_idx": int(assoc.at[_idx, "aux_idx"]),
+                           "sub_no": int(_sn),
+                           "note": (f"倾向侧约定违反（{_fid0} 反侧 "
+                                    f"{_angdiff(_rb0, _da):.0f}°）但符合约定"
+                                    f"候选 {len(_cands)} 个（"
+                                    f"{'/'.join(c[2] for c in _cands[:4])}）"
+                                    f"——维持原归属待裁定")})
+            _n_dip_multi += 1
+        else:
+            review.append({"aux_idx": int(assoc.at[_idx, "aux_idx"]),
+                           "sub_no": int(_sn),
+                           "note": (f"倾向侧约定违反（{_fid0} 反侧 "
+                                    f"{_angdiff(_rb0, _da):.0f}°）且无符合约定"
+                                    f"宿主——维持原归属待裁定")})
+            _n_dip_none += 1
+        _n_dip_hold += 1
+    if _n_dip or _n_dip_multi or _n_dip_none:
+        print(f"倾向侧约定: 改属 {_n_dip} 点 / 多候选维持 {_n_dip_multi} / "
+              f"无候选维持 {_n_dip_none}")
+
     # 倾角注释类别按幅探测（英吉沙=产状注释；库尔干/奥依亚依拉克=断层注释；
     # 巴什库尔干均无→跳过，倾角留空）
     _num_cls = "断层注释" if (wt["CHFCEC"].astype(str) == "断层注释").any() else         ("产状注释" if (wt["CHFCEC"].astype(str) == "产状注释").any() else "")

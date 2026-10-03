@@ -971,6 +971,44 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         _n_inh += 1
     if _n_inh:
         print(f"   码义逻辑判断继承: {_n_inh} 段")
+    # 无族义码全段归一般断层（2026-10-03 用户裁定：F106.1 案——「一旦完成
+    # 标定相同编码值的要素继承该地质语义」，无族义码（mle_semantic=断层
+    # 泛称）的段级证据一律让位码级语义：全部段=断层泛称；段级证据如实
+    # 入冲突册待裁定（证据不因码义消失）；覆盖库裁定段不动）
+    _n_unify = 0
+    _unify_segs = set()
+    for r in rows:
+        _gz0 = str(r.get("GZEEB") or "")
+        if _gz0 not in _unreg:
+            continue  # 注册码（02/03/05 等）有族义——注册继承，不适用本通道
+        if _mle_sem_by_code.get(_gz0, "断层泛称") != "断层泛称":
+            continue  # 有族义码的段级例外保持（35/37/16 与注册码同构）
+        if r.get("structural_type") in ("断层泛称", "", None):
+            continue
+        if str(r.get("verdict")) == "裁定（覆盖库）":
+            continue  # 覆盖库绝对
+        _old = r["structural_type"]
+        _unify_segs.add(int(r["idx"]))
+        r["structural_type"] = "断层泛称"
+        conflicts.append({
+            "fault_id": r["fault_id"], "segs": str(r["idx"]),
+            "issue": f"GZEEB={_gz0}（一般断层）码级语义归一",
+            "evidence": (f"段级标定 {_old} 让位码级语义（无族义，全段归"
+                         f"一般断层）——段级证据（{str(r.get('checks'))[:80]}）"
+                         f"如实保留待裁定"),
+            "status": "pending_review"})
+        if str(r.get("verdict")) not in ("兜底（一般断层）", "标定（活动先验）"):
+            r["verdict"] = "consistent"
+            r["confidence"] = "0.6"
+        _n_unify += 1
+    if _unify_segs:
+        # 段级语义让位后，投票期按旧语义登记的期望冲突一并转注（避免
+        # 「01(推覆体边界) 证据冲突」等过期条目与新语义打架）
+        conflicts[:] = [c for c in conflicts
+                        if not (str(c.get("segs")) in
+                                {str(s) for s in _unify_segs}
+                                and "证据冲突" in str(c.get("issue")))]
+        print(f"   无族义码全段归一般断层: {_n_unify} 段")
     # 继承后重算最终分布（提案表 final_distribution 反映继承结果）
     _final_raw = defaultdict(lambda: defaultdict(int))
     for r in rows:
