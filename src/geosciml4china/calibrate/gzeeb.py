@@ -4,10 +4,18 @@
 三维正交分层（用户定调「分层并行不冲突」）——
   · 证据级别层：复合覆盖（第四系松散沉积物剔半胶结+冰雪+水体）≥90% 强推测/
     ≥50% 推测；LYGREBA001=解译；
-  · 结构类型层：GZELD 运动学（本幅 gzeld 码义注册表——英吉沙 103=左行 vs
-    库尔干 103=右行）+ GZECE 倾角域值 + aux 三联体正逆 + 走滑旋向钩 +
-    三类补强（推覆：地层重复探针+老盖新探针（倾向盘老于下盘）；复活：aux
-    正断层产状点+切割/控制第四系；活动：切割第四系+入冰雪区）；
+  · 结构类型层（2026-10-02 用户抽象逻辑对齐：每个图幅的编码值地质语义
+    映射依赖**自身数据空间结构模式与先验知识的回归关系**）：
+      regression(数据模式, 先验知识) = argmax 投票——
+      先验知识类（图幅注册表 +3 / 断层名语义 +2 / GZELD 运动学 +2）回归
+      权重高于数据模式类（签名 +2 / 倾角域 +1 / 覆盖 +2 / Q 内强档 +3）；
+      **aux 判别通道**（a-b-a/a-b 模式地质产状测量点——正/逆断层的编码
+      标识证据，+2）单列出站；无图幅注册表时先验知识仍经名称/运动学
+      通道参与回归，未收敛码落泛称+提案待裁定；+ GZELD 运动学（本幅 gzeld 码义注册表——
+      英吉沙 103=左行 vs 库尔干 103=右行）+ GZECE 倾角域值 + aux 三联体
+      正逆 + 走滑旋向钩 + 三类补强（推覆：地层重复探针+老盖新探针（倾向盘
+      老于下盘）；复活：aux 正断层产状点+切割/控制第四系；活动：切割第四系
+      +入冰雪区）；
   · 活动性层：37=活动（与上两层正交）；**活动性强先验**（2026-09-28 用户定）：
     断层与第四系松散沉积物界线重合→活动（复活）倾向，实体多段重合加强，
     强候选登记交人工裁定（不自动改码）。
@@ -91,7 +99,10 @@ EXPECT = {
     "走滑断层": dict(),
     "断层泛称": dict(),
     "断层（泛称）": dict(),
-    "推测断层": dict(cover_min=50),
+    # 2026-10-02 用户裁定：推测断层可出现在第四系松散沉积物（强证据，
+    # Q 内强档 +3 票）也可出现在地层——出露地层**不是否定条件**，不再设
+    # cover_min 违反闸（原 2026-09-25 cover_min=50 判据废止）
+    "推测断层": dict(),
     "活动断层": dict(activity=True),
     # 复合断层（2026-10-01 用户建议新增）：分析型结构语义——码面走滑类
     # （16/18/走滑）× aux 倾滑判别（正/逆）双通道同段命中升格；分量随段标注
@@ -151,8 +162,6 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     LON_M = 111320.0 * math.cos(math.radians(LAT0))
     ice = (load_source_layer(str(sh.root), "LDLYAAE002.WP", graphic=False) if (sh.root / "LDLYAAE002.WP").exists() or (sh.root / "geojson" / "L0" / "LDLYAAE002.WP.geojson").exists() else gpd.GeoDataFrame())
     ice_u = ice.geometry.union_all() if len(ice) else None
-    wl = (load_source_layer(str(sh.root), "LDLYAAE001.WL", graphic=False) if (sh.root / "LDLYAAE001.WL").exists() or (sh.root / "geojson" / "L0" / "LDLYAAE001.WL.geojson").exists() else gpd.GeoDataFrame())
-    water_u = wl.geometry.union_all().buffer(100.0 / LON_M) if len(wl) else None
     from shapely.ops import unary_union
     # 半胶结第四纪沉积物剔除（2026-09-27 用户定：西域群/乌恰群等不属于
     # 第四系松散沉积物范畴——西域组 Qp1X 剔除在案；清单走 priors
@@ -160,6 +169,10 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     _priors = load_priors(sheet)
     _q_excl = set(_priors.get("quaternary_exclude", ["Qp1X"]))
     _q_rank = float(_priors.get("quaternary_rank_min", 1300.0))
+    # Q 内强证据档（2026-10-02 用户裁定「位于第四系松散沉积物内是推测断层
+    # 强证据」）：段线在 Q 并集内的比例 ≥本值 → 推测断层 +3 票（与注册
+    # 先验同级权重，并列时注册先验仍胜——不翻已裁定码义）
+    _q_interior_frac = float(_priors.get("q_interior_frac", 0.9))
     # 活动断层审计（2026-10-02）：Q 面元宇宙=四 WP 全层（原仅 001 层——
     # 它幅 Q 单元若分布于 002-004 则 Q 并集缺漏，面元拓扑通道漏检）
     q_geoms = []
@@ -181,7 +194,10 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                     and not any(x in _cn for x in _q_excl)):
                 q_geoms.append(g)
     quat_u = unary_union(q_geoms) if q_geoms else None
-    cover_u = unary_union([u for u in (ice_u, water_u, quat_u) if u is not None])
+    # 2026-10-03 用户裁定：取消水体线缓冲（LDLYAAE001.WL buffer）机制——
+    # 水系线穿越不构成覆盖证据（F098.1 案：覆盖 19% 全为水体线缓冲，
+    # 断层实为地层内断层；水体面 LDLYAAE002.WP 保留在联合内）
+    cover_u = unary_union([u for u in (ice_u, quat_u) if u is not None])
 
     # ---- 三类自支持补强通道数据（2026-09-26 用户定：复活断层/推覆体边界/
     # 活动断层判别依据不足补强）----
@@ -216,7 +232,8 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     asc_p = str(sh.root / prof_get("assoc_csv", "fault_aux_point_association.csv"))
     if os.path.exists(asc_p):
         asc = pd.read_csv(asc_p, dtype=str)
-        for _, ar in asc[asc["sub_no"].isin([str(prof_get("b_symbol_raw", 1894))])].iterrows():
+        # b 族归一 1894（auxchain 正典化同构——英吉沙 1851 也归一）
+        for _, ar in asc[asc["sub_no"].isin(["1894"])].iterrows():
             try:
                 sg_i, da_f = int(float(ar.get("seg_idx"))), float(ar.get("dip_az"))
             except (TypeError, ValueError):
@@ -225,7 +242,9 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 seg_dipaz.setdefault(sg_i, da_f)
 
     def _sides_units(fm, probe=300.0):
-        """米制线两侧单元 {code: age_rank}（+n/−n 两侧，7 点探针）。"""
+        """米制线两侧单元 {code: (age_rank, hits)}（+n/−n 两侧，7 点探针）。
+        2026-10-02 增强：计命中数——主导单元（最多命中）的 rank 判老盖新，
+        避免混合侧被零星年轻单元（max 口径）误导（F012 案：C 主导侧混 K2k）。"""
         import numpy as _np
         total = fm.length
         if total < 1e-9:
@@ -248,8 +267,53 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                           p[1] + sgn * nm[1] * probe)
                 ii = _ptree.query(q, predicate="intersects")
                 if len(ii):
-                    acc[_pcodes[ii[0]]] = _pages[ii[0]]
+                    _c0 = _pcodes[ii[0]]
+                    _r0 = _pages[ii[0]]
+                    _prev = acc.get(_c0, (_r0, 0))
+                    acc[_c0] = (_r0, _prev[1] + 1)
         return left, right
+
+    def _hw_fw_ranks(fm, da, probe=100.0):
+        """倾向方位 → (上盘主导 rank, 下盘主导 rank)——沿线局部法向探针
+        （2026-10-02 F012 案：弦向法向出图外致侧别失判——弧形/图缘断层
+        按逐点局部法向与倾向方位点积定盘侧）。"""
+        import numpy as _np
+        total = fm.length
+        if total < 1e-9:
+            return None, None
+        coords = _np.array(fm.coords)
+        sl = _np.sqrt(((_np.diff(coords, axis=0)) ** 2).sum(axis=1))
+        cum = _np.concatenate([[0], _np.cumsum(sl)])
+        dx, dy = math.sin(math.radians(da)), math.cos(math.radians(da))
+        hw, fw = {}, {}
+        for k in range(7):
+            d = total * (k + 0.5) / 7
+            j = max(0, min(int(_np.searchsorted(cum, d)) - 1, len(coords) - 2))
+            if sl[j] < 1e-10:
+                continue
+            t = (d - cum[j]) / sl[j]
+            p = coords[j] * (1 - t) + coords[j + 1] * t
+            tg = coords[j + 1] - coords[j]
+            nm = _np.array([-tg[1], tg[0]])
+            sgn_hw = 1 if (dx * nm[0] + dy * nm[1]) > 0 else -1
+            for sgn, acc in ((sgn_hw, hw), (-sgn_hw, fw)):
+                q = Point(p[0] + sgn * nm[0] * probe,
+                          p[1] + sgn * nm[1] * probe)
+                ii = _ptree.query(q, predicate="intersects")
+                if len(ii):
+                    _c0 = _pcodes[ii[0]]
+                    _r0 = _pages[ii[0]]
+                    _prev = acc.get(_c0, (_r0, 0))
+                    acc[_c0] = (_r0, _prev[1] + 1)
+        return _dominant_rank(hw), _dominant_rank(fw)
+
+    def _dominant_rank(d) -> float | None:
+        """两侧单元 dict 的主导单元 rank（命中最多者；并列取老者）。"""
+        if not d:
+            return None
+        _best = max(d.items(), key=lambda kv: (kv[1][1],
+                                        -(kv[1][0] if kv[1][0] is not None else 0)))
+        return _best[1][0]
 
     # 走滑钩对（2026-10-01 空间识别通道——auxchain 产出 _fault_hooks_<key>.csv，
     # 238/239 钩旋向登记缺口就此闭合：识别不依赖符号码表，符号列仅作佐证）
@@ -302,6 +366,67 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     _unreg = {}  # 码义未注册聚合（2026-10-01 泛化缺口修复）：eff 码 → [段]
     _fallback_rows = []  # 一般断层兜底档案（2026-10-02 用户裁定）
     _mle_raw = defaultdict(lambda: defaultdict(int))  # 归位前 MLE 语义分布
+    _prior_raw = defaultdict(lambda: defaultdict(float))  # 先验知识类票（回归构成）
+    _data_raw = defaultdict(lambda: defaultdict(float))   # 数据模式类票（回归构成）
+    _aux_raw = defaultdict(lambda: defaultdict(float))    # aux 判别票（a-b-a/a-b 正逆编码标识）
+    _act_raw = defaultdict(lambda: defaultdict(float))    # 活动证据票（Q2 拓扑，回归第三通道）
+    # ---- 界线重合预计算（2026-10-03 用户裁定：位于 Q-地层界线的断层
+    # 无推测断层逻辑——埋藏通道（签名/Q 内/覆盖/边缘）不适用，界线证据
+    # 直投活动断层；面元拓扑重合先于回归计算，供 MLE 投票与活动层共用）
+    from collections import defaultdict as _dd
+    Q2_TOL_M = float(_priors.get("q2_tol_m", 3.0))
+    Q2_MIN_OV = float(_priors.get("q2_min_ov", 150.0))   # 重合有效长度下限（m）
+    Q2_STRONG_M = float(_priors.get("q2_strong_m", 1000.0))  # 单段强型下限（且 ≥50% 段长）
+    Q2_LONG_M = float(_priors.get("q2_long_m", 10000.0))  # 长距离强证据下限
+    coinc = _dd(list)        # fault_id → [(seg_idx, overlap_m, pct)]
+    _coinc_own, _coinc_tier, _long_fids = {}, {}, set()
+    if quat_m is not None:
+        _q_bound = quat_m.boundary
+        _nq_geoms = [g for g, c in zip(_pgeoms, _pcodes)
+                     if (_unit_age_rank(c) or 0) < _q_rank]  # 非 Q 侧与 Q 侧同参数（活动断层审计 2026-10-02）
+        _nq_tree = STRtree(_nq_geoms) if _nq_geoms else None
+        for _idx0, _row0 in fl.iterrows():
+            if (ov.get(str(_idx0)) or {}).get("status") == "cartographic_error":
+                continue
+            _g0 = _row0.geometry
+            if _g0 is None or _g0.is_empty or _g0.geom_type != "LineString":
+                continue
+            _fm0 = LineString([(c[0] * LON_M, c[1] * 111320.0)
+                               for c in _g0.coords])
+            # 在线采样：点距 Q 边界 ≤3m 且距非 Q 面元 ≤3m → 公共边界重合
+            _n_pts = max(21, int(_fm0.length // 500))
+            _hit = 0
+            for _k in range(_n_pts):
+                _pt = _fm0.interpolate(_fm0.length * (_k + 0.5) / _n_pts)
+                if _q_bound.distance(_pt) > Q2_TOL_M:
+                    continue
+                if _nq_tree is None:
+                    continue
+                if len(_nq_tree.query(_pt.buffer(Q2_TOL_M),
+                                      predicate="intersects")):
+                    _hit += 1
+            _ovm = _fm0.length * _hit / _n_pts
+            if _ovm >= max(Q2_MIN_OV, 0.1 * _fm0.length):
+                _si0 = int(_row0.get("_src_id", _idx0))
+                _fid0 = seg2fid.get(_si0)
+                if _fid0:
+                    coinc[_fid0].append(
+                        (_si0, round(_ovm), round(_ovm / _fm0.length * 100)))
+        _long_fids = {fid for fid, hits in coinc.items()
+                      if any(m >= Q2_LONG_M and p_ >= 50 for _, m, p_ in hits)}
+        for _fid0, _hits0 in coinc.items():
+            _n0 = len(_hits0)
+            for _si0, _m0, _p0 in _hits0:
+                _coinc_own[_si0] = (_m0, _p0)
+                if _fid0 in _long_fids:
+                    _coinc_tier[_si0] = "长距离"
+                elif _n0 >= 2:
+                    _coinc_tier[_si0] = "多段"
+                elif _m0 >= Q2_STRONG_M and _p0 >= 50:
+                    _coinc_tier[_si0] = "单段强型"
+                else:
+                    _coinc_tier[_si0] = "弱重合"
+
     for idx, row in fl.iterrows():
         g = row.geometry
         if g is None or g.is_empty:
@@ -362,51 +487,123 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             auxv = ""
         # 覆盖分数（MLE 投票输入；证据层复用）
         fc = g.intersection(cover_u).length / g.length if cover_u is not None else 0.0
+        # 界线重合闸（2026-10-03 用户裁定：Q-地层界线断层无推测断层逻辑——
+        # 埋藏通道不投推测票，界线证据直投活动断层；弱重合 +2/强档 +3）
+        _own_c = _coinc_own.get(int(row.get("_src_id", idx)))
+        _tier_c = _coinc_tier.get(int(row.get("_src_id", idx)), "弱重合")
 
         # ---- MLE 语义标定（2026-10-01 用户裁定）----
         # 证据投票：注册/覆盖库语义先验 +3 / 断层名 +2 / 推测签名 +2 /
-        # GZELD 运动学 +2 / GZECE 倾角域 +1 / aux 判别 +2；argmax 即标定；
-        # 覆盖库 adjudicated 结构裁定=绝对；并列取注册先验、无先验并列落泛称；
-        # 最高票 <2 落泛称（证据不足不硬标）
+        # GZELD 运动学 +2 / GZECE 倾角域 +1 / aux 判别 +2 / 界线重合 +2~3；
+        # argmax 即标定；覆盖库 adjudicated 结构裁定=绝对；并列取注册先验、
+        # 无先验并列落泛称；最高票 <2 落泛称（证据不足不硬标）
         votes = defaultdict(float)
+        _v_prior = defaultdict(float)   # 先验知识类票
+        _v_data = defaultdict(float)    # 数据模式类票
+        _v_aux = defaultdict(float)     # aux 判别票（a-b-a/a-b 产状测量点）
         if _sem_from_reg:
             votes[sem_name] += 3
+            _v_prior[sem_name] += 3
         if _ns_hit:
             votes[sem_name] += 2
-        if _sig_hit:
+            _v_prior[sem_name] += 2
+        if _sig_hit and _own_c is None:
             votes["推测断层"] += 2
+            _v_data["推测断层"] += 2
         if str(gzeld_sem_now).startswith("压性"):
             votes["逆断层"] += 2
+            _v_prior["逆断层"] += 2
             votes["推覆体边界"] += 2
+            _v_prior["推覆体边界"] += 2
         elif str(gzeld_sem_now).startswith("张性"):
             votes["正断层"] += 2
+            _v_prior["正断层"] += 2
         elif str(gzeld_sem_now).startswith("左行"):
             votes["左型走滑断层"] += 2
+            _v_prior["左型走滑断层"] += 2
         elif str(gzeld_sem_now).startswith("右行"):
             votes["右型走滑断层"] += 2
+            _v_prior["右型走滑断层"] += 2
         if dip is not None and dip > 0:
             if 25 <= dip <= 85:
                 votes["逆断层"] += 1
+                _v_data["逆断层"] += 1
             if 50 <= dip <= 90:
                 votes["正断层"] += 1
+                _v_data["正断层"] += 1
             if 0 <= dip <= 35:
                 votes["推覆体边界"] += 1
+                _v_data["推覆体边界"] += 1
         if auxv == "逆断层产状点":
             votes["逆断层"] += 2
+            _v_aux["逆断层"] += 2
         elif auxv == "正断层产状点":
             votes["正断层"] += 2
+            _v_aux["正断层"] += 2
         # 覆盖证据权重提升（2026-10-01 用户裁定）：第四系松散沉积物/冰雪区/
         # 水体中展布的断层（fc≥50%）或沿覆盖边缘段（≤1km）——编码值大概率
         # 为推测断层 +2（注册码先验 +3 仍优先，不翻已裁定码义）
-        if fc >= 0.5:
+        # 2026-10-02 用户裁定强档：位于第四系松散沉积物内（Q 内比例
+        # ≥q_interior_frac）为推测断层强证据 +3
+        _qfrac = (g.intersection(quat_u).length / g.length
+                  if (quat_u is not None and g is not None
+                      and not g.is_empty and g.length > 0) else 0.0)
+        if _own_c is None and _qfrac >= _q_interior_frac:
+            votes["推测断层"] += 3
+            _v_data["推测断层"] += 3
+        elif _own_c is None and fc >= 0.5:
             votes["推测断层"] += 2
-        elif cover_u is not None:
+            _v_data["推测断层"] += 2
+        elif _own_c is None and cover_u is not None:
             try:
                 _dedge0 = g.distance(cover_u.boundary) * LON_M
             except Exception:
                 _dedge0 = None
             if _dedge0 is not None and _dedge0 <= 1000.0:
                 votes["推测断层"] += 2
+                _v_data["推测断层"] += 2
+        if _own_c is not None:
+            # 界线证据直投活动断层（2026-10-03 用户裁定）
+            votes["活动断层"] += 2 if _tier_c == "弱重合" else 3
+            _v_data["活动断层"] += 2 if _tier_c == "弱重合" else 3
+        # 老盖新判据进回归（2026-10-03 用户裁定：35 码各段性质——老盖新
+        # 为其最大似然语义推覆体界线的决定性证据，直投推覆体边界票；
+        # 段级倾向 aux b 标定真值优先，GZECD 属性兜底（F051 案：无 aux
+        # 点同构形态漏判）；已有正/逆产状点或注册逆码义者不参与）
+        if auxv not in ("逆断层产状点", "正断层产状点") \
+                and not (_sem_from_reg
+                         and sem_name in ("逆断层", "推覆体边界")):
+            _da2v = seg_dipaz.get(int(row.get("_src_id", idx)))
+            _da2_from_aux = _da2v is not None
+            if _da2v is None:
+                try:
+                    _gzd = float(row.get("GZECD") or 0)
+                except (TypeError, ValueError):
+                    _gzd = 0.0
+                _da2v = _gzd if 0 < _gzd < 360 else None
+            # 倾角闸仅约束 GZECD 兜底路径（属性倾向未经产状点验证）——
+            # aux 标定路径维持 2026-10-02 判据原貌（F012 案 aux 44/46° 在案）
+            if (_da2v is not None
+                    and (_da2_from_aux or dip is None or dip <= 35)
+                    and g is not None
+                    and not g.is_empty and g.geom_type == "LineString"):
+                _fmv = LineString([(c[0] * LON_M, c[1] * 111320.0)
+                                   for c in g.coords])
+                _ahv, _afv = _hw_fw_ranks(_fmv, _da2v)
+                if _ahv is not None and _afv is not None and _ahv < _afv:
+                    votes["推覆体边界"] += 3
+                    _v_data["推覆体边界"] += 3
+        # 走滑钩对进回归（2026-10-03 用户：解析出走滑断层码——钩旋向
+        # z 算法判定的左行/右行证据直投走滑票；16 码×GZELD=103×左行钩）
+        _hps0 = hook_by_seg.get(int(row.get("_src_id", idx)), [])
+        if _hps0:
+            _sense0 = str(_hps0[0].get("sense") or "")
+            if _sense0 == "左行":
+                votes["左型走滑断层"] += 3
+                _v_data["左型走滑断层"] += 3
+            elif _sense0 == "右行":
+                votes["右型走滑断层"] += 3
+                _v_data["右型走滑断层"] += 3
         _mle_sem = "断层泛称"
         if votes:
             _mx = max(votes.values())
@@ -424,6 +621,15 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         if adjudicated and structural_type:
             _mle_sem = structural_type  # 覆盖库结构裁定=绝对
         _mle_raw[gz][_mle_sem] += 1
+        # 逐键累加（2026-10-03 修复：dict.update 覆盖同键仅留末段票面，
+        # 提案表 prior/aux/data 列聚合失真——37 案 data=推测×2 实为
+        # F064.1 末段票面；mle/activity 两列本为 += 不受影响）
+        for _k0, _v0 in _v_prior.items():
+            _prior_raw[gz][_k0] += _v0
+        for _k0, _v0 in _v_data.items():
+            _data_raw[gz][_k0] += _v0
+        for _k0, _v0 in _v_aux.items():
+            _aux_raw[gz][_k0] += _v0
         # 一般断层兜底（2026-10-02 用户裁定）：码义无法标定——注册表未命中、
         # 断层名不蕴含地质语义、无辅助点呈现的地质语义（签名/MLE 均空）——
         # 统一归入一般断层，保障管线运转；详情入 _gzeeb_fallback_<key>.csv
@@ -434,7 +640,13 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         # ——结构层落「断层泛称」，证据层标「推测」；exp 按 MLE 标定语义取
         exp_name = _mle_sem
         if _mle_sem == "推测断层" and structural_type is None:
-            structural_type = "断层泛称"
+            if (_sem_from_reg or _qfrac >= _q_interior_frac or fc >= 0.5):
+                # 2026-10-03 用户裁定：推测断层的标定有强证据即可标定，
+                # 不需要依赖人工裁定——强证据=码义注册继承 / Q 内强档 /
+                # 覆盖强证据（fc≥50%）；其余（仅签名等弱证据）落泛称
+                structural_type = "推测断层"
+            else:
+                structural_type = "断层泛称"
             if evidence_class is None:
                 evidence_class = "推测"
         structural_type = structural_type or _mle_sem or "断层泛称"
@@ -449,6 +661,9 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         # ---- 结构类型层多通道互证 ----
         exp = EXPECT.get(exp_name, {})
         checks, viol = [], []
+        if _qfrac >= _q_interior_frac:
+            checks.append(f"位于第四系松散沉积物内 {_qfrac * 100:.0f}%"
+                          f"——推测断层强证据")
         if _ns_hit:
             checks.append(f"断层名性质优先（{_ns_hit}→{sem_name}）")
         if _sig_hit:
@@ -504,8 +719,8 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 if _rep:
                     checks.append(f"地层重复({'/'.join(sorted(_rep))}，推覆重复)")
                 _da = seg_dipaz.get(int(row.get("_src_id", idx)))
-                _aL = max((a for a in _L.values() if a), default=None)
-                _aR = max((a for a in _R.values() if a), default=None)
+                _aL = _dominant_rank(_L)
+                _aR = _dominant_rank(_R)
                 if _da is not None:
                     _c0 = _fm.coords
                     _tx, _ty = _c0[-1][0] - _c0[0][0], _c0[-1][1] - _c0[0][1]
@@ -525,6 +740,29 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                         # _ah == _af：同龄不判
                 elif _aL and _aR and abs(_aL - _aR) >= 200:
                     checks.append(f"新老差显著（{_aL}|{_aR}，倾向未定）")
+        elif structural_type not in ("逆断层", "推覆体边界", "正断层",
+                                    "左型走滑断层", "右型走滑断层", "走滑断层",
+                                    "复合断层"):
+            # 2026-10-02 用户裁定：判定正/逆编码值后，上盘老下盘新的、
+            # 与逆断层编码值不同的断层可能为推覆体界线——老盖新判据
+            # （2026-10-03 泛化：GZECD 属性倾角兜底，倾角闸仅约束兜底
+            # 路径——aux 标定路径维持判据原貌，与回归票通道同口径）
+            _da2 = seg_dipaz.get(int(row.get("_src_id", idx)))
+            _da2_from_aux = _da2 is not None
+            if _da2 is None:
+                try:
+                    _gzd2 = float(row.get("GZECD") or 0)
+                except (TypeError, ValueError):
+                    _gzd2 = 0.0
+                _da2 = _gzd2 if 0 < _gzd2 < 360 else None
+            if _da2 is not None and (_da2_from_aux or dip is None or dip <= 35):
+                _ah2, _af2 = _hw_fw_ranks(_fm, _da2)
+                if (_ah2 is not None and _af2 is not None
+                        and _ah2 < _af2):
+                    structural_type = "推覆体边界"
+                    checks.append(f"老盖新（倾向盘 {_ah2:.0f} 老于下盘 "
+                                  f"{_af2:.0f}，与逆断层编码值不同"
+                                  f"——推覆体界线判据）")
         elif structural_type == "复活断层":
             if auxv == "正断层产状点":
                 checks.append("aux 正断层产状点（复活期伸展活动）")
@@ -585,9 +823,13 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             verdict, conf = "制图误差（剔除）", 0.0
         elif adjudicated:
             verdict, conf = "裁定（覆盖库）", 1.0
-        elif _fallback:
+        elif _fallback and structural_type == "断层泛称":
             verdict, conf = "兜底（一般断层）", 0.3
             checks.append("一般断层兜底（码义无法标定：名无语义+无辅助点语义）")
+        elif _fallback:
+            # 兜底判定后结构层经后置判据升级（老盖新/复合等）——
+            # verdict 随最终结构层联动，不残留「兜底+非泛称」脱节
+            verdict, conf = "consistent", 0.6
         elif viol:
             # 语义已由 MLE 标定（不阻塞管线），矛盾证据全部保留在冲突册
             verdict, conf = "标定（矛盾保留）", 0.3
@@ -606,7 +848,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             GZECE=dip if dip is not None else None, cover_pct=round(fc * 100),
             checks="；".join(checks), verdict=verdict, confidence=conf,
             **ent_info))
-        if _fallback:
+        if _fallback and structural_type == "断层泛称":
             _fallback_rows.append(dict(
                 idx=idx, fault_id=fid, GZEEB=gz, fault_name=ent_info.get(
                     "fault_name", ""), gzeld=gzeld, gzece=(dip if dip else ""),
@@ -622,6 +864,9 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                                             encoding="utf-8-sig")
         print(f"   一般断层兜底: {len(_fallback_rows)} 段 → {_fb_p.name}")
 
+    # 码义提案出站（2026-10-02 用户对齐裁定：图幅编码语义映射依赖自身
+    # 数据空间结构模式）——未注册码的归位前 MLE 分布 + 段数 = 本幅数据
+    # 模式的语义提案，供用户裁定后写入图幅注册表（fault_semantics_<key>.json）
     # 码义未注册冲突登记（2026-10-01 MLE 修订）：段级语义已由 MLE 标定，
     # 码级语义仍待裁定——归位前 MLE 分布如实入 evidence（不猜码义）
     for _code, _segs in sorted(_unreg.items()):
@@ -640,50 +885,13 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     # ---- 活动性强先验（2026-10-02 优化定版）：识别标志=断层与第四系松散
     # 沉积物和地层的接触界线重合——**活动断层的典型识别标志（2026-10-02
     # 用户确认：「F072 是第四系松散沉积物与地层的边界一致，是活动断层的
-    # 典型识别标志」）**。判据升级为**面元拓扑**（断裂落于 Q 面元
-    # 与非 Q 面元公共边界；在线采样×3m 容差），免疫 gzbd 路由语义转移
-    # （GZBD=10 不再遮蔽标志；seg248 案根因修复）。实体级聚合（多段加强）
-    # + 单段强型（≥50% 段长且 ≥1km）+ 37 码佐证 + 制图误差跳过。
-    from collections import defaultdict as _dd
-    # Q2 活动先验阈值入 priors（2026-10-02 泛化审计）：与同模块
-    # quaternary_rank_min/quaternary_exclude 同通道；裁定值作默认
-    Q2_TOL_M = float(_priors.get("q2_tol_m", 3.0))
-    Q2_MIN_OV = float(_priors.get("q2_min_ov", 150.0))   # 重合有效长度下限（m）
-    Q2_STRONG_M = float(_priors.get("q2_strong_m", 1000.0))  # 单段强型下限（且 ≥50% 段长）
-    Q2_LONG_M = float(_priors.get("q2_long_m", 10000.0))  # 长距离强证据下限
-    # （2026-10-02 用户裁定「长距离与第四系松散沉积物边界重叠也是活动断层
-    #   强证据」：单段重合 ≥本值且 ≥50% 段长 → 活动，与实体多段加强同级）
-    coinc = _dd(list)        # fault_id → [(seg_idx, overlap_m, pct)]
+    # 典型识别标志」）**。判据为**面元拓扑**（断裂落于 Q 面元与非 Q 面元
+    # 公共边界；在线采样×3m 容差），免疫 gzbd 路由语义转移（GZBD=10 不再
+    # 遮蔽标志；seg248 案根因修复）。实体级聚合（多段加强）+ 单段强型
+    # （≥50% 段长且 ≥1km）+ 长距离档 + 制图误差跳过。
+    # 2026-10-03 用户裁定：重合采样与阈值已前置到回归前预计算——界线证据
+    # 同时进入 MLE 投票（活动断层票）与本活动层标注；此处只做活动层落笔。
     if quat_m is not None:
-        _q_bound = quat_m.boundary
-        _nq_geoms = [g for g, c in zip(_pgeoms, _pcodes)
-                     if (_unit_age_rank(c) or 0) < _q_rank]  # 非 Q 侧与 Q 侧同参数（活动断层审计 2026-10-02）
-        _nq_tree = STRtree(_nq_geoms) if _nq_geoms else None
-        for r in rows:
-            if str(r.get("verdict")) == "制图误差（剔除）":
-                continue
-            _si = int(r["idx"])
-            _g = fl.geometry.iloc[_si]
-            if _g is None or _g.is_empty or _g.geom_type != "LineString":
-                continue
-            fm = LineString([(c[0] * LON_M, c[1] * 111320.0)
-                             for c in _g.coords])
-            # 在线采样：点距 Q 边界 ≤3m 且距非 Q 面元 ≤3m → 公共边界重合
-            _n_pts = max(21, int(fm.length // 500))
-            _hit = 0
-            for k in range(_n_pts):
-                pt = fm.interpolate(fm.length * (k + 0.5) / _n_pts)
-                if _q_bound.distance(pt) > Q2_TOL_M:
-                    continue
-                if _nq_tree is None:
-                    continue
-                if len(_nq_tree.query(pt.buffer(Q2_TOL_M),
-                                      predicate="intersects")):
-                    _hit += 1
-            ov_m = fm.length * _hit / _n_pts
-            if ov_m >= max(Q2_MIN_OV, 0.1 * fm.length):
-                coinc[r["fault_id"]].append(
-                    (_si, round(ov_m), round(ov_m / fm.length * 100)))
         for r in rows:
             hits = coinc.get(r["fault_id"], [])
             if not hits:
@@ -692,14 +900,21 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             if own:
                 r["checks"] += f"；Q-地层边界重合 {own:.0f}m"
             if len(hits) >= 2:
-                r["checks"] += f"；实体 Q-地层边界重合×{len(hits)}段（活动候选）"
+                r["checks"] += f"；实体 Q-地层边界重合×{len(hits)}段"
         n_strong = 0
-        _act_conf = {}   # 活动候选冲突按实体去重（活动断层审计 2026-10-02：
-                         # 原每行一条 → F001 型大实体 15 条同 segs 重复登记，
-                         # 且非重合行证据呈「0m（0%段长）」误导——改实体一条，
-                         # 证据列逐重合段米数/占比）
-        _long_fids = {fid for fid, hits in coinc.items()
-                      if any(m >= Q2_LONG_M and p_ >= 50 for _, m, p_ in hits)}
+
+        def _mark_activity(r, own, tag):
+            """活动层强证据自动标定（2026-10-02/03 用户裁定）：长距离/
+            多段/单段强型接触界线重合 → activity=活动 + 结构层=活动断层
+            （仅当原结构语义为泛称/推测——推覆体边界、正/逆/走滑等更强
+            结构语义与覆盖库裁定不被覆盖；证据层保留推测/泛称原貌）。"""
+            r["activity"] = "活动"
+            r["verdict"] = "标定（活动先验）"
+            if r.get("structural_type") in ("断层泛称", "推测断层"):
+                r["structural_type"] = "活动断层"
+            r["checks"] += (f"；活动性佐证（Q-地层边界重合 {own[0]:.0f}m/"
+                            f"{own[1]:.0f}%段长，{tag}）")
+
         for r in rows:
             fid = r["fault_id"]
             hits = coinc.get(fid, [])
@@ -712,38 +927,81 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                     tag = f"×{n}段" if n >= 2 else ""
                     r["checks"] += f"；活动性佐证（Q-地层边界重合{tag}）"
             elif fid in _long_fids and own[0]:
-                # 长距离强证据（2026-10-02 用户裁定）：单段长距离重合与
-                # 实体多段加强同级——直接标活动，不落候选待裁定
-                r["activity"] = "活动"
-                r["verdict"] = "标定（活动先验）"
-                r["checks"] += (f"；活动性佐证（Q-地层边界重合 {own[0]:.0f}m/"
-                                f"{own[1]:.0f}%段长，长距离强证据）")
+                # 长距离强证据（2026-10-02 用户裁定）：单段长距离重合——
+                # 直接标活动，不落候选待裁定
+                _mark_activity(r, own, "长距离强证据")
                 n_strong += 1
-            elif n >= 2 or (own[0] >= Q2_STRONG_M and own[1] >= 50):
-                _tag = ("单段强型" if n < 2 else
-                        ("单段强型+实体多段" if own[0] >= Q2_STRONG_M
-                         and own[1] >= 50 else "实体多段"))
-                r["activity"] = f"活动候选（Q-地层边界重合{_tag}，待裁定）"
+            elif n >= 2 and own[0]:
+                # 多段接触界线强证据（2026-10-02 用户裁定：F048 案——多段
+                # 作为第四系松散沉积物与地层的接触界线=活动断层强证据）：
+                # 直接标活动，不落候选待裁定
+                _mark_activity(r, own, "多段接触界线强证据")
                 n_strong += 1
-                _act_conf[fid] = hits
-        for fid, hits in _act_conf.items():
-            # 实体级标签取最强证据（行序无关：任一重合段达强型即标强型）
-            _strong = any(m >= Q2_STRONG_M and p_ >= 50 for _, m, p_ in hits)
-            _tag2 = ("单段强型+实体多段" if _strong else "实体多段") \
-                if len(hits) >= 2 else "单段强型"
-            _seg_ev = "；".join(f"段{s_}: {m:.0f}m（{p_}%段长）"
-                                for s_, m, p_ in hits)
-            conflicts.append({
-                "fault_id": fid,
-                "segs": str([s_ for s_, _, _ in hits]),
-                "issue": f"活动断层候选：Q-地层边界重合（{_tag2}）",
-                "evidence": f"断裂与第四系松散沉积物-地层接触界线重合："
-                            f"{_seg_ev}"
-                            + (f"；实体 {len(hits)} 段重合"
-                               if len(hits) >= 2 else ""),
-                "status": "pending_review"})
+            elif own[0] >= Q2_STRONG_M and own[1] >= 50:
+                # 单段强型（2026-10-03 用户裁定：第四系松散沉积物与地层/
+                # 侵入岩的界线=活动断层强证据——单段重合 ≥1km 且 ≥50%
+                # 段长亦直接标活动，不落候选待裁定）
+                _mark_activity(r, own, "单段强型")
+                n_strong += 1
         print(f"   活动性先验：重合实体 {len(coinc)} 个"
               f"（强候选 {n_strong} 段）")
+        # 活动证据按码聚合（回归数据通道）：多段实体=+3（强证据档）、
+        # 单段强型=+2——供码义提案裁决参考（37 案：拓扑说边界、覆盖说隐伏，
+        # 两通道张力如实呈现在提案里）
+        for _fid0, _hits0 in coinc.items():
+            _multi0 = len(_hits0) >= 2
+            for _si0, _m0, _p0 in _hits0:
+                _gz0 = str(fl.iloc[_si0].get("GZEEB", ""))
+                if _multi0:
+                    _act_raw[_gz0]["活动断层"] += 3
+                elif _m0 >= Q2_STRONG_M and _p0 >= 50:
+                    _act_raw[_gz0]["活动断层"] += 2
+    # 码级语义逻辑判断（2026-10-03 用户）：码义 MLE 结论=各段**最终标定
+    # 结构语义**（含活动通道升格）的众数——逻辑推导，非人工裁定，
+    # 不回灌段级（37 案：活动断层×19 主导 → 码义=活动断层）
+    _final_raw = defaultdict(lambda: defaultdict(int))
+    for r in rows:
+        _final_raw[str(r.get("GZEEB") or "")][
+            str(r.get("structural_type") or "断层泛称")] += 1
+    if _unreg:
+        _prop_rows = []
+        for _code, _segs in sorted(_unreg.items()):
+            _tally = "；".join(f"{k}×{v}" for k, v in
+                               sorted(_mle_raw.get(_code, {}).items(),
+                                      key=lambda x: -x[1]))
+            _prior_tally = "；".join(f"{k}×{v:g}" for k, v in
+                    sorted(_prior_raw.get(_code, {}).items(),
+                           key=lambda x: -x[1])) if _prior_raw.get(_code) else ""
+            _data_tally = "；".join(f"{k}×{v:g}" for k, v in
+                    sorted(_data_raw.get(_code, {}).items(),
+                           key=lambda x: -x[1])) if _data_raw.get(_code) else ""
+            _act_tally = "；".join(f"{k}×{v:g}" for k, v in
+                    sorted(_act_raw.get(_code, {}).items(),
+                           key=lambda x: -x[1])) if _act_raw.get(_code) else ""
+            _aux_tally = "；".join(f"{k}×{v:g}" for k, v in
+                    sorted(_aux_raw.get(_code, {}).items(),
+                           key=lambda x: -x[1])) if _aux_raw.get(_code) else ""
+            _final_tally = "；".join(f"{k}×{v}" for k, v in
+                    sorted(_final_raw.get(_code, {}).items(),
+                           key=lambda x: -x[1]))
+            # 码级 MLE 结论（2026-10-03 用户裁定）：决定性证据主导——最终
+            # 标定语义中剔除无证据的泛称后取众数（35 案：老盖新×5 →
+            # 推覆体边界；37 案：界线强档×19 → 活动断层）
+            _evid = {k: v for k, v in _final_raw.get(_code, {}).items()
+                     if k != "断层泛称"}
+            _mle_sem_code = max(_evid, key=_evid.get) if _evid else "断层泛称"
+            _prop_rows.append({"GZEEB": _code, "segs": len(_segs),
+                               "mle_distribution": _tally,
+                               "final_distribution": _final_tally,
+                               "mle_semantic": _mle_sem_code,
+                               "prior_votes": _prior_tally,
+                               "aux_votes": _aux_tally,
+                               "data_votes": _data_tally,
+                               "activity_votes": _act_tally})
+        pd.DataFrame(_prop_rows).to_csv(
+            _outdir / f"_gzeeb_code_semantics_proposal_{sheet}.csv",
+            index=False, encoding="utf-8-sig")
+
     # 活动识别标志（2026-10-02 用户裁定定版）：断层与第四系松散沉积物和
     # 地层的接触界线重合——切割第四系不是识别标志（切割通道已撤销；
     # 结构检查的切割注记保留为中性证据）

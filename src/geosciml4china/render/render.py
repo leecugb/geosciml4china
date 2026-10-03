@@ -16,6 +16,7 @@ from pymapgis.rendering import render_map_to_pdf
 from pymapgis.rendering.pattern_engine import set_svg_pattern_registry_path
 
 from ..sheets import get_sheet, list_sheets
+from ..convert import config
 from .codemap import DEFAULT_SVG_REGISTRY
 from .map_builder import build_geosciml_map
 from .mirror import check_consistency

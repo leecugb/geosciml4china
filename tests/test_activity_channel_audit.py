@@ -58,8 +58,9 @@ def test_activity_check_strings_classified_acont():
 
 
 def test_read_fault_conflict_entities_dual_register(tmp_path):
-    """A7 双册消费链（合成）：gzeeb 册（segs 列表）+ 断裂接触册（单段）
-    均入横幅集合；adjudicated 与空 fault_id 行过滤。"""
+    """登记册消费链（合成，2026-10-02 裁定后单册）：产品横幅只读 gzeeb
+    册；断裂接触册为审查档案不入横幅集合。adjudicated 与空 fault_id
+    行过滤保持。"""
     from geosciml4china.convert import sources, config
     a = tmp_path / "a.csv"
     pd.DataFrame([
@@ -83,7 +84,7 @@ def test_read_fault_conflict_entities_dual_register(tmp_path):
     finally:
         config.CONFLICTS_CSV = _oa
         config.CONTACT_CONFLICTS_CSV = _ob
-    assert out == {("F001", 187), ("F001", 192), ("F047", 41)}
+    assert out == {("F001", 187), ("F001", 192)}
 
 
 # ---------- 生产数据不变量 ----------

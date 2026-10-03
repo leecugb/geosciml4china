@@ -98,13 +98,16 @@ def measure_point_ids(fault_aux_gdf, auxchain_df, faults_gdf) -> dict:
 
 def contact_ids(boundaries_gdf) -> dict:
     """boundaries _src_id → "GZBD_eff.类内序"（L1 行序逐类计数；
-    10/81/excluded 不占号——与 build 跳过口径一致）。"""
+    excluded 不占号）。2026-10-02 jwss 泛化测试：原 CONTACT_CODES 过滤
+    与 build 发射集不一致——GZBD_eff 空值行（标定缺口）经 pending
+    接触发射却无 id → KeyError；现对所有非 excluded 行赋号（10/81
+    build 提前跳过、空码行 pending 发射均安全）。"""
     out = {}
     cnt = Counter()
     for _, r in boundaries_gdf.iterrows():
-        code = str(r.get("GZBD_eff") or "")
-        if code not in CONTACT_CODES or str(r.get("status") or "normal") == "excluded":
+        if str(r.get("status") or "normal") == "excluded":
             continue
+        code = str(r.get("GZBD_eff") or "")
         cnt[code] += 1
         out[int(r["_src_id"])] = f"{code}.{cnt[code]}"
     return out

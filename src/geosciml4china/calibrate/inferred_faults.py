@@ -28,8 +28,7 @@ from pymapgis.semantics.profile import get_profile
 
 from ..sheets import get_sheet
 
-COV_PASS = 0.8      # ≥80% 覆盖 → 标定通过（推测前提）
-COV_CONFLICT = 0.4  # <40% 覆盖 → 矛盾（基岩出露为主）
+COV_PASS = 0.8      # ≥80% 覆盖 → 标定通过（推测前提——Q 内强证据档）
 N_SAMPLE = 8        # 采样点数（t=0.08..0.92 等距）
 
 
@@ -85,15 +84,18 @@ def calibrate_inferred_faults(sheet_key: str, out_dir=None) -> dict:
         cov = seg_coverage(coords)
         if cov >= COV_PASS:
             verdict = "标定通过（推测断层）"
-        elif cov < COV_CONFLICT:
-            verdict = "矛盾（基岩出露为主）"
         else:
-            verdict = "存疑（覆盖不足）"
+            # 2026-10-02 用户裁定：推测断层可出现在地层——出露非否定条件；
+            # 覆盖不足仅记存疑（信息性），不再判矛盾
+            verdict = "存疑（覆盖不足，非否定）"
         rows.append({"seg_idx": i, "GZEEB": gzeeb,
                      "fid": seg2fid.get(i, ""),
                      "coverage": round(cov, 2), "verdict": verdict})
 
-    out = pd.DataFrame(rows)
+    # 显式列构造（2026-10-02 jwss 泛化测试）：零推测断层图幅 rows 为空时
+    # DataFrame([]) 无列 → 后续 out["verdict"] KeyError——空表也须带列
+    out = pd.DataFrame(rows, columns=["seg_idx", "GZEEB", "fid",
+                                      "coverage", "verdict"])
     out_p = outdir / f"_inferred_fault_calibration.csv"
     out.to_csv(out_p, index=False, encoding="utf-8-sig")
     print(f"推测断层（04）覆盖度核定: {len(out)} 段 → {out_p.name}")

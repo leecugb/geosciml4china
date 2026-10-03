@@ -136,13 +136,12 @@ def read_fault_conflict_entities() -> set:
     冲突册 _gzeeb_conflicts_<key>.csv pending 行 -> {(fault_id, seg_idx)}。
     横幅按冲突段精确挂载（原实体级广播在 F001 型大实体上过度横幅——
     24 vs 7 实证）；fault_aux_code_semantics.json 作裁定文档层。
-    2026-10-02 活动断层审计 A7：双册消费——_gzeeb_conflicts_ +
-    _fault_contact_activity_conflicts_（断裂接触层活动候选，已归因
-    fault_id/断层段索引空间）。
+    2026-10-02 活动断层审计 A7 双册消费已撤销（同日全管线测试裁定）：
+    线层通道候选（_fault_contact_activity_conflicts_）系被面元拓扑通道
+    取代的旧判据诊断件——只保留为审查档案，不再横幅产品。
     """
     out = set()
-    for cand in (getattr(config, "CONFLICTS_CSV", None),
-                 getattr(config, "CONTACT_CONFLICTS_CSV", None)):
+    for cand in (getattr(config, "CONFLICTS_CSV", None),):
         if cand is None or not cand.exists():
             continue
         try:

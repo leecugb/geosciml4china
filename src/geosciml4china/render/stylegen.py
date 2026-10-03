@@ -94,6 +94,39 @@ def norm_code(raw: str) -> str:
 # 色库访问
 # ---------------------------------------------------------------------------
 
+# 标准界线线样式（DZ/T 0179 表22 地质界线用色——图幅无关标准资产；
+# 骨架缺失时（独立项目泛化接入）作为 line_layers 默认）
+STANDARD_LINE_LAYERS = {
+    "LDZOFBA002.WL": {
+        "role": "地质界线（GZBD 标准）",
+        "type_field": "GZBD",
+        "line_styles": {
+            "01": {"name": "实测地质界线", "rgb": [51, 51, 51], "width": 0.45,
+                   "style": "solid"},
+            "02": {"name": "第四系界线", "rgb": [51, 51, 51], "width": 0.3,
+                   "style": "solid"},
+            "04": {"name": "角度不整合", "rgb": [51, 51, 51], "width": 0.5,
+                   "style": "solid",
+                   "note": "双线：实线+平行点线，点线在年轻地层一侧"},
+            "11": {"name": "侵入接触", "rgb": [51, 51, 51], "width": 0.45,
+                   "style": "solid"},
+            "16": {"name": "推测界线", "rgb": [100, 100, 100], "width": 0.4,
+                   "style": "dashed", "dash_pattern": [11.1, 3.2]},
+            "24": {"name": "平行不整合", "rgb": [51, 51, 51], "width": 0.5,
+                   "style": "solid",
+                   "note": "双线：实线+平行断线，断线在年轻地层一侧"},
+            "43": {"name": "渐变界线", "rgb": [100, 100, 100], "width": 0.6,
+                   "style": "dotted", "dash_pattern": [0.01, 3.3],
+                   "capstyle": "round"},
+            "60": {"name": "脉动接触", "rgb": [51, 51, 51], "width": 0.45,
+                   "style": "dashdot"},
+            "81": {"name": "冰雪区界线", "rgb": [0, 255, 255], "width": 0.5,
+                   "style": "solid"},
+        },
+    },
+}
+
+
 class Lib:
     def __init__(self, path: Path = LIB_PATH):
         self.doc = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -253,6 +286,7 @@ _CROSS_CODES = {"CP", "SD", "DC", "OS", "JK", "TJ", "PT", "KE", "EN", "NQ",
 # 注意：_ERA_RE 交替序短码遮蔽长码（"P" 先于 "Pt\d?" 命中、C 先于 Ch），
 # 回落层须按**长前缀优先**自扫，不得复用 _ERA_RE 的 group(1)。
 _ERA_TO_BASE = {"Pt1": "Pt1", "Pt2": "Pt2", "Pt3": "Pt3",
+                "Ht": "Pt2",  # 滹沱纪（2026-10-02 用户裁定：中元古代）
                 "Ch": "Pt2", "Jx": "Pt2", "Qb": "Pt3",
                 "Nh": "Nh", "Z": "Z", "∈": "Cm",
                 "Qh": "Q", "Qp": "Q", "Q": "Q",
@@ -547,6 +581,25 @@ def generate(sheet: str, lib: Lib | None = None,
             specs[nm].rgb = _seg_shade(specs[nm].rgb, seg, n_seg)
             specs[nm].src += f"；段间分色 {seg}/{n_seg} 段（下段深、上段浅）"
 
+    # ③b 界级基色多单元分色（2026-10-02 用户裁定：相同地质年代号的不同
+    # 地层赋色要有区别——ChA/ChSt 型同界基色碰撞须分色；层序未定时
+    # 码序占位（下段深上段浅同构 _seg_shade，占位标注待裁定）
+    era_groups: dict[str, list[str]] = {}
+    for u in units:
+        if specs[u.norm].cls != "strata_base":
+            continue
+        _key = specs[u.norm].src.rsplit(" ", 1)[-1]
+        era_groups.setdefault(_key, []).append(u.norm)
+    for _ek, _norms in era_groups.items():
+        if len(_norms) < 2:
+            continue
+        for i, _nm in enumerate(sorted(_norms), 1):
+            specs[_nm].rgb = _seg_shade(specs[_nm].rgb, i, len(_norms))
+            specs[_nm].src += (f"；同界分色 {i}/{len(_norms)}"
+                               f"（码序占位，层序待裁定）")
+            specs[_nm].pending = specs[_nm].pending or (
+                f"同界基色多单元（{_ek}）——码序占位分色，层序待裁定")
+
     # ④ overrides 裁定层（应用即登记）
     from dataclasses import replace as _dc_replace
 
@@ -605,7 +658,12 @@ def generate(sheet: str, lib: Lib | None = None,
 
     # ⑤ 组装映射文件（骨架深拷贝，units 替换）；新幅首接无骨架→最小模板
     skel_p = Path(cfg["skeleton"])
-    skel = json.loads(skel_p.read_text(encoding="utf-8")) if skel_p.exists()         else {"polygon_layers": {}, "_meta": {}}
+    # 无骨架回退（2026-10-02 jwss 泛化测试）：界线线样式属 DZ/T 0179 标准
+    # （地质界线 GZBD 色/宽/线型——图幅无关），并入包标准默认；骨架存在时
+    # 以骨架为准（图幅裁定层优先）
+    skel = (json.loads(skel_p.read_text(encoding="utf-8")) if skel_p.exists()
+            else {"polygon_layers": {}, "line_layers": STANDARD_LINE_LAYERS,
+                  "_meta": {}})
     out = json.loads(json.dumps(skel))
     for f in POLY_FILES:
         layer_units = {}

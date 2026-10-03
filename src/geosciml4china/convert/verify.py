@@ -39,7 +39,7 @@ EXPECT = {
         # 活动候选队列 8→1（F038/F070/F093/F032/F004/F001/F067 消解）
         ms_dist={"reverse": 54, "normal": 5, "no_movement_sense": 34,
                  "dextral": 1, "sinistral": 3},
-        hwd=93, relations=160, measure_points=93, char_dist_b=277.0,
+        hwd=93, relations=153, measure_points=93, char_dist_b=277.0,  # 全链基线 160→153（区域单元年代不可判 7 对，2026-10-02 裁定）
         lite_counts={"geologic_unit_view": 713, "contact_view": 1316,
                      "shear_displacement_structure_view": 310,
                      "site_observation_view": 305,
@@ -62,6 +62,29 @@ EXPECT = {
                      "fault_attitude_point_view": 93,
                      "fossil_specimen_view": 48},
         fossil_violations=1,
+    ),
+    # jwss（英吉沙幅副本独立项目，2026-10-02 泛化测试）：画像=英吉沙镜像
+    # 初始猜测——独立跑测后按实测回填
+    # jwss（英吉沙幅副本独立项目，2026-10-02 泛化测试）：零数据件复制的
+    # 裸接入基线——派生映射 pending 接触 405、gzeeb 兜底决定（nil 6）、
+    # 自身登记册 27 对、关系 163（均实测）
+    # jwss（英吉沙幅副本独立项目，2026-10-02 泛化测试）：码义对齐裁定后
+    # 基线——图幅注册表仅 {02: 推测断层}，未注册码 MLE 提案待裁定
+    "jwss": dict(
+        units=95, poly_mfs=808, contacts=1199, contact_nil=405, sds=289,
+        sds_nil_faulttype=0, planes=134, polarity=0, folds=7, fold_nil=0,
+        members=4357, compositions=0, six_mode=(46, 22, 11, 7, 47, 1),
+        orphan_tolerance=True,
+        banners=96,  # 多段接触界线强证据档升活动后登记册收窄
+        dv_blocks=137,
+        ms_dist={"reverse": 57, "normal": 29, "no_movement_sense": 48,
+                 "sinistral": 3},
+        hwd=134, relations=163, measure_points=134, char_dist_b=297.0,
+        lite_counts={"geologic_unit_view": 808, "contact_view": 1199,
+                     "shear_displacement_structure_view": 289,
+                     "site_observation_view": 165,
+                     "fault_attitude_point_view": 134,
+                     "fossil_specimen_view": 40},
     ),
     "yingjisha": dict(
         units=95, poly_mfs=808, contacts=1199, contact_nil=0, sds=289,
