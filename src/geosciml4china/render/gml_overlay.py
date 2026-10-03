@@ -16,9 +16,12 @@ GSMLE = "{http://www.opengis.net/gsml/4.1/GeoSciML-Extension}"
 GML = "{http://www.opengis.net/gml/3.2}"
 XLINK = "{http://www.w3.org/1999/xlink}"
 
-# 码→蕴含运动性质（07 推覆体边界属逆冲族；02 本幅 0 条候选码）
-_IMPLIED_BY_CODE = {"05": "reverse", "02": "normal", "07": "reverse",
-                    "16": "dextral", "18": "sinistral"}
+# 语义→蕴含运动性质（2026-10-03 渲染完全基于 geosciml：脱离 MapGIS
+# 码系统——标定结构语义 structural_type 直查；活动/推测为其他分层不蕴含）
+_IMPLIED_BY_SEM = {"逆断层": "reverse", "推覆体边界": "reverse",
+                   "正断层": "normal", "左型走滑断层": "sinistral",
+                   "右型走滑断层": "dextral", "走滑断层": None,
+                   "复合断层": None}
 
 
 @dataclass
@@ -222,7 +225,8 @@ def render_movement_sense_overlay(ax, entries, sds_gdf, *,
         draw_normal_fault_ticks, draw_reverse_fault_teeth)
 
     geom_by_fid = {str(r["FEATUREID"]): r.geometry for _, r in sds_gdf.iterrows()}
-    code_by_fid = {str(r["FEATUREID"]): str(r["GZEEB"]) for _, r in sds_gdf.iterrows()}
+    sem_by_fid = {str(r["FEATUREID"]): str(r.get("structural_type") or "")
+                  for _, r in sds_gdf.iterrows()}
     buckets = {"一致": [], "新增": [], "冲突": [], "无运动": 0, "未命中几何": []}
     drawn = 0
     hooks_stats = {"segments": 0, "hooks": 0, "parallel_max_dev": 0.0,
@@ -237,8 +241,8 @@ def render_movement_sense_overlay(ax, entries, sds_gdf, *,
         if not sense or sense == "no_movement_sense":
             buckets["无运动"] += 1
             continue
-        code = code_by_fid.get(e.feature_id, "")
-        implied = _IMPLIED_BY_CODE.get(code)
+        _sem0 = sem_by_fid.get(e.feature_id, "")
+        implied = _IMPLIED_BY_SEM.get(_sem0)
         if implied and implied != sense:
             buckets["冲突"].append(e.feature_id)
         elif implied:

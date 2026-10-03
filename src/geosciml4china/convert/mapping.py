@@ -8,11 +8,17 @@ from typing import Any, Dict, Optional
 from . import config, vocab
 
 _cache: Optional[dict] = None
+_cache_key: str = ""
 
 
 def load() -> dict:
-    global _cache
-    if _cache is None:
+    global _cache, _cache_key
+    # 图幅切换缓存键（2026-10-03 修复：原 _cache 全局不复位——褶皱标定域
+    # 首呼 load() 时 config 仍为模块默认 kurgan，缓存锁定库尔干词表，
+    # jwss build 误用他幅码义（A07/A08/A25 三联失败根因）；现在按
+    # VOCAB_MAPPING 路径键控，init_sheet 切换即重载
+    key = str(config.VOCAB_MAPPING)
+    if _cache is None or _cache_key != key:
         if config.VOCAB_MAPPING.exists():
             with open(config.VOCAB_MAPPING, encoding="utf-8") as f:
                 _cache = json.load(f)
@@ -22,6 +28,7 @@ def load() -> dict:
             # 走 pending/兜底默认（管线畅通+待裁定闭环）
             _cache = _derived_mapping()
         _validate(_cache)
+        _cache_key = key
     return _cache
 
 

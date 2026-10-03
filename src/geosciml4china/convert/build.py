@@ -74,17 +74,21 @@ def assemble_unit_relations(units: Dict[str, model.UnitRec]) -> int:
         if key not in best:
             best[key] = {"term": term, "rank": rank, "n": 1,
                          "verdict": row["verdict"], "conf": row["rule_conf"],
-                         "codes": {code.zfill(2)}}
+                         "sems": {str(row.get("sem_label") or
+                                     row.get("标定语义") or term)}}
         else:
             b = best[key]
             b["n"] += 1
-            b["codes"].add(code.zfill(2))
+            b["sems"].add(str(row.get("sem_label") or
+                              row.get("标定语义") or term))
             if rank > b["rank"]:
                 b.update(term=term, rank=rank, verdict=row["verdict"],
                          conf=row["rule_conf"])
     n_rel = 0
     for (yn, on), b in sorted(best.items()):
-        note = (f"{b['n']} 段佐证（GZBD={','.join(sorted(b['codes']))}），"
+        # 2026-10-03 转换完全基于地质语义：关系溯源注记由 GZBD 码改
+        # 标定语义标签（同码继承后的规范标签）；码不再进入 GML
+        note = (f"{b['n']} 段佐证（{'、'.join(sorted(b['sems']))}），"
                 f"verdict={b['verdict']}（conf={b['conf'] or '码面'}）；"
                 f"source=年轻单元、target=较老单元（young_side 图面证据）")
         units[yn].relations.append({"target_norm": on, "term": b["term"],

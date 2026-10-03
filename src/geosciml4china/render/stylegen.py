@@ -95,33 +95,40 @@ def norm_code(raw: str) -> str:
 # ---------------------------------------------------------------------------
 
 # 标准界线线样式（DZ/T 0179 表22 地质界线用色——图幅无关标准资产；
-# 骨架缺失时（独立项目泛化接入）作为 line_layers 默认）
+# 骨架缺失时（独立项目泛化接入）作为 line_layers 默认）。
+# 2026-10-03 渲染完全基于地质语义：line_styles 由 GZBD 码键改为标定
+# 语义标签键（sem_label 规范形）；渲染器对「角度不整合界线」等变体
+# 与「（先验建议→xx）」后缀做规范化后查表
 STANDARD_LINE_LAYERS = {
     "LDZOFBA002.WL": {
-        "role": "地质界线（GZBD 标准）",
-        "type_field": "GZBD",
+        "role": "地质界线（标定语义）",
+        "type_field": "sem_label",
         "line_styles": {
-            "01": {"name": "实测地质界线", "rgb": [51, 51, 51], "width": 0.45,
-                   "style": "solid"},
-            "02": {"name": "第四系界线", "rgb": [51, 51, 51], "width": 0.3,
-                   "style": "solid"},
-            "04": {"name": "角度不整合", "rgb": [51, 51, 51], "width": 0.5,
-                   "style": "solid",
-                   "note": "双线：实线+平行点线，点线在年轻地层一侧"},
-            "11": {"name": "侵入接触", "rgb": [51, 51, 51], "width": 0.45,
-                   "style": "solid"},
-            "16": {"name": "推测界线", "rgb": [100, 100, 100], "width": 0.4,
-                   "style": "dashed", "dash_pattern": [11.1, 3.2]},
-            "24": {"name": "平行不整合", "rgb": [51, 51, 51], "width": 0.5,
-                   "style": "solid",
-                   "note": "双线：实线+平行断线，断线在年轻地层一侧"},
-            "43": {"name": "渐变界线", "rgb": [100, 100, 100], "width": 0.6,
-                   "style": "dotted", "dash_pattern": [0.01, 3.3],
-                   "capstyle": "round"},
-            "60": {"name": "脉动接触", "rgb": [51, 51, 51], "width": 0.45,
-                   "style": "dashdot"},
-            "81": {"name": "冰雪区界线", "rgb": [0, 255, 255], "width": 0.5,
-                   "style": "solid"},
+            "实测地质界线": {"name": "实测地质界线", "rgb": [51, 51, 51],
+                         "width": 0.45, "style": "solid"},
+            "第四系界线": {"name": "第四系界线", "rgb": [51, 51, 51],
+                       "width": 0.3, "style": "solid"},
+            "角度不整合": {"name": "角度不整合", "rgb": [51, 51, 51],
+                       "width": 0.5, "style": "solid",
+                       "note": "双线：实线+平行点线，点线在年轻地层一侧"},
+            "侵入接触": {"name": "侵入接触", "rgb": [51, 51, 51],
+                     "width": 0.45, "style": "solid"},
+            "推测界线": {"name": "推测界线", "rgb": [100, 100, 100],
+                     "width": 0.4, "style": "dashed", "dash_pattern": [11.1, 3.2]},
+            "平行不整合": {"name": "平行不整合", "rgb": [51, 51, 51],
+                       "width": 0.5, "style": "solid",
+                       "note": "双线：实线+平行断线，断线在年轻地层一侧"},
+            "不整合接触": {"name": "不整合接触（待裁定方向）", "rgb": [51, 51, 51],
+                       "width": 0.5, "style": "solid"},
+            "岩性过渡渐变界线": {"name": "岩性过渡渐变界线", "rgb": [100, 100, 100],
+                         "width": 0.6, "style": "dotted",
+                         "dash_pattern": [0.01, 3.3], "capstyle": "round"},
+            "脉动接触界线": {"name": "脉动接触界线", "rgb": [51, 51, 51],
+                         "width": 0.45, "style": "dashdot"},
+            "整合接触": {"name": "整合接触", "rgb": [51, 51, 51],
+                     "width": 0.45, "style": "solid"},
+            "冰雪区界线": {"name": "冰雪区界线", "rgb": [0, 255, 255],
+                       "width": 0.5, "style": "solid"},
         },
     },
 }

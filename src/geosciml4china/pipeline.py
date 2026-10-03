@@ -4,7 +4,7 @@
 阶段序（管线纪律，逐段失败即中止；与用户对齐链逐字对应）：
   ⓪ preflight     MapGIS 文件完整性检查（11 文件契约，CORE 缺即中止）
   ① convert       MapGIS 原生 → geojson/L0（pymapgis.semantics.convert_sheet + validate_l0）
-  ② calibrate     自支持地质语义判别解析（geosciml4china.calibrate 五域全包原生）：
+  ② calibrate     自支持地质语义判别解析（geosciml4china.calibrate 七域全包原生：
                    gzbd（界线）→ entities（断层归组）→ auxchain（辅助点判别）
                    → 写回 → gzeeb（断层三维）→ attitudes（产状）→ fossils（化石）
   ②b materialize  L1 物化（语义标定写回 geojson/L1）
@@ -72,6 +72,7 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
         from .calibrate.gzeeb import calibrate_faults
         from .calibrate.attitudes import calibrate_attitudes
         from .calibrate.fossils import calibrate_fossils
+        from .calibrate.folds import calibrate_folds
         from .calibrate.inferred_faults import calibrate_inferred_faults
         print("② 自支持地质语义判别解析")
         calibrate_boundaries(sh.key)               # 界线（GZBD）
@@ -89,9 +90,16 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
         calibrate_faults(sh.key)                   # 断层三维（GZEEB）
         calibrate_attitudes(sh.key)                # 产状类型
         calibrate_fossils(sh.key)                  # 化石/泥火山
+        calibrate_folds(sh.key)                    # 褶皱（词表码义标定域，
+        # 2026-10-03 六步架构第三步正式化：先验知识驱动，无段级证据通道
+        # 不构成 MLE 回归——码义命中即标定，未注册码待裁定）
         calibrate_inferred_faults(sh.key)          # 推测断层（覆盖度核定）
         print("②b 终态 L1 物化（语义标定写回 geojson/L1）")
         materialize_sheet(sh.root)
+        # ②c 缺口报告（2026-10-03 用户裁定：缺口兜底保障管线 + 文字报告
+        # + 单要素渲染配图，供后期专家裁决）
+        from .render.gap_report import build_gap_report
+        build_gap_report(sh.key)
 
     # ③ stylegen（lite 优先；缺 lite 走 WP 引导——新幅首接通道）
     from .render import stylegen as _sg

@@ -64,6 +64,8 @@ _DELEGATES = {
     "calibrate-gzeeb": ("geosciml4china.calibrate.gzeeb", "main"),
     "calibrate-attitudes": ("geosciml4china.calibrate.attitudes", "main"),
     "calibrate-fossils": ("geosciml4china.calibrate.fossils", "main"),
+    "calibrate-folds": ("geosciml4china.calibrate.folds", "main"),
+    "report-gaps": ("geosciml4china.render.gap_report", "main"),
     "calibrate-inferred-faults":
         ("geosciml4china.calibrate.inferred_faults", "main"),
     "calibrate-fault-contact-activity":

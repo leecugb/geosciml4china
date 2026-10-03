@@ -76,7 +76,9 @@ def contact_view(c: model.ContactRec) -> Dict[str, Any]:
         "contactType_uri": ct_uri,
         "observationMethod": (c.observation_term or "outcrop_observation").replace("_", " "),
         "specification_uri": c.uri,
-        "genericSymbolizer": c.code,
+        # 2026-10-03 转换完全基于地质语义：genericSymbolizer 由 GZBD 码
+        # 改为标定语义标签（sem_label；码不再进入 GeoSciML 语义槽）
+        "genericSymbolizer": c.sem_label or c.code,
         "shape": c.geometry,
     }
     # 结构化年轻侧（2026-10-02 渲染优化）：04/24 不整合双线须用标定侧
@@ -110,7 +112,15 @@ def sds_view(f: model.FaultRec) -> Dict[str, Any]:
         "faultType_uri": ft_uri,
         "observationMethod": (f.observation_term or "").replace("_", " "),
         "specification_uri": f.uri,
-        "genericSymbolizer": f.gzeeb_eff,
+        # 2026-10-03 转换完全基于地质语义：genericSymbolizer 由 GZEEB 码
+        # 改为标定结构语义 structural_type（码不再进入 GeoSciML 语义槽）
+        "genericSymbolizer": f.structural_type or "",
+        # 证据层出站（2026-10-03：推测断层虚线化接线——渲染器消费本列，
+        # 不再依赖覆盖库逐段裁定）
+        "evidence_class": f.evidence_class or "",
+        # 结构语义层出站（2026-10-03：渲染按地质语义进行——渲染器以本列
+        # 优先取样式，码级样式作回退）
+        "structural_type": f.structural_type or "",
         "shape": f.geometry,
     }
 
@@ -134,9 +144,9 @@ def site_observation_view(
         "observedValueUom": "deg",
         "propertyType_uri": f_uri,
         "symbolRotation": int(round((a.azimuth - 90.0) % 360.0)),
-        "genericSymbolizer": a.gzbbga,
-        # 2026-09-28：sem_type 有效类型下送（Pt1→片麻理产状等宿主裁定规则
-        # 在渲染层生效；原码 GZBBGA 不改写，仅作 genericSymbolizer 键）
+        # 2026-10-03 渲染完全基于地质语义：genericSymbolizer 由 GZBBGA 码
+        # 改为标定语义 sem_type（宿主裁定规则已定类型；码不再出站）
+        "genericSymbolizer": a.sem_type or "",
         "sem_type": a.sem_type,
         "shape": a.geometry,
     }
@@ -205,14 +215,15 @@ def fossil_specimen_view(s) -> Dict[str, Any]:
 
 
 def fold_view(f: "model.FoldRec") -> Dict[str, Any]:
-    """FoldView properties（褶皱轴线，2026-09-28 接入——参照 pymapgis
-    render_fold_layer 契约：GZCE 分型 02/04 背斜实线透镜、03 复向斜断线）。"""
+    """FoldView properties（褶皱轴线，2026-09-28 接入——2026-10-03 渲染
+    完全基于地质语义：出站词表裁定语义 profile（anticline/syncline），
+    不再携带 GZCE 码）。"""
     return {
         "@featureType": "FoldView",
         "identifier": {"value": f.uri, "@codeSpace": config.CODE_SPACE},
         "label": f.name or f.feature_id,
         "observationName": "fold axis",
-        "genericSymbolizer": f.gzce,
-        "GZCE": f.gzce,
+        "genericSymbolizer": f.profile_term or "",
+        "profile": f.profile_term or "",
         "shape": f.geometry,
     }

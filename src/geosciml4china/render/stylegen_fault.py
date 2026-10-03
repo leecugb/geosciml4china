@@ -59,8 +59,11 @@ class _SheetCfgDict(dict):
 
 SHEETS = _SheetCfgDict()
 
-# 词表 → 默认画法（DZ/T 0179-2025 本地表达；装饰仅给类型与默认参数，
-# 尺寸/侧别等细节归 overrides 裁定层）
+# 词表 → 默认画法（DZ/T 0179-2025 本地表达）。2026-10-03 用户指令：
+# jws（库尔干幅）断层渲染样式迁移为标准通用样式——参数即库尔干裁定
+# 定稿值：2026-09-04 正/逆去装饰（测量点体系承担标注）、2026-09-06
+# 线宽按规模级别（GZEEE 101/102/103）、2026-09-07 推覆齿 0.0012/0.014
+# 固定右侧、复活断层左侧短线 0.001。幅级 overrides 仍可覆盖
 VOCAB_DEFAULT = {
     "fault": {"name": "断层（泛称）",
               "line": {"rgb": [220, 20, 20], "width": 0.6, "style": "solid"}},
@@ -69,18 +72,62 @@ VOCAB_DEFAULT = {
     "thrust_fault": {"name": "推覆体边界",
                      "line": {"rgb": [180, 0, 0], "width": 0.7, "style": "solid"},
                      "decoration": {"type": "reverse_fault_teeth",
+                                    "side": "right",
                                     "rgb": [180, 0, 0], "filled": True,
-                                    "tooth_length_frac": 0.004,
-                                    "spacing_frac": 0.008}},
+                                    "tooth_length_frac": 0.0012,
+                                    "spacing_frac": 0.014}},
     "normal_fault": {"name": "正断层",
-                     "line": {"rgb": [220, 20, 20], "width": 0.6, "style": "solid"},
-                     "decoration": {"type": "normal_fault_ticks"}},
+                     "line": {"rgb": [220, 20, 20], "width": 0.6, "style": "solid"}},
     "dextral_strike_slip_fault": {"name": "右行走滑断层",
-                                  "line": {"rgb": [220, 20, 20], "width": 0.6,
+                                  "line": {"rgb": [220, 20, 20], "width": 0.5,
                                            "style": "solid"}},
     "sinistral_strike_slip_fault": {"name": "左行走滑断层",
-                                    "line": {"rgb": [220, 20, 20], "width": 0.6,
+                                    "line": {"rgb": [220, 20, 20], "width": 0.5,
                                              "style": "solid"}},
+    "inferred_fault": {"name": "推测断层",
+                       "line": {"rgb": [220, 20, 20], "width": 0.5,
+                                "style": "solid", "dash_pattern": [4, 2]}},
+    "active_fault": {"name": "活动断层",
+                     # 2026-10-03 用户裁定：采用库尔干 2026-09-07 复活断层
+                     # 样式定稿（鲜红 0.6 + 左侧短线装饰 0.001/0.004）
+                     "line": {"rgb": [255, 0, 0], "width": 0.6, "style": "solid"},
+                     "decoration": {"type": "short_ticks", "side": "left",
+                                    "rgb": [255, 0, 0],
+                                    "tick_length_frac": 0.001,
+                                    "spacing_frac": 0.004}},
+    "regional_fault": {"name": "区域性大断裂",
+                       "line": {"rgb": [200, 80, 0], "width": 0.8,
+                                "style": "solid"}},
+    "reactivated_fault": {"name": "复活断层",
+                          "line": {"rgb": [255, 0, 0], "width": 0.6,
+                                   "style": "solid"},
+                          "decoration": {"type": "short_ticks", "side": "left",
+                                         "rgb": [255, 0, 0],
+                                         "tick_length_frac": 0.001,
+                                         "spacing_frac": 0.004}},
+    "boundary_fault": {"name": "边界断裂",
+                       "line": {"rgb": [180, 0, 0], "width": 0.8,
+                                "style": "solid"}},
+}
+# 证据级别虚线化不在码级静态样式中硬编码——渲染时由证据层（evidence_class
+# 覆盖裁定）叠加 [4,2]（三维分层：证据层 ⊥ 结构层，码义随幅原则）
+# 语义名 → 词表键（2026-10-03 渲染按地质语义进行：标定结构语义
+# structural_type 出站后，渲染器按语义名取样式，码级样式作回退）
+SEMANTIC_TO_VOCAB = {
+    "断层": "fault", "断层（泛称）": "fault", "断层泛称": "fault",
+    "逆断层": "reverse_fault",
+    "推覆体边界": "thrust_fault", "推覆体界线": "thrust_fault",
+    "正断层": "normal_fault",
+    "右型走滑断层": "dextral_strike_slip_fault",
+    "右行走滑断层": "dextral_strike_slip_fault",
+    "左型走滑断层": "sinistral_strike_slip_fault",
+    "左行走滑断层": "sinistral_strike_slip_fault",
+    "走滑断层": "sinistral_strike_slip_fault",
+    "推测断层": "inferred_fault",
+    "活动断层": "active_fault",
+    "区域性大断裂": "regional_fault",
+    "复活断层": "reactivated_fault",
+    "边界断裂": "boundary_fault",
 }
 # 证据级别虚线化不在码级静态样式中硬编码——渲染时由证据层（evidence_class
 # 覆盖裁定）叠加 [4,2]（三维分层：证据层 ⊥ 结构层，码义随幅原则）
@@ -122,15 +169,19 @@ def generate(sheet: str, overrides: dict | None = None) -> dict:
     # 新幅首接无手工样式本：各节走默认（[220,20,20]/0.5/{} 见组装段）
     codes = read_sds_codes(sheet)
     ft: dict[str, dict] = {}
-    # 并集：图上出现码 ∪ 裁定层注册码（0 段保留注册语义，如库尔干 02）
+    # 2026-10-03 渲染完全基于地质语义：sds_view 的 genericSymbolizer 已为
+    # 标定结构语义（structural_type）——fault_types 键=语义名；裁定层注册键
+    # 保持兼容（码键经 SEMANTIC_TO_VOCAB 反查语义）
     all_codes = sorted(set(codes) | set((overrides.get("fault_types") or {}).keys()))
     for code in all_codes:
         ov = (overrides.get("fault_types") or {}).get(code) or {}
-        term = ov.get("_term") or _vocab_of(code, sheet)
+        term = (ov.get("_term")
+                or SEMANTIC_TO_VOCAB.get(code)
+                or _vocab_of(code, sheet))
         base = json.loads(json.dumps(VOCAB_DEFAULT.get(term, VOCAB_DEFAULT["fault"])))
         entry = {
             "name": ov.get("name", base["name"]),
-            "source_field": "GZEEB",
+            "source_field": "structural_type",
             "count": codes.get(code, 0),
             "line": ov.get("line", base["line"]),
         }
@@ -154,8 +205,19 @@ def generate(sheet: str, overrides: dict | None = None) -> dict:
         "default_width": (overrides.get("default_width")
                           or hand.get("default_width", 0.5)),
         "width_by_gzeee": (overrides.get("width_by_gzeee")
-                           or hand.get("width_by_gzeee", {})),
+                           or hand.get("width_by_gzeee")
+                           # 2026-10-03 标准通用默认（库尔干 2026-09-06 裁定：
+                           # 线宽按规模级别——101 一般/102 区域性/103 边界级）
+                           or {"field": "GZEEE",
+                               "widths": {"101": 0.5, "102": 0.9, "103": 1.5},
+                               "default": 0.5}),
         "fault_types": ft,
+        # 语义样式表（2026-10-03 渲染按地质语义进行）：标定 structural_type
+        # → 样式（渲染器语义优先，码级 fault_types 作回退）
+        "semantic_types": {
+            sem: json.loads(json.dumps(
+                VOCAB_DEFAULT[term])) for sem, term in SEMANTIC_TO_VOCAB.items()
+        },
         "named_faults": (overrides.get("named_faults")
                          or hand.get("named_faults", {})),
         "deep_faults": (overrides.get("deep_faults")

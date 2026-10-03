@@ -143,12 +143,12 @@ def check_consistency(lite_dir: str | Path,
             continue
         az, dip = l1_att_map[k]
         # 单位圆规范化同口径（build 侧 GZBBAC%360；360≡0，奥依亚依拉克 1 点首遇）
-        if abs((r["GZBBAC"] % 360.0) - az) > 1e-6:
+        if abs((r["dip_az"] % 360.0) - az) > 1e-6:
             n_bad += 1
             continue
         # dip 双侧任一缺省（空倾角行）→ 跳过 dip 比对（缺省如实登记非失配）
         try:
-            _rdip = None if r["GZBBAD"] is None else float(r["GZBBAD"])
+            _rdip = None if r["dip"] is None else float(r["dip"])
         except (TypeError, ValueError):
             _rdip = None
         if dip is not None and _rdip is not None and abs(_rdip - dip) > 1e-6:
@@ -156,13 +156,13 @@ def check_consistency(lite_dir: str | Path,
     rep("C5 产状角度一致", n_bad == 0 and n_miss == 0,
         f"mismatch={n_bad} missing={n_miss}（{len(gdf_a)}/{expect_counts[3]}）")
 
-    # ⑥ 码分布一致
-    dist_s = Counter(gdf_s["GZEEB"])
-    dist_s_l1 = Counter(l1_flt["gzeeb_eff"].astype(str).str.replace(".0", "", regex=False).str.zfill(2))
-    dist_c = Counter(gdf_c["GZBD_eff"])
-    dist_c_l1 = Counter(gzbd_eff[gzbd_eff.isin(list(CONTACT_CODES))
-                                 & ~is_excl])
-    rep("C6 码分布一致",
+    # ⑥ 语义分布一致（2026-10-03 渲染完全基于 geosciml：断层侧改按标定
+    # 结构语义对账，脱离码系统；接触侧仍码口径待界线域解耦切换）
+    dist_s = Counter(gdf_s["structural_type"])
+    dist_s_l1 = Counter(l1_flt["structural_type"].astype(str))
+    dist_c = Counter(gdf_c["sem_label"])
+    dist_c_l1 = Counter(conv8["sem_label"].astype(str))
+    rep("C6 语义分布一致",
         dist_s == dist_s_l1 and dist_c == dist_c_l1,
         f"SDS {'=' if dist_s == dist_s_l1 else dict(dist_s_l1)} / Contact {'=' if dist_c == dist_c_l1 else '≠'}")
 

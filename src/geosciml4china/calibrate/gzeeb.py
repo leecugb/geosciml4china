@@ -856,32 +856,6 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 evidence_class=evidence_class, structural_type=structural_type,
                 checks="；".join(checks)))
 
-    # 一般断层兜底档案（2026-10-02 用户裁定）：详情记录——逐段码/名/运动学/
-    # 倾角/覆盖/证据级/标定结构，供人工裁定与审计回溯
-    if _fallback_rows:
-        _fb_p = _outdir / f"_gzeeb_fallback_{sh.key}.csv"
-        pd.DataFrame(_fallback_rows).to_csv(_fb_p, index=False,
-                                            encoding="utf-8-sig")
-        print(f"   一般断层兜底: {len(_fallback_rows)} 段 → {_fb_p.name}")
-
-    # 码义提案出站（2026-10-02 用户对齐裁定：图幅编码语义映射依赖自身
-    # 数据空间结构模式）——未注册码的归位前 MLE 分布 + 段数 = 本幅数据
-    # 模式的语义提案，供用户裁定后写入图幅注册表（fault_semantics_<key>.json）
-    # 码义未注册冲突登记（2026-10-01 MLE 修订）：段级语义已由 MLE 标定，
-    # 码级语义仍待裁定——归位前 MLE 分布如实入 evidence（不猜码义）
-    for _code, _segs in sorted(_unreg.items()):
-        _tally = "；".join(f"{k}×{v}" for k, v in
-                           sorted(_mle_raw.get(_code, {}).items(),
-                                  key=lambda x: -x[1]))
-        conflicts.append({
-            "fault_id": "", "segs": str(_segs),
-            "issue": f"GZEEB={_code} 码义未注册（{len(_segs)} 段）",
-            "evidence": f"段级 MLE 标定分布：{_tally}——码级语义待裁定",
-            "status": "pending_review"})
-    if _unreg:
-        print(f"   码义未注册: {len(_unreg)} 码 {sum(len(v) for v in _unreg.values())} 段"
-              f" → 冲突册 pending")
-
     # ---- 活动性强先验（2026-10-02 优化定版）：识别标志=断层与第四系松散
     # 沉积物和地层的接触界线重合——**活动断层的典型识别标志（2026-10-02
     # 用户确认：「F072 是第四系松散沉积物与地层的边界一致，是活动断层的
@@ -957,13 +931,87 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 elif _m0 >= Q2_STRONG_M and _p0 >= 50:
                     _act_raw[_gz0]["活动断层"] += 2
     # 码级语义逻辑判断（2026-10-03 用户）：码义 MLE 结论=各段**最终标定
-    # 结构语义**（含活动通道升格）的众数——逻辑推导，非人工裁定，
-    # 不回灌段级（37 案：活动断层×19 主导 → 码义=活动断层）
+    # 结构语义**（含活动通道升格）的众数——逻辑推导，非人工裁定
+    # （37 案：活动断层×19 主导 → 码义=活动断层）
     _final_raw = defaultdict(lambda: defaultdict(int))
     for r in rows:
         _final_raw[str(r.get("GZEEB") or "")][
             str(r.get("structural_type") or "断层泛称")] += 1
+    _mle_sem_by_code = {}
+    for _code in _unreg:
+        _evid = {k: v for k, v in _final_raw.get(_code, {}).items()
+                 if k != "断层泛称"}
+        _mle_sem_by_code[_code] = "断层泛称"
+        if _evid:
+            _sem0, _n0 = max(_evid.items(), key=lambda kv: kv[1])
+            # 决定性证据覆盖门槛（2026-10-03 用户裁定：01 码仅 11/131 段
+            # 老盖新（8%）不足以判族义推覆体边界——族义结论要求决定性
+            # 语义覆盖族内 ≥25% 段；01 落无族义，段级证据语义如实保留）
+            if _n0 / sum(_final_raw.get(_code, {}).values()) >= 0.25:
+                _mle_sem_by_code[_code] = _sem0
+    # 码义逻辑判断继承（2026-10-03 用户裁定：逻辑判断码义扩展同码全段
+    # 继承是既定逻辑——mle_semantic 结论回填该码全部泛称段；决定性证据
+    # 段（正/逆/走滑/推覆/活动/推测）保持证据语义，不被覆盖）
+    _n_inh = 0
+    for r in rows:
+        _ms0 = _mle_sem_by_code.get(str(r.get("GZEEB") or ""))
+        if not _ms0 or _ms0 == "断层泛称":
+            continue
+        if r.get("structural_type") != "断层泛称":
+            continue
+        r["structural_type"] = _ms0
+        _note = f"码义逻辑判断继承（{_ms0}，mle_semantic 全段继承）"
+        if r.get("checks"):
+            r["checks"] += f"；{_note}"
+        else:
+            r["checks"] = _note
+        if str(r.get("verdict")) == "兜底（一般断层）":
+            r["verdict"] = "consistent"
+            r["confidence"] = "0.6"
+        _n_inh += 1
+    if _n_inh:
+        print(f"   码义逻辑判断继承: {_n_inh} 段")
+    # 继承后重算最终分布（提案表 final_distribution 反映继承结果）
+    _final_raw = defaultdict(lambda: defaultdict(int))
+    for r in rows:
+        _final_raw[str(r.get("GZEEB") or "")][
+            str(r.get("structural_type") or "断层泛称")] += 1
+    # 一般断层兜底档案（2026-10-02 用户裁定）：详情记录——逐段码/名/运动学/
+    # 倾角/覆盖/证据级/标定结构，供人工裁定与审计回溯；继承段剔除
+    _fb_keep = {r["idx"] for r in rows
+                if str(r.get("verdict")) == "兜底（一般断层）"}
+    _fallback_rows = [x for x in _fallback_rows if x["idx"] in _fb_keep]
+    if _fallback_rows:
+        _fb_p = _outdir / f"_gzeeb_fallback_{sh.key}.csv"
+        pd.DataFrame(_fallback_rows).to_csv(_fb_p, index=False,
+                                            encoding="utf-8-sig")
+        print(f"   一般断层兜底: {len(_fallback_rows)} 段 → {_fb_p.name}")
+    else:
+        # 继承清零后清理陈旧件（2026-10-03：原仅 if 写入——兜底归零时
+        # 旧 CSV 残留 47 行被缺口报告误读）
+        _fb_p = _outdir / f"_gzeeb_fallback_{sh.key}.csv"
+        if _fb_p.exists():
+            _fb_p.unlink()
+        print("   一般断层兜底: 0 段（陈旧件已清理）")
     if _unreg:
+        # 码义提案出站（2026-10-02 用户对齐裁定：图幅编码语义映射依赖自身
+        # 数据空间结构模式）——未注册码的归位前 MLE 分布 + 段数 = 本幅数据
+        # 模式的语义提案；码义未注册冲突登记（2026-10-01 MLE 修订）：段级
+        # 语义已由 MLE 标定，码级语义已由逻辑判断并全段继承——注册表待裁定
+        for _code, _segs in sorted(_unreg.items()):
+            _tally = "；".join(f"{k}×{v}" for k, v in
+                               sorted(_mle_raw.get(_code, {}).items(),
+                                      key=lambda x: -x[1]))
+            conflicts.append({
+                "fault_id": "", "segs": str(_segs),
+                "issue": f"GZEEB={_code} 码义未注册（{len(_segs)} 段）",
+                "evidence": (f"段级 MLE 标定分布：{_tally}——码级语义已由"
+                             f"逻辑判断（mle_semantic="
+                             f"{_mle_sem_by_code.get(_code, '断层泛称')}）"
+                             f"并全段继承；注册表待裁定"),
+                "status": "pending_review"})
+        print(f"   码义未注册: {len(_unreg)} 码 "
+              f"{sum(len(v) for v in _unreg.values())} 段 → 冲突册 pending")
         _prop_rows = []
         for _code, _segs in sorted(_unreg.items()):
             _tally = "；".join(f"{k}×{v}" for k, v in
@@ -986,14 +1034,12 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                            key=lambda x: -x[1]))
             # 码级 MLE 结论（2026-10-03 用户裁定）：决定性证据主导——最终
             # 标定语义中剔除无证据的泛称后取众数（35 案：老盖新×5 →
-            # 推覆体边界；37 案：界线强档×19 → 活动断层）
-            _evid = {k: v for k, v in _final_raw.get(_code, {}).items()
-                     if k != "断层泛称"}
-            _mle_sem_code = max(_evid, key=_evid.get) if _evid else "断层泛称"
+            # 推覆体边界；37 案：界线强档×19 → 活动断层）；结论已全段继承
             _prop_rows.append({"GZEEB": _code, "segs": len(_segs),
                                "mle_distribution": _tally,
                                "final_distribution": _final_tally,
-                               "mle_semantic": _mle_sem_code,
+                               "mle_semantic": _mle_sem_by_code.get(
+                                   _code, "断层泛称"),
                                "prior_votes": _prior_tally,
                                "aux_votes": _aux_tally,
                                "data_votes": _data_tally,

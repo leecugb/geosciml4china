@@ -68,9 +68,10 @@ def adapt_geologic_units(features: list[dict],
 
 
 def adapt_contacts(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict]:
-    """contact_view → 界线层（render_line_layer 契约；GZBD_eff 在场即关闭
-    gzbd_overrides 路径）。younger_side 结构化贯通（2026-10-02 渲染优化）：
-    04/24 不整合双线用标定侧；null → 渲染层探针回落（与参照管线同链）。"""
+    """contact_view → 界线层（render_line_layer 契约）。2026-10-03 渲染
+    完全基于地质语义：出站标定语义标签 sem_label（不再出 GZBD 码）；
+    younger_side 结构化贯通（04/24 不整合双线用标定侧；null → 渲染层
+    探针回落，与参照管线同链）。"""
     rows, bad_geom = [], []
 
     def _side(v):
@@ -82,10 +83,9 @@ def adapt_contacts(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict]:
         if geom.geom_type != "LineString":
             bad_geom.append(geom.geom_type)
             continue
-        code = str(p.get("genericSymbolizer") or "")
+        sem = str(p.get("genericSymbolizer") or p.get("name") or "")
         rows.append({
-            "GZBD": code,
-            "GZBD_eff": code,
+            "sem_label": sem,
             "status": "normal",
             "younger_side": _side(p.get("younger_side")),
             "contact_id": feature_id(p.get("identifier_value") or ""),
@@ -113,11 +113,14 @@ def adapt_shear_structures(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict
             bad_geom.append(geom.geom_type)
             continue
         rows.append({
-            "GZEEB": str(p.get("genericSymbolizer") or ""),
+            # 2026-10-03 渲染完全基于 geosciml：不再出站 MapGIS 码
+            # （GZEEB）——样式与旋向归组均按标定语义（structural_type）
             "GZEAB": _clean_name(p.get("name")),
             "FEATUREID": feature_id(p.get("identifier_value") or ""),
             "faultType": p.get("faultType"),
             "description": p.get("description"),
+            "evidence_class": str(p.get("evidence_class") or ""),
+            "structural_type": str(p.get("structural_type") or ""),
             "geometry": geom,
         })
     gdf = _frame(rows)
@@ -139,9 +142,12 @@ def adapt_site_observations(features: list[dict]) -> tuple[gpd.GeoDataFrame, dic
         except (TypeError, ValueError):
             dip, bad_val = 0.0, bad_val + 1
         rows.append({
-            "GZBBAB": rot,
-            "GZBBAC": float((rot + 90.0) % 360.0),
-            "GZBBAD": dip,
+            # 2026-10-03 渲染完全基于地质语义：测量契约字段更名（脱离
+            # MapGIS 字段名）——GZBBAB→strike_az（走向）、GZBBAC→dip_az
+            # （倾向）、GZBBAD→dip（倾角）；渲染器旧名回退保留（遗留）
+            "strike_az": rot,
+            "dip_az": float((rot + 90.0) % 360.0),
+            "dip": dip,
             "GZBBGA": str(p.get("genericSymbolizer") or ""),
             "sem_type": (str(p["sem_type"]) if p.get("sem_type") else None),
             "obs_id": feature_id(p.get("identifier_value") or ""),
@@ -177,22 +183,17 @@ def adapt_specimens(features: list[dict]) -> tuple[gpd.GeoDataFrame, gpd.GeoData
 
 
 def adapt_folds(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict]:
-    """fold_view → 褶皱层（render_fold_layer 契约：GZCE 分型 + geometry）。
+    """fold_view → 褶皱层（render_fold_layer 契约：fold_class 语义 + geometry）。
 
-    fold_class 语义列（2026-09-29）：词表 gzce_foldprofile 的 decided term
-    → syncline/anticline（语义单源，码义随幅由幅级词表承载）；未命中→空串，
-    渲染器回退内置码表（syncline_codes）。调用前须 config.init_sheet。
+    2026-10-03 渲染完全基于地质语义：直接消费视图出站的词表裁定语义
+    profile（anticline/syncline）——不再读取/解析 GZCE 码。
     """
-    from ..convert import mapping as _mp
-    _fold_terms = _mp.load().get("gzce_foldprofile") or {}
     rows = []
     for feat in features:
         p = props(feat)
-        code = str(p.get("GZCE") or p.get("genericSymbolizer") or "")
-        term = ((_fold_terms.get(code) or {}).get("term")) or ""
+        sem = str(p.get("profile") or p.get("genericSymbolizer") or "")
         rows.append({
-            "GZCE": code,
-            "fold_class": term if term in ("syncline", "anticline") else "",
+            "fold_class": sem if sem in ("syncline", "anticline") else "",
             "name": p.get("label"),
             "geometry": shape(feat["geometry"]),
         })
