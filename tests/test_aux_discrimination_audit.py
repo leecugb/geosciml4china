@@ -9,6 +9,7 @@ b -20%/+40%、a -35%/+75%（2026-09-30 系列裁定））
 + 同侧正异侧逆 + 存疑交人工零改码。
 """
 import math
+import os
 
 import geopandas as gpd
 import pandas as pd
@@ -16,9 +17,15 @@ import pytest
 from shapely.geometry import LineString as _LS, MultiLineString as _MLS, Point as _Pt
 from shapely.ops import transform as _stf, unary_union as _uu
 
+# 2026-10-04 用户裁定：审计测试以 jwss/jwsss 为测试项目（工件全量新鲜）；
+# import 期 skipif 标记——无数据机器（CI runner）优雅跳过
 SHEETS = [
-    ("aoyiyayilake", r"D:\J45C004001新疆奥依亚依拉克\J45C004001\MAPGIS\JWD", 36.5),
-    ("bashkurgan", r"D:\ts\JWD", 39.5),
+    pytest.param("jwsss", r"D:\jwsss", 39.5,
+                 marks=pytest.mark.skipif(not os.path.isdir(r"D:\jwsss"),
+                                          reason="jwsss 数据不在场")),
+    pytest.param("jwss", r"D:\jwss", 38.5,
+                 marks=pytest.mark.skipif(not os.path.isdir(r"D:\jwss"),
+                                          reason="jwss 数据不在场")),
 ]
 NOISE_SIDE = 20.0
 MIN_AB = 200.0
@@ -203,6 +210,11 @@ def test_assoc_distance_and_band(key, root, lat):
     med = {c: sorted(v)[len(v) // 2] for c, v in dists.items() if v}
     for _, r in assoc.iterrows():
         if r["kind"] != "symbol" or r["dist_m"] is None or pd.isna(r["dist_m"]):
+            continue
+        # dip_side 重归属行豁免（2026-10-04 通道边界：倾向侧通道以
+        # 射线×倾角方位重归属——越出最近链距离带是该通道的定义行为
+        # （aux=64→F070 案 525m>412m 带），不带 dist_band_ok 标记）
+        if str(r.get("method") or "") == "dip_side":
             continue
         sn = str(r["sub_no"])
         if sn not in med:
@@ -402,6 +414,9 @@ def test_distance_criteria_strict(key, root, lat):
             _med[sn] = med_any
     for _, r in assoc.iterrows():
         if r["kind"] != "symbol" or pd.isna(r["dist_m"]):
+            continue
+        # dip_side 重归属行豁免（同 test_assoc_distance_and_band 通道边界）
+        if str(r.get("method") or "") == "dip_side":
             continue
         sn = str(r["sub_no"])
         if sn not in band:

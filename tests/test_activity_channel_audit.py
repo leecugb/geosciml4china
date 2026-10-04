@@ -16,12 +16,15 @@ from pymapgis.rendering.pdf_writer import _unit_age_rank
 
 SRC = Path(r"D:\geosciml4china\src\geosciml4china")
 
+# 2026-10-04 用户裁定：审计测试以 jwss/jwsss 为测试项目；import 期
+# skipif 标记——无数据机器（CI runner）优雅跳过
 SHEETS = [
-    ("kurgan", r"D:\JWD"),
-    ("jws", r"D:\jws"),
-    ("yingjisha", r"D:\J43C002003新疆英吉沙县\J43C002003\MAPGIS\JWD"),
-    ("aoyiyayilake", r"D:\J45C004001新疆奥依亚依拉克\J45C004001\MAPGIS\JWD"),
-    ("bashkurgan", r"D:\ts\JWD"),
+    pytest.param("jwsss", r"D:\jwsss",
+                 marks=pytest.mark.skipif(not Path(r"D:\jwsss").is_dir(),
+                                          reason="jwsss 数据不在场")),
+    pytest.param("jwss", r"D:\jwss",
+                 marks=pytest.mark.skipif(not Path(r"D:\jwss").is_dir(),
+                                          reason="jwss 数据不在场")),
 ]
 
 

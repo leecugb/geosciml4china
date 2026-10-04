@@ -1099,6 +1099,14 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         else:
             r["checks"] = _note
         if str(r.get("verdict")) in ("兜底（一般断层）", "标定（矛盾保留）"):
+            if str(r.get("verdict")) == "兜底（一般断层）" and r.get("checks"):
+                # 兜底注记随翻牌剥离（2026-10-04 兜底审计 F151 案：码义
+                # 继承翻牌后「码义无法标定」注记不再成立——注记与 verdict
+                # 联动，不残留「非兜底行携带兜底注记」脱节）
+                _fb_note = "一般断层兜底（码义无法标定：名无语义+无辅助点语义）"
+                _parts = [p for p in str(r["checks"]).split("；")
+                          if p and p != _fb_note]
+                r["checks"] = "；".join(_parts)
             r["verdict"] = "consistent"
             r["confidence"] = "0.6"
         _n_inh += 1

@@ -16,6 +16,7 @@ _fault_hooks_<key>.csv 逐对对照。共享输入（WT/断层/实体表/归属�
   ⑥ 旋向与码义互证（16/18 码段：右行/左行与钩旋向一致或如实张力）。
 """
 import math
+import os
 
 import geopandas as gpd
 import pandas as pd
@@ -24,11 +25,15 @@ from shapely.geometry import Point
 
 from pymapgis.semantics.profile import get_profile
 
+# 2026-10-04 用户裁定：审计测试以 jwss/jwsss 为测试项目；import 期
+# skipif 标记——无数据机器（CI runner）优雅跳过
 SHEETS = [
-    ("kurgan", r"D:\JWD", 39.5),
-    ("yingjisha", r"D:\J43C002003新疆英吉沙县\J43C002003\MAPGIS\JWD", 38.5),
-    ("aoyiyayilake", r"D:\J45C004001新疆奥依亚依拉克\J45C004001\MAPGIS\JWD", 36.5),
-    ("bashkurgan", r"D:\ts\JWD", 39.5),
+    pytest.param("jwsss", r"D:\jwsss", 39.5,
+                 marks=pytest.mark.skipif(not os.path.isdir(r"D:\jwsss"),
+                                          reason="jwsss 数据不在场")),
+    pytest.param("jwss", r"D:\jwss", 38.5,
+                 marks=pytest.mark.skipif(not os.path.isdir(r"D:\jwss"),
+                                          reason="jwss 数据不在场")),
 ]
 
 BAND = (50.0, 500.0)

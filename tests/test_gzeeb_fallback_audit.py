@@ -7,6 +7,7 @@
 签名/运动学/dip/aux/覆盖）/兜底判定自实现，与生产 verdict 与档案逐行对照。
 """
 import math
+import os
 import re
 
 import geopandas as gpd
@@ -16,11 +17,15 @@ from shapely.ops import unary_union
 
 from pymapgis.rendering.pdf_writer import _unit_age_rank
 
+# 2026-10-04 用户裁定：审计测试以 jwss/jwsss 为测试项目；import 期
+# skipif 标记——无数据机器（CI runner）优雅跳过
 SHEETS = [
-    ("kurgan", r"D:\JWD", 39.5),
-    ("yingjisha", r"D:\J43C002003新疆英吉沙县\J43C002003\MAPGIS\JWD", 38.5),
-    ("aoyiyayilake", r"D:\J45C004001新疆奥依亚依拉克\J45C004001\MAPGIS\JWD", 36.5),
-    ("bashkurgan", r"D:\ts\JWD", 39.5),
+    pytest.param("jwsss", r"D:\jwsss", 39.5,
+                 marks=pytest.mark.skipif(not os.path.isdir(r"D:\jwsss"),
+                                          reason="jwsss 数据不在场")),
+    pytest.param("jwss", r"D:\jwss", 38.5,
+                 marks=pytest.mark.skipif(not os.path.isdir(r"D:\jwss"),
+                                          reason="jwss 数据不在场")),
 ]
 
 _NAME_KW = [("逆冲推覆", "推覆体边界"), ("逆冲", "逆断层"), ("逆掩", "逆断层"),
@@ -83,14 +88,26 @@ def _independent_fallback(key, root, lat):
         if Path(root + r"\geojson\L0\LDZOFBB001.WP.geojson").exists() \
         else gpd.GeoDataFrame({"geometry": [], "QDUECC": []}, crs="EPSG:4326")
     ice_u = ice.geometry.union_all() if len(ice) else None
-    wat_u = wl.geometry.union_all().buffer(100.0 / lon_m) if len(wl) else None
-    qg = [g for g, c in zip(poly.geometry.values, poly["QDUECC"].astype(str).values)
-          if g is not None and not g.is_empty
-          and (_unit_age_rank(c) or 0) >= _rank_min
-          and not any(x in c for x in _q_excl)]
+    # 2026-10-04 与生产对齐：①水体线缓冲机制已取消（2026-10-02 裁定）——
+    # 覆盖联合=冰雪 ∪ Q，不含水系；②Q 并集取 BB001-004 四面元层；
+    # ③排除检查前做箭头归一（F038 案：「中Qp↓1→X」子串 "Qp1X" 不命中
+    # 会击穿排除——西域组半固结混入将虚增覆盖）
+    qg = []
+    for _qfn in ("LDZOFBB001.WP", "LDZOFBB002.WP",
+                 "LDZOFBB003.WP", "LDZOFBB004.WP"):
+        _qp = root + rf"\geojson\L0\{_qfn}.geojson"
+        if not Path(_qp).exists():
+            continue
+        _qd = gpd.read_file(_qp)
+        for g, c in zip(_qd.geometry.values, _qd["QDUECC"].astype(str).values):
+            _cn = re.sub(r"[→↓↑]", "", c)
+            if (g is not None and not g.is_empty
+                    and (_unit_age_rank(c) or 0) >= _rank_min
+                    and not any(x in _cn for x in _q_excl)):
+                qg.append(g)
     quat_u = unary_union(qg) if qg else None
-    cover_u = unary_union([u for u in (ice_u, wat_u, quat_u) if u is not None]) \
-        if any(u is not None for u in (ice_u, wat_u, quat_u)) else None
+    cover_u = unary_union([u for u in (ice_u, quat_u) if u is not None]) \
+        if any(u is not None for u in (ice_u, quat_u)) else None
     # 签名集（码级：全段无倾角+真覆盖≥2；仅未注册码）
     code_dip, code_buried = set(), {}
     for _, row in fl.iterrows():
@@ -151,6 +168,17 @@ def _independent_fallback(key, root, lat):
             sig_hit = True
         # 投票
         votes = {}
+        # aux 判别票（2026-10-04 与生产对齐：逆/正断层产状点 +2——原模型
+        # 缺此通道，致有 aux 段误判兜底）
+        auxv = ""
+        if row.get("fault_id") in ent_first.index:
+            auxv = str(ent_first.loc[row.get("fault_id"), "aux_verdict"] or "")
+            if auxv in ("nan", "None"):
+                auxv = ""
+        if auxv == "逆断层产状点":
+            votes["逆断层"] = votes.get("逆断层", 0) + 2
+        elif auxv == "正断层产状点":
+            votes["正断层"] = votes.get("正断层", 0) + 2
         if sem_name and (bool(sem_entry) or (adjudicated
                                              and ov_e.get("effective_semantic"))):
             votes[sem_name] = votes.get(sem_name, 0) + 3
@@ -219,7 +247,27 @@ def test_fallback_execution(key, root, lat):
     prod = {int(r["idx"]): r for _, r in gz.iterrows()}
     prod_fb = {i for i, r in prod.items()
                if str(r["verdict"]) == "兜底（一般断层）"}
-    ind_fb = {i for i, v in ind.items() if v}
+    # L3 继承消解（2026-10-04 三层逻辑对齐）：码有具体可继承语义者，
+    # 兜底被继承翻牌（verdict 兜底→consistent）出档案——以映射表为 L2 源
+    import csv as _csv
+    from pathlib import Path as _Path
+    _map_sem = {}
+    _map_p = _Path(root) / f"code_semantics_map_{key}.csv"
+    if _map_p.exists():
+        for _r in _csv.DictReader(open(_map_p, encoding="utf-8-sig")):
+            _u = str(_r.get("user_semantic") or "").strip()
+            _map_sem[str(_r["GZEEB"])] = (_u if _u not in ("", "nan", "None")
+                                          else str(_r["semantic"]))
+    _code_of = {int(r["idx"]): str(r["GZEEB"]) for _, r in gz.iterrows()}
+    # 分工边界（2026-10-04）：本模型覆盖 注册/名/签名/运动学/dip/aux/覆盖
+    # 七通道+继承组合；界线重合/老盖新/钩旋向等 2026-10-03 新增通道
+    # （own_structural_type ≠ 泛称者）由 test_activity_channel_audit /
+    # test_hook_identification_audit 等专责审计覆盖，在此作为已解释集滤除
+    _own_of = {int(r["idx"]): str(r.get("own_structural_type") or "断层泛称")
+               for _, r in gz.iterrows()}
+    ind_fb = {i for i, v in ind.items()
+              if v and _map_sem.get(_code_of.get(i, ""), "断层泛称") == "断层泛称"
+              and _own_of.get(i, "断层泛称") == "断层泛称"}
     assert prod_fb == ind_fb, \
         f"兜底判定不符 {key}: 生产多 {sorted(prod_fb - ind_fb)} 独立多 {sorted(ind_fb - prod_fb)}"
     # 兜底行不变量
