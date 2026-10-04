@@ -33,9 +33,15 @@ import geopandas as gpd
 import pandas as pd
 from shapely.strtree import STRtree
 
-from pymapgis.rendering.pdf_writer import (_unit_age_rank,
-                                           corrected_polygon_code,
-                                           load_polygon_overrides)
+# pymapgis 完整地质栈导入守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——rendering 子包未发布；缺席时绑定 None 使模块 import 安全，
+# 执行路径首用自然报错；完整栈在场行为不变）
+try:
+    from pymapgis.rendering.pdf_writer import (_unit_age_rank,
+                                               corrected_polygon_code,
+                                               load_polygon_overrides)
+except ModuleNotFoundError:  # PyPI-minimal 环境
+    _unit_age_rank = corrected_polygon_code = load_polygon_overrides = None
 
 from ..sheets import get_sheet
 

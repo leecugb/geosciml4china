@@ -23,7 +23,10 @@ import pandas as pd
 import pytest
 from shapely.geometry import Point
 
-from pymapgis.semantics.profile import get_profile
+# PyPI-minimal 守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含极简读取器，
+# semantics 子包未发布——无完整栈环境整文件跳过）
+_prof = pytest.importorskip("pymapgis.semantics.profile")
+get_profile = _prof.get_profile
 
 # 2026-10-04 用户裁定：审计测试以 jwss/jwsss 为测试项目；import 期
 # skipif 标记——无数据机器（CI runner）优雅跳过

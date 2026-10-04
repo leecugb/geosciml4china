@@ -192,6 +192,9 @@ def test_name_segment_parser():
 
 def test_ht_paleoproterozoic_simultaneous():
     """滹沱纪 Ht 与古元古代 Pt1 同时代（2026-09-29 用户裁定）。"""
+    # PyPI-minimal 守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含极简
+    # 读取器，rendering 子包未发布——无完整栈环境跳过）
+    pytest.importorskip("pymapgis.rendering.pdf_writer")
     from pymapgis.rendering.pdf_writer import _unit_age_rank
     assert _unit_age_rank("HtA") == 101 == _unit_age_rank("Pt1K")
     assert _unit_age_rank("HtA") < _unit_age_rank("Pt2")  # 仍老于 Pt2

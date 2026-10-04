@@ -17,7 +17,13 @@ import pandas as pd
 
 from ..convert import mapping as _mp
 from ..sheets import get_sheet
-from pymapgis.semantics import load_source_layer
+# pymapgis 完整地质栈导入守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——semantics 子包未发布；缺席时绑定 None 使模块 import 安全，
+# 执行路径首用自然报错；完整栈在场行为不变）
+try:
+    from pymapgis.semantics import load_source_layer
+except ModuleNotFoundError:  # PyPI-minimal 环境
+    load_source_layer = None
 
 
 def calibrate_folds(sheet_key: str, out_dir=None) -> dict:

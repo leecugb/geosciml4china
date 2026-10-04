@@ -9,8 +9,9 @@ from pathlib import Path
 
 import numpy as np
 
-from pymapgis.rendering import Layer, Map
-
+# pymapgis 完整地质栈导入懒化（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——rendering/semantics 子包未发布；模块级导入移入函数体，
+# 使本包在 PyPI-minimal 环境 import 安全；注解经 future 懒求值不受影响）
 from . import adapters, sources
 from .codemap import DEFAULT_COLOR_MAPPING, build_reverse_unit_map, zorder_table
 
@@ -40,6 +41,7 @@ def build_geosciml_map(
     zorder_tbl: dict | None = None,
 ) -> tuple[Map, dict]:
     """Lite 四视图 → (Map IR, 适配报告)。"""
+    from pymapgis.rendering import Layer, Map
     if not color_mapping_path:
         raise ValueError("color_mapping_path 必须显式传入（泛化 2026-10-02：无库尔干默认）")
     rmap = build_reverse_unit_map(color_mapping_path)

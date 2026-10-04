@@ -54,9 +54,15 @@ from shapely.strtree import STRtree
 from shapely.ops import unary_union as _unary_union
 import os as _os
 
-from pymapgis.semantics import load_source_layer
-from pymapgis.semantics.profile import get_profile
-from pymapgis.rendering.pdf_writer import _unit_age_rank
+# pymapgis 完整地质栈导入守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——semantics/rendering 子包未发布；缺席时绑定 None 使模块
+# import 安全（CI 冒烟可收集），执行路径首用自然报错；完整栈在场行为不变）
+try:
+    from pymapgis.semantics import load_source_layer
+    from pymapgis.semantics.profile import get_profile
+    from pymapgis.rendering.pdf_writer import _unit_age_rank
+except ModuleNotFoundError:  # PyPI-minimal 环境
+    load_source_layer = get_profile = _unit_age_rank = None
 
 from ..data import data_path
 from ..sheets import get_sheet

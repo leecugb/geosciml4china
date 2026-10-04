@@ -59,6 +59,9 @@ for args in _strips:
 
 @pytest.fixture(scope="module")
 def audit_sheet(tmp_path_factory):
+    # PyPI-minimal 守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含极简
+    # 读取器，semantics 子包未发布——无完整栈环境整 fixture 跳过）
+    pytest.importorskip("pymapgis.semantics.profile")
     from geosciml4china.sheets import Sheet, register_sheet
     from pymapgis.semantics.profile import PROFILES, SheetProfile
 

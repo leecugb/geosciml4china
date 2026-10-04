@@ -25,11 +25,17 @@ import numpy as np
 import pandas as pd
 from shapely.geometry import LineString, Point
 
-from pymapgis.semantics import load_source_layer
-from pymapgis.rendering.pdf_writer import _unit_age_rank
+# pymapgis 完整地质栈导入守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——semantics/rendering 子包未发布；缺席时绑定 None 使模块
+# import 安全，执行路径首用自然报错；完整栈在场行为不变）
+try:
+    from pymapgis.semantics import load_source_layer
+    from pymapgis.rendering.pdf_writer import _unit_age_rank
+    from pymapgis.semantics.profile import get_profile
+except ModuleNotFoundError:  # PyPI-minimal 环境
+    load_source_layer = _unit_age_rank = get_profile = None
 
 from ..sheets import get_sheet
-from pymapgis.semantics.profile import get_profile
 
 
 def calibrate_entities(sheet_key: str, out_dir=None,

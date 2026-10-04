@@ -12,7 +12,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from pymapgis.rendering.pdf_writer import _unit_age_rank
+# PyPI-minimal 守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含极简读取器，
+# rendering/semantics 子包未发布——无完整栈环境整文件跳过）
+_pw = pytest.importorskip("pymapgis.rendering.pdf_writer")
+_unit_age_rank = _pw._unit_age_rank
 
 SRC = Path(r"D:\geosciml4china\src\geosciml4china")
 

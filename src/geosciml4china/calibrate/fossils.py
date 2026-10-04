@@ -35,9 +35,15 @@ import pandas as pd
 from shapely.geometry import Point
 from shapely.strtree import STRtree
 
-from pymapgis.rendering.pdf_writer import (corrected_polygon_code,
-                                           load_polygon_overrides)
-from pymapgis.semantics.profile import get_profile
+# pymapgis 完整地质栈导入守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——rendering/semantics 子包未发布；缺席时绑定 None 使模块
+# import 安全，执行路径首用自然报错；完整栈在场行为不变）
+try:
+    from pymapgis.rendering.pdf_writer import (corrected_polygon_code,
+                                               load_polygon_overrides)
+    from pymapgis.semantics.profile import get_profile
+except ModuleNotFoundError:  # PyPI-minimal 环境
+    corrected_polygon_code = load_polygon_overrides = get_profile = None
 
 from ..data import data_path
 from ..sheets import get_sheet

@@ -12,9 +12,8 @@ import json
 import sys
 from pathlib import Path
 
-from pymapgis.rendering import render_map_to_pdf
-from pymapgis.rendering.pattern_engine import set_svg_pattern_registry_path
-
+# pymapgis 完整地质栈导入懒化（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——rendering 子包未发布；导入移入 main()，模块 import 安全）
 from ..sheets import get_sheet, list_sheets
 from ..convert import config
 from .codemap import DEFAULT_SVG_REGISTRY
@@ -127,6 +126,8 @@ def _regen_styles(sheet: str) -> None:
 
 
 def main() -> int:
+    from pymapgis.rendering import render_map_to_pdf
+    from pymapgis.rendering.pattern_engine import set_svg_pattern_registry_path
     ap = argparse.ArgumentParser(prog="geosciml_render.render")
     ap.add_argument("lite_dir", nargs="?", default=None)
     ap.add_argument("-o", "--output", default=None)

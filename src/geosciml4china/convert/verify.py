@@ -17,7 +17,8 @@ from typing import List, Optional, Tuple
 from lxml import etree
 
 from ..sheets import list_sheets
-from pymapgis.semantics.profile import get_profile
+# pymapgis 完整地质栈导入懒化（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
+# 极简读取器——semantics 子包未发布；导入移入 main()，模块 import 安全）
 from . import config, mapping, model, sources, validate
 from . import ids as semantic_ids
 from . import units as unit_mod
@@ -193,6 +194,7 @@ def _text(el, path: str) -> Optional[str]:
 
 
 def main() -> int:
+    from pymapgis.semantics.profile import get_profile
     # GBK 控制台容忍（2026-10-02 重渲崩溃案）：✓/⚠ 标记在 cp936 stdout
     # 下 UnicodeEncodeError 中止 verify——统一降级 replace，报告文件不受影响
     try:
