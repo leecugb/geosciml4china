@@ -24,7 +24,15 @@
 from __future__ import annotations
 
 import os
-import tomllib
+# tomllib 为 3.11+ 标准库；3.10 回退 tomli（2026-10-04 CI 矩阵修复——
+# 3.10 job 直接 ImportError 收集失败）
+try:
+    import tomllib
+except ModuleNotFoundError:
+    try:
+        import tomli as tomllib
+    except ModuleNotFoundError:
+        tomllib = None
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Optional
