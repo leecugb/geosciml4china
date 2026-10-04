@@ -179,6 +179,11 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             if _c0 and _n0 and _n0 not in ("nan", "None"):
                 _map_note[_c0] = _n0
     _kin_map_p = sh.root / f"gzeld_semantics_map_{sheet}.csv"
+    # 2026-10-04 修复：映射表**写出**路径尊重 out_dir（影子运行不得触碰
+    # 正典——17:09 影子 gzeeb 覆盖正典映射表案）；**读取**仍从 sh.root
+    # （用户编辑 user_semantic 的跨轮保留通道）
+    _map_out_p = _outdir / f"code_semantics_map_{sheet}.csv"
+    _kin_map_out_p = _outdir / f"gzeld_semantics_map_{sheet}.csv"
     if _kin_map_p.exists():
         for _, _kr in pd.read_csv(_kin_map_p, dtype=str).iterrows():
             _c0 = str(_kr.get("GZELD") or "").strip()
@@ -1001,16 +1006,24 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     # 语义一幅一码——按最大似然原则由逆断层段数最多的码归属（05 案）；
     # 其余码剔除逆断层候选后重估族义：正逆共存签名（压张交替=复活
     # 样式，逆×≥3 且 正×≥3）→ 活动断层（31 案）；否则按主导性门槛
-    # 从剩余候选重取
+    # 从剩余候选重取。
+    # 主张宇宙（2026-10-04 用户裁定修复——03/35 案）：全部非注册、非
+    # 签名码（按段级终态 _final_raw 聚合）。原实现复用 _unreg（仅
+    # 「无注册且无名称语义」的段所在码）——名称全覆盖的码（03 双伍山
+    # 正断层F7 11/11、35 刀峰山逆冲推覆断层F8 4/4）被系统性漏主张，
+    # 映射表伪落「无族义（泛称）」与段级终态自相矛盾。_unreg 保留给
+    # 「码义未注册」冲突册登记（其原本用途）。
+    _claim_codes = [c for c in _final_raw
+                    if c not in gsem and c not in _sig_infer]
     _rev_claim = max(
-        (c for c in _unreg
+        (c for c in _claim_codes
          if sum(_final_raw.get(c, {}).values())
          and _final_raw[c].get("逆断层", 0)
          / sum(_final_raw[c].values()) >= 0.25),
         key=lambda c: _final_raw[c].get("逆断层", 0), default=None)
     _mle_sem_by_code = {}
     _gzeld_derived = {}  # GZELD 推导语义（_unreg 块内填充；映射表出站兜底引用）
-    for _code in _unreg:
+    for _code in _claim_codes:
         _evid = {k: v for k, v in _final_raw.get(_code, {}).items()
                  if k != "断层泛称"}
         _mle_sem_by_code[_code] = "断层泛称"
@@ -1510,8 +1523,8 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             "evidence_votes": _evotes(_c0),
             "user_semantic": _user_sem.get(_c0, ""),
             "user_note": _map_note.get(_c0, "")})
-    pd.DataFrame(_map_rows).to_csv(_map_p, index=False, encoding="utf-8-sig")
-    print(f"   编码-地质语义映射表: {len(_map_rows)} 码 → {_map_p.name}")
+    pd.DataFrame(_map_rows).to_csv(_map_out_p, index=False, encoding="utf-8-sig")
+    print(f"   编码-地质语义映射表: {len(_map_rows)} 码 → {_map_out_p.name}")
     _kin_rows = []
     for _g0 in sorted({str(r.get("GZELD") or "") for r in rows} - {""}):
         _dist0 = defaultdict(int)
@@ -1550,9 +1563,9 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                     _dist0.items(), key=lambda x: -x[1])),
             "user_semantic": _user_kin.get(_g0, ""),
             "user_note": _kin_note.get(_g0, "")})
-    pd.DataFrame(_kin_rows).to_csv(_kin_map_p, index=False,
+    pd.DataFrame(_kin_rows).to_csv(_kin_map_out_p, index=False,
                                    encoding="utf-8-sig")
-    print(f"   GZELD 码义映射表: {len(_kin_rows)} 码 → {_kin_map_p.name}")
+    print(f"   GZELD 码义映射表: {len(_kin_rows)} 码 → {_kin_map_out_p.name}")
     print("三维分布:")
     print("  结构类型:", out["structural_type"].value_counts().to_dict())
     print("  证据级别:", out["evidence_class"].value_counts().to_dict())

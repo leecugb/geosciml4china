@@ -102,6 +102,75 @@ def _find_sheet_file(sh, name: str):
     return None
 
 
+# ---- QDUECD 字段兜底通道（2026-10-04 用户裁定「直接从侵入岩的字段读取
+# 对应岩性」）：代号希腊字母前缀不可靠（西里尔 г=γ 误录、∑ 数学符变体
+# ——奥依亚依拉克 →гC-P=未分花岗岩 37 面元、→∑=超基性岩 11 面元实证），
+# QDUECD 地质单元名称字段自带岩性与时代文本。码解析失败时逐级兜底：
+# ①剥非 ASCII 前缀再解析时代后缀（гC-P→C-P 可解）②名称时代词③名称岩性词。
+_ERA_NAMES = (
+    ("全新世", 1340.0), ("全新统", 1340.0),
+    ("更新世", 1320.0), ("更新统", 1320.0), ("第四系", 1300.0),
+    ("新近纪", 1200.0), ("新近系", 1200.0),
+    ("古近纪", 1100.0), ("古近系", 1100.0),
+    ("白垩纪", 1000.0), ("白垩系", 1000.0),
+    ("侏罗纪", 900.0), ("侏罗系", 900.0),
+    ("三叠纪", 800.0), ("三叠系", 800.0),
+    ("二叠纪", 700.0), ("二叠系", 700.0),
+    ("石炭纪", 600.0), ("石炭系", 600.0),
+    ("泥盆纪", 500.0), ("泥盆系", 500.0),
+    ("志留纪", 400.0), ("志留系", 400.0),
+    ("奥陶纪", 300.0), ("奥陶系", 300.0),
+)
+_LITH_NAMES = ("花岗闪长岩", "石英闪长岩", "二长花岗岩", "碱长花岗岩",
+               "黑云母花岗岩", "花岗斑岩", "辉绿岩", "辉长岩", "闪长岩",
+               "花岗岩", "超基性岩")  # 长词优先（防「花岗岩」截断「花岗闪长岩」）
+
+
+def _era_from_name(name: str):
+    """名称字段时代词 → 时代级别（与 _ERA_TOKENS 同基数）；无→None。"""
+    for kw, r in _ERA_NAMES:
+        if kw in str(name or ""):
+            return r
+    return None
+
+
+def _lith_from_name(name: str):
+    """名称字段岩性词；无→''。"""
+    t = str(name or "")
+    for kw in _LITH_NAMES:
+        if kw in t:
+            return kw
+    return ""
+
+
+def _era_suffix_of(code: str) -> str:
+    """剥希腊/西里尔/数学符前缀后的拉丁时代后缀（43/60 时代一致比较用）。"""
+    return re.sub(r"[^A-Za-z0-9\-]+", "", str(code))
+
+
+def _age_rank_of(unit) -> float | None:
+    """单元时代级别兜底链：码解析 → 剥非 ASCII 前缀再解析（г/∑ 误录变体）
+    → 名称字段时代词。"""
+    r = _unit_age_rank(unit["code"])
+    if r is not None:
+        return r
+    stripped = _era_suffix_of(unit["code"])
+    if stripped:
+        # 字母-字母跨时代后缀（C-P/O-D2 类）取均值——与 2026-09-15
+        # 跨亚统均值裁定同构（гC-P 花岗岩=650 而非 C 基 600：与 C1 围岩
+        # 新老比较不失真，防「地层新侵入老」伪覆盖）
+        _m = re.match(r"^([A-Za-z]+)(\d*)-([A-Za-z]+)(\d*)$", stripped)
+        if _m:
+            _t1 = _unit_age_rank(_m.group(1) + _m.group(2))
+            _t2 = _unit_age_rank(_m.group(3) + _m.group(4))
+            if _t1 is not None and _t2 is not None:
+                return (_t1 + _t2) / 2.0
+        r = _unit_age_rank(stripped)
+        if r is not None:
+            return r
+    return _era_from_name(unit["name"])
+
+
 def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     """执行 GZBD 界线先验标定，返回计数统计。out_dir 缺省=图幅 root。"""
     sh = get_sheet(sheet_key)
@@ -140,6 +209,28 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         for _, row in g.iterrows():
             if row.geometry is not None and not row.geometry.is_empty:
                 polys.append((row.geometry, str(row.get("QDUECC", "")), tag))
+    # 侵入岩本身属性优先通道（2026-10-04 用户裁定「优先尝试从侵入岩本身
+    # 属性读取岩性信息」）：QDUEAQ 单元类型码结构化岩性分类（21=超基性/
+    # 22=基性/23=中性/24=酸性类+岩石种）——映射由本幅 QDUEAQ×QDUECD
+    # 对自推导（多数名决），无外部词典、跨幅自持；字段缺席幅优雅降级
+    # 到名称词/希腊码通道。
+    code2qdueaq, _q_votes = {}, {}
+    for _fn2 in ("LDZOFBB001.WP", "LDZOFBB003.WP", "LDZOFBB002.WP",
+                 "LDZOFBB004.WP"):
+        _qp = sh.root / "geojson" / "L0" / f"{_fn2}.geojson"
+        if not _qp.exists():
+            continue
+        _qg = load_source_layer(str(sh.root), _fn2, graphic=False)
+        if "QDUEAQ" not in _qg.columns:
+            continue
+        for _c2, _q2 in zip(_qg["QDUECC"].astype(str),
+                            _qg["QDUEAQ"].astype(str)):
+            code2qdueaq.setdefault(_c2, _q2.strip())
+            _kw2 = _lith_from_name(code2name.get(_c2, ""))
+            if _kw2:
+                _q_votes.setdefault(_q2.strip(), {})[_kw2] = \
+                    _q_votes.setdefault(_q2.strip(), {}).get(_kw2, 0) + 1
+    _lith_by_q = {q: max(votes, key=votes.get) for q, votes in _q_votes.items()}
     # 2026-09-13 seg2096 审计修复：探针单元宇宙纳入冰雪区
     # （LDLYAAE002，GB=73020）——非地层覆盖层，否则冰缘界线两侧漏判
     # import os as _os  # 模块级已导入（体内重复导入致局部遮蔽，2026-09-29 修）
@@ -405,9 +496,13 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         idx = int(rec["idx"])
         lu_codes = json.loads(rec["left_codes"])
         ru_codes = json.loads(rec["right_codes"])
-        lu_units = [{"code": c, "name": code2name.get(c, c), "layer": code2layer.get(c, "?")}
+        lu_units = [{"code": c, "name": code2name.get(c, c), "layer": code2layer.get(c, "?"),
+                     "lith": _lith_by_q.get(code2qdueaq.get(c, ""), "")
+                             or _lith_from_name(code2name.get(c, c))}
                     for c in lu_codes]
-        ru_units = [{"code": c, "name": code2name.get(c, c), "layer": code2layer.get(c, "?")}
+        ru_units = [{"code": c, "name": code2name.get(c, c), "layer": code2layer.get(c, "?"),
+                     "lith": _lith_by_q.get(code2qdueaq.get(c, ""), "")
+                             or _lith_from_name(code2name.get(c, c))}
                     for c in ru_codes]
         base = {"idx": idx, "gzbd": gz,
                 "left": ";".join(f"{u['code']}({u['name']})" for u in lu_units),
@@ -431,6 +526,11 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             # 岩性过渡渐变（2026-09-24 用户核定）：岩浆岩间的一种接触界线，
             # 两侧岩浆岩时代、岩性要求一致——逐侧校验（岩浆岩层 + 希腊岩性码同
             # + 时代码同）；违反者登记分歧交裁定（永不自动改码）
+            # 2026-10-04 侵入岩本身属性通道（用户裁定「优先尝试从侵入岩
+            # 本身属性读取岩性信息」）：任一侧希腊解析失败（г/∑ 误录
+            # 变体）→ 整体走属性通道（QDUEAQ 单元类型码优先→QDUECD
+            # 名称词→剥前缀时代后缀），不与希腊码混比（比较空间一致性
+            # ——旧逻辑把不可解析侧整侧丢弃致伪分歧）
             _parts = {"L": [], "R": []}
             for tag, units in (("L", lu_units), ("R", ru_units)):
                 for u in units:
@@ -439,14 +539,24 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                     if m:
                         _parts[tag].append((u["layer"], m.group(1), m.group(2)))
             _ok43 = True
-            if not _parts["L"] or not _parts["R"]:
-                _ok43 = False
-            elif not all(p[0] in ("侵入", "火山") for p in _parts["L"] + _parts["R"]):
-                _ok43 = False
-            elif {p[1] for p in _parts["L"]} != {p[1] for p in _parts["R"]}:
-                _ok43 = False  # 岩性不一致
-            elif {p[2] for p in _parts["L"]} != {p[2] for p in _parts["R"]}:
-                _ok43 = False  # 时代不一致
+            if all(_parts[t] for t in ("L", "R")):
+                if not all(p[0] in ("侵入", "火山") for p in _parts["L"] + _parts["R"]):
+                    _ok43 = False
+                elif {p[1] for p in _parts["L"]} != {p[1] for p in _parts["R"]}:
+                    _ok43 = False  # 岩性不一致
+                elif {p[2] for p in _parts["L"]} != {p[2] for p in _parts["R"]}:
+                    _ok43 = False  # 时代不一致
+            else:
+                _mags = {t: [u for u in us if u["layer"] in ("侵入", "火山")]
+                         for t, us in (("L", lu_units), ("R", ru_units))}
+                if not _mags["L"] or not _mags["R"]:
+                    _ok43 = False
+                elif {u["lith"] for u in _mags["L"]} != \
+                        {u["lith"] for u in _mags["R"]}:
+                    _ok43 = False  # 岩性不一致（QDUEAQ 优先→名称词）
+                elif {_era_suffix_of(u["code"]) for u in _mags["L"]} != \
+                        {_era_suffix_of(u["code"]) for u in _mags["R"]}:
+                    _ok43 = False  # 时代不一致
             verdicts.append({**base,
                              "verdict": "特殊码（独立标定）" if _ok43 else
                              "分歧未裁定（43约束：两侧岩浆岩时代岩性须一致）",
@@ -457,6 +567,8 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             # 脉动接触（2026-09-24 用户核定）：岩浆岩间的一种接触界线，
             # 两侧岩浆岩要求时代一致（岩性不要求一致——不同岩性侵入体同代
             # 脉动注入）；违反者登记分歧交裁定（永不自动改码）
+            # 2026-10-04 QDUECD/QDUEAQ 字段兜底（同 43）：希腊解析失败侧
+            # 不再整侧丢弃——名称通道按剥前缀时代后缀比较（60 不要求岩性）
             _parts = {"L": [], "R": []}
             for tag, units in (("L", lu_units), ("R", ru_units)):
                 for u in units:
@@ -465,12 +577,19 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                     if m:
                         _parts[tag].append((u["layer"], m.group(1), m.group(2)))
             _ok60 = True
-            if not _parts["L"] or not _parts["R"]:
-                _ok60 = False
-            elif not all(p[0] in ("侵入", "火山") for p in _parts["L"] + _parts["R"]):
-                _ok60 = False
-            elif {p[2] for p in _parts["L"]} != {p[2] for p in _parts["R"]}:
-                _ok60 = False  # 时代不一致
+            if all(_parts[t] for t in ("L", "R")):
+                if not all(p[0] in ("侵入", "火山") for p in _parts["L"] + _parts["R"]):
+                    _ok60 = False
+                elif {p[2] for p in _parts["L"]} != {p[2] for p in _parts["R"]}:
+                    _ok60 = False  # 时代不一致
+            else:
+                _mags = {t: [u for u in us if u["layer"] in ("侵入", "火山")]
+                         for t, us in (("L", lu_units), ("R", ru_units))}
+                if not _mags["L"] or not _mags["R"]:
+                    _ok60 = False
+                elif {_era_suffix_of(u["code"]) for u in _mags["L"]} != \
+                        {_era_suffix_of(u["code"]) for u in _mags["R"]}:
+                    _ok60 = False  # 时代不一致
             verdicts.append({**base,
                              "verdict": "特殊码（独立标定）" if _ok60 else
                              "分歧未裁定（60约束：两侧岩浆岩时代须一致）",
@@ -623,16 +742,18 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                 # adjacent is None（相对×绝对混比不可判）→ 落下方通用级联
         all_layers = {u["layer"] for u in lu_units + ru_units}
         # 第四系判定：剔除半固结成岩沉积层（Qp1X 西域组等，算基岩）
+        # （2026-10-04 QDUECD 兜底链：г/∑ 误录前缀码的时代从剥前缀后缀/
+        # 名称时代词恢复——不再静默丢证据）
         ages = [a for u in lu_units + ru_units
                 if clean_code(u["code"]) not in Q_EXCLUDE
-                and (a := _unit_age_rank(u["code"])) is not None]
+                and (a := _age_rank_of(u)) is not None]
         if ages and max(ages) >= 1300:
             exp, cname, rpair = {"02"}, "第四系界线", "(第四系通用规则)"
         elif "侵入" in all_layers:
             int_ages = [a for u in lu_units + ru_units if u["layer"] == "侵入"
-                        and (a := _unit_age_rank(u["code"])) is not None]
+                        and (a := _age_rank_of(u)) is not None]
             oth_ages = [a for u in lu_units + ru_units if u["layer"] != "侵入"
-                        and (a := _unit_age_rank(u["code"])) is not None]
+                        and (a := _age_rank_of(u)) is not None]
             cover = int_ages and oth_ages and max(oth_ages) > max(int_ages)
             exp = {"04"} if cover else {"11"}
             cname = "角度不整合" if cover else "侵入接触"
@@ -644,9 +765,9 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             # 乌苏群|西域组=不整合）；此处仅对先验未覆盖的组合兜底：
             # 西域组上覆于更老地层 → 角度不整合(04)，年轻侧=西域组。
             xy = [a for u in lu_units + ru_units if clean_code(u["code"]) == "Qp1X"
-                  and (a := _unit_age_rank(u["code"])) is not None]
+                  and (a := _age_rank_of(u)) is not None]
             oth = [a for u in lu_units + ru_units if clean_code(u["code"]) != "Qp1X"
-                   and (a := _unit_age_rank(u["code"])) is not None]
+                   and (a := _age_rank_of(u)) is not None]
             if xy and oth and max(oth) < max(xy):
                 exp, cname, rpair = {"04"}, "角度不整合", "(西域组通用规则)"
             else:
@@ -676,9 +797,9 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             continue
         # 间断通则补填年轻侧（先验年轻侧通道）：age_rank 大者所在侧
         if rpair == "(间断通则)" and ages:
-            _lmax = max((a for a in (_unit_age_rank(u["code"]) for u in lu_units)
+            _lmax = max((a for a in (_age_rank_of(u) for u in lu_units)
                          if a is not None), default=None)
-            _rmax = max((a for a in (_unit_age_rank(u["code"]) for u in ru_units)
+            _rmax = max((a for a in (_age_rank_of(u) for u in ru_units)
                          if a is not None), default=None)
             if _lmax is not None and _rmax is not None and _lmax != _rmax:
                 base = {**base, "rule_younger": "", "young_side": "left" if _lmax > _rmax else "right"}
@@ -689,9 +810,9 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         if not base.get("young_side") and ages and rpair in (
                 "(第四系通用规则)", "(侵入通用规则)", "(侵入通用规则-覆盖)",
                 "(西域组通用规则)"):
-            _lmax = max((a for a in (_unit_age_rank(u["code"]) for u in lu_units)
+            _lmax = max((a for a in (_age_rank_of(u) for u in lu_units)
                          if a is not None), default=None)
-            _rmax = max((a for a in (_unit_age_rank(u["code"]) for u in ru_units)
+            _rmax = max((a for a in (_age_rank_of(u) for u in ru_units)
                          if a is not None), default=None)
             if _lmax is not None and _rmax is not None and _lmax != _rmax:
                 base = {**base, "rule_younger": "", "young_side": "left" if _lmax > _rmax else "right"}
