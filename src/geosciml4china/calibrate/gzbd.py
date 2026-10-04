@@ -524,39 +524,35 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             continue
         if gz == "43":
             # 岩性过渡渐变（2026-09-24 用户核定）：岩浆岩间的一种接触界线，
-            # 两侧岩浆岩时代、岩性要求一致——逐侧校验（岩浆岩层 + 希腊岩性码同
-            # + 时代码同）；违反者登记分歧交裁定（永不自动改码）
-            # 2026-10-04 侵入岩本身属性通道（用户裁定「优先尝试从侵入岩
-            # 本身属性读取岩性信息」）：任一侧希腊解析失败（г/∑ 误录
-            # 变体）→ 整体走属性通道（QDUEAQ 单元类型码优先→QDUECD
-            # 名称词→剥前缀时代后缀），不与希腊码混比（比较空间一致性
-            # ——旧逻辑把不可解析侧整侧丢弃致伪分歧）
-            _parts = {"L": [], "R": []}
-            for tag, units in (("L", lu_units), ("R", ru_units)):
-                for u in units:
+            # 两侧岩浆岩时代、岩性要求一致——逐侧校验；违反者登记分歧交
+            # 裁定（永不自动改码）。
+            # 岩性比较属性字段优先（2026-10-05 用户裁定「确定侵入岩岩性时
+            # 优先读取岩浆岩本身属性字段」）：单元 lith 槽（QDUEAQ 单元
+            # 类型码→QDUECD 名称词）直读先行，希腊字母前缀仅在其双缺时
+            # 兜底——г/∑ 误录变体不再走旁路；时代后缀=剥非 ASCII 前缀
+            # 的拉丁段（比较空间一致性，取代旧希腊后缀混比）。
+            _mags = {"L": [u for u in lu_units if u["layer"] in ("侵入", "火山")],
+                     "R": [u for u in ru_units if u["layer"] in ("侵入", "火山")]}
+
+            def _liths(us):
+                s = {u["lith"] for u in us if u.get("lith")}
+                if s:
+                    return s
+                out = set()
+                for u in us:
                     c = re.sub(r"[→↓↑]", "", u["code"])
                     m = re.match(r"([Ͱ-Ͽἀ-῿]+)(.*)$", c)
                     if m:
-                        _parts[tag].append((u["layer"], m.group(1), m.group(2)))
+                        out.add(m.group(1))
+                return out
             _ok43 = True
-            if all(_parts[t] for t in ("L", "R")):
-                if not all(p[0] in ("侵入", "火山") for p in _parts["L"] + _parts["R"]):
-                    _ok43 = False
-                elif {p[1] for p in _parts["L"]} != {p[1] for p in _parts["R"]}:
-                    _ok43 = False  # 岩性不一致
-                elif {p[2] for p in _parts["L"]} != {p[2] for p in _parts["R"]}:
-                    _ok43 = False  # 时代不一致
-            else:
-                _mags = {t: [u for u in us if u["layer"] in ("侵入", "火山")]
-                         for t, us in (("L", lu_units), ("R", ru_units))}
-                if not _mags["L"] or not _mags["R"]:
-                    _ok43 = False
-                elif {u["lith"] for u in _mags["L"]} != \
-                        {u["lith"] for u in _mags["R"]}:
-                    _ok43 = False  # 岩性不一致（QDUEAQ 优先→名称词）
-                elif {_era_suffix_of(u["code"]) for u in _mags["L"]} != \
-                        {_era_suffix_of(u["code"]) for u in _mags["R"]}:
-                    _ok43 = False  # 时代不一致
+            if not _mags["L"] or not _mags["R"]:
+                _ok43 = False
+            elif _liths(_mags["L"]) != _liths(_mags["R"]):
+                _ok43 = False  # 岩性不一致
+            elif {_era_suffix_of(u["code"]) for u in _mags["L"]} != \
+                    {_era_suffix_of(u["code"]) for u in _mags["R"]}:
+                _ok43 = False  # 时代不一致
             verdicts.append({**base,
                              "verdict": "特殊码（独立标定）" if _ok43 else
                              "分歧未裁定（43约束：两侧岩浆岩时代岩性须一致）",
@@ -567,29 +563,16 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             # 脉动接触（2026-09-24 用户核定）：岩浆岩间的一种接触界线，
             # 两侧岩浆岩要求时代一致（岩性不要求一致——不同岩性侵入体同代
             # 脉动注入）；违反者登记分歧交裁定（永不自动改码）
-            # 2026-10-04 QDUECD/QDUEAQ 字段兜底（同 43）：希腊解析失败侧
-            # 不再整侧丢弃——名称通道按剥前缀时代后缀比较（60 不要求岩性）
-            _parts = {"L": [], "R": []}
-            for tag, units in (("L", lu_units), ("R", ru_units)):
-                for u in units:
-                    c = re.sub(r"[→↓↑]", "", u["code"])
-                    m = re.match(r"([Ͱ-Ͽἀ-῿]+)(.*)$", c)
-                    if m:
-                        _parts[tag].append((u["layer"], m.group(1), m.group(2)))
+            # 2026-10-05 属性字段优先（同 43）：60 不要求岩性，时代比较
+            # 统一走剥前缀拉丁后缀（希腊后缀混比退役）
+            _mags60 = {"L": [u for u in lu_units if u["layer"] in ("侵入", "火山")],
+                       "R": [u for u in ru_units if u["layer"] in ("侵入", "火山")]}
             _ok60 = True
-            if all(_parts[t] for t in ("L", "R")):
-                if not all(p[0] in ("侵入", "火山") for p in _parts["L"] + _parts["R"]):
-                    _ok60 = False
-                elif {p[2] for p in _parts["L"]} != {p[2] for p in _parts["R"]}:
-                    _ok60 = False  # 时代不一致
-            else:
-                _mags = {t: [u for u in us if u["layer"] in ("侵入", "火山")]
-                         for t, us in (("L", lu_units), ("R", ru_units))}
-                if not _mags["L"] or not _mags["R"]:
-                    _ok60 = False
-                elif {_era_suffix_of(u["code"]) for u in _mags["L"]} != \
-                        {_era_suffix_of(u["code"]) for u in _mags["R"]}:
-                    _ok60 = False  # 时代不一致
+            if not _mags60["L"] or not _mags60["R"]:
+                _ok60 = False
+            elif {_era_suffix_of(u["code"]) for u in _mags60["L"]} != \
+                    {_era_suffix_of(u["code"]) for u in _mags60["R"]}:
+                _ok60 = False  # 时代不一致
             verdicts.append({**base,
                              "verdict": "特殊码（独立标定）" if _ok60 else
                              "分歧未裁定（60约束：两侧岩浆岩时代须一致）",

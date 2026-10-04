@@ -307,6 +307,17 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         code = row["gzeeb_eff"]
         row_map = mapping.gzeeb_row(code)
         obs = row_map.get("obs") or mapping.evidence_observation(row["evidence_class"])
+        # movementSense 回退通道（2026-10-05 契约审计修复 P1-1）：钩对
+        # 旋向优先（区间语义）；无钩段回退 GZELD 运动学语义（L1 内化
+        # gzeld_sem——注册表/用户编辑/全局先验/推导链产物）：
+        # 右行→dextral、左行→sinistral；未记录/不明→空（不伪出站）
+        _slip = slip_by_seg.get(seg_idx, "")
+        if not _slip:
+            _gzsem = str(row.get("gzeld_sem") or "")
+            if _gzsem.startswith("右行"):
+                _slip = "dextral"
+            elif _gzsem.startswith("左行"):
+                _slip = "sinistral"
         # faultType 语义驱动（2026-10-04 用户裁定「类别编码值拥有最高
         # 优先级」）：全继承后 structural_type≡码义——规范性 faultType 槽
         # 直接消费段级标定语义；图幅级映射文件在场时（正典双幅
@@ -399,7 +410,7 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
                 gzehg=row.get("GZEHG") or "",
                 gzece=gzece,
                 attitude_note="；".join(notes),
-                slip_sense=slip_by_seg.get(seg_idx, ""),
+                slip_sense=_slip,
                 slip_span=slip_span_by_seg.get(seg_idx, ""),
                 planes=filled,
                 geometry=row.geometry.__geo_interface__,

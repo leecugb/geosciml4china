@@ -194,8 +194,9 @@ def _independent_identify(key, root, lat):
     fl = gpd.read_file(root + r"/geojson/L1/faults.geojson") \
         .sort_values("_src_id").reset_index(drop=True)
     prof = get_profile(key)
-    ent = pd.read_csv(root + f"/fault_entities_{key}.csv" if key != "kurgan"
-                      else root + r"/fault_entities.csv", dtype=str)
+    ent = pd.read_csv(root + "/" + (get_profile(key).entities_csv
+                                or "fault_entities.csv"),
+                        dtype=str)  # profile 通道（2026-10-05 测试债修复）
     assoc = pd.read_csv(root + f"\\fault_aux_{key}.csv", dtype=str)
     lon_m = 111320.0 * math.cos(math.radians(lat))
     lat_m = 111320.0
@@ -285,8 +286,9 @@ def test_hook_identification(key, root, lat):
     # ⑤ 区间段号核验（段弧位范围与区间重叠）
     fl = gpd.read_file(root + r"/geojson/L1/faults.geojson") \
         .sort_values("_src_id").reset_index(drop=True)
-    ent = pd.read_csv(root + f"/fault_entities_{key}.csv" if key != "kurgan"
-                      else root + r"/fault_entities.csv", dtype=str)
+    ent = pd.read_csv(root + "/" + (get_profile(key).entities_csv
+                                or "fault_entities.csv"),
+                        dtype=str)  # profile 通道（2026-10-05 测试债修复）
     chains = _chain_fold(fl, ent)
     lon_m = 111320.0 * math.cos(math.radians(lat))
     lat_m = 111320.0
@@ -365,8 +367,9 @@ def test_hook_interval_entity_scoping(key, root, lat):
     同实体非覆盖段零承载——「表征某段而非整个实体」。"""
     hooks = pd.read_csv(root + rf"/_fault_hooks_{key}.csv", dtype=str)
     gz = pd.read_csv(root + rf"/_gzeeb_calibration_{key}.csv", dtype=str)
-    ent = pd.read_csv(root + f"/fault_entities_{key}.csv" if key != "kurgan"
-                      else root + r"/fault_entities.csv", dtype=str)
+    ent = pd.read_csv(root + "/" + (get_profile(key).entities_csv
+                                or "fault_entities.csv"),
+                        dtype=str)  # profile 通道（2026-10-05 测试债修复）
     seg2fid = dict(zip(ent["seg_idx"].astype(int), ent["fault_id"].astype(str)))
     n_pairs = 0
     # 实体覆盖并集（多对实体：F002 两对各覆盖一段——证据=全部对的并集）

@@ -162,16 +162,21 @@ EXPECT = {
     # 逆 22/正 5（带外组禁止成组严格化后，2026-09-29）；配对 21；
     # 六类画像随实体链版更新。
     "aoyiyayilake": dict(
-        units=58, poly_mfs=543, contacts=734, contact_nil=0, sds=341,
-        sds_nil_faulttype=73, planes=61, polarity=13, folds=60, fold_nil=0,
+        units=58, poly_mfs=543, contacts=734, contact_nil=72, sds=341,
+        sds_nil_faulttype=0, planes=61, polarity=12, folds=60, fold_nil=0,
         members=3744, compositions=0, six_mode=(27, 6, 2, 0, 9, 17),
         orphan_tolerance=True,
-        banners=36, dv_blocks=65,  # 2026-10-02 gzeeb 现版重跑实测（Qp1X/注释通道裁定后）
-        # 2026-10-02 slip_sense 接线后画像：a-b→a-b-a 升级（臂隙兜底）+
-        # 走滑旋向块 sinistral 3/dextral 1（空间识别钩对出站）
+        banners=37, dv_blocks=76,  # 2026-10-04 全管线实测（GZELD 全局先验+
+        # 16=走滑断层注册表+走滑强档票+QDUECD 兜底通道裁决后重基线）：
+        # contact_nil 87→72（QDUECD 兜底 14 段修复）、sds_nil 73→0（8 码
+        # 全部获语义）、banners 33→37（16/18 码义全继承登记出站）、
+        # relations 0→47；polarity 13→12（idx333 编码错误待裁定，裁定后
+        # 可能回 13）
+        # 2026-10-05 movementSense 回退通道接线（契约审计 P1-1）：dv 65→76、
+        # dextral 1→5（16 码 4 段回退）、sinistral 3→10（18 码 7 段回退）
         ms_dist={"reverse": 29, "normal": 6, "no_movement_sense": 26,
-                 "sinistral": 3, "dextral": 1},
-        hwd=61, relations=0, measure_points=61, char_dist_b=209.6,
+                 "sinistral": 10, "dextral": 5},
+        hwd=61, relations=47, measure_points=61, char_dist_b=209.6,
         lite_counts={"geologic_unit_view": 543, "contact_view": 734,
                      "shear_displacement_structure_view": 341,
                      "site_observation_view": 406,

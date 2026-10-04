@@ -263,6 +263,28 @@ _INTR_PREFIX = [
     ("q", ("dike_quartz", None, None)),
     ("γ", ("t6", "custom", "gamma")),
 ]
+# 侵入岩岩性直读通道（2026-10-05 用户裁定「确定侵入岩岩性时优先读取
+# 岩浆岩本身属性字段」）：QDUECD 单元名称岩性词 → (色表, 花纹族, 花纹码)，
+# 优先于希腊字母前缀解析（г=γ 西里尔误录、∑ 数学符变体实证——前缀
+# 解析不可靠；长词优先防「花岗岩」截断「花岗闪长岩/二长花岗岩」）。
+# 与裁定层一致：υC→辉长岩花纹 nD3、∑O-D2→橄榄岩花纹 sS（奥幅裁定在案）。
+_INTR_NAME = [
+    ("斜长花岗岩", ("t6", "custom", "gammaO")),   # γο 专属瓦片——库尔干
+                                                  # γοC↓2 名称直读回归闸
+    ("二长花岗岩", ("t6", "t15_intrusive", "etagJ1")),
+    ("花岗闪长岩", ("t6", "t15_intrusive", "gdT2")),
+    ("花岗斑岩", ("t6", "custom", "gammaPi")),
+    ("花岗岩", ("t6", "custom", "gamma")),
+    ("石英闪长岩", ("t9", "custom", "deltaO")),
+    ("闪长岩", ("t9", "t15_intrusive", "dK2")),
+    ("辉长岩", ("t10", "t15_intrusive", "nD3")),
+    ("辉绿岩", ("dike_basic", None, None)),
+    ("超基性岩", ("t11", "t15_intrusive", "sS")),
+    ("橄榄岩", ("t11", "t15_intrusive", "sS")),
+]
+# 脉岩名称守卫：名称为岩脉/脉岩者不赋侵入体花纹（与前缀通道 dike_* 同
+# 口径——库尔干 →δ 闪长岩岩脉 / →υ 辉长岩岩脉 案）
+_DIKE_NAME_KW = ("岩脉", "脉岩")
 # 时代不明脉岩：色表类 → 表14 类型名
 _DIKE_BY_CLASS = {"t6": "酸性岩脉", "t7": "酸性岩脉", "t9": "中性岩脉",
                   "t10": "基性岩脉", "t11": "超基性岩脉", "t12": "碱性岩脉",
@@ -365,6 +387,72 @@ def _quat_spec(norm: str, lib: Lib) -> StyleSpec:
     return spec
 
 
+def _intr_era_color(table: str, suffix: str, lib: Lib) -> tuple | None:
+    """时代后缀→(rgb, src)。t6 先世色、次前寒武 t7、后代基色；其余按代群。
+    跨时代后缀（C-P/O-D2/C-C——г/∑ 变体剥前缀后形态）整段未命中时取
+    年轻段（末段）兜底；整段命中保持原解析不变（库尔干正典中性）。"""
+    s = "Cm" if suffix == "∈" else suffix
+    if table == "t6":
+        if s in lib.t6_ep:
+            return list(lib.t6_ep[s]), f"表6 {suffix}世"
+        if s in lib.t7_ep:
+            return list(lib.t7_ep[s]), f"表7 {suffix}纪"
+        if s in lib.t6_base:
+            return list(lib.t6_base[s]), f"表6 {suffix}代基色"
+        if "-" in s:
+            y = s.split("-")[-1]
+            for pool, tag in ((lib.t6_ep, "世"), (lib.t7_ep, "纪"),
+                              (lib.t6_base, "代基色")):
+                if y in pool:
+                    return list(pool[y]), f"表6 {y}{tag}（跨时代后缀 {suffix} 取年轻段）"
+        return None
+    grp = None
+    for era, g in _ERA_GROUP.items():
+        if g and s.startswith(era):
+            grp = g
+            break
+    tbl = {"t9": lib.t9, "t10": lib.t10, "t11": lib.t11,
+           "t12": lib.t12, "t13": lib.t13}[table]
+    if grp in tbl:
+        tname = {"t9": "表9 中性", "t10": "表10 基性", "t11": "表11 超基性",
+                 "t12": "表12 碱性", "t13": "表13 煌斑岩"}[table]
+        return list(tbl[grp]), f"{tname} {grp}"
+    return None
+
+
+def _intr_name_spec(name: str, norm: str, lib: Lib) -> StyleSpec | None:
+    """岩性直读通道（2026-10-05 裁定）：QDUECD 名称岩性词 → 色表/花纹，
+    时代后缀=剥非 ASCII 前缀后的拉丁段（跨时代取年轻段兜底）。
+    名称无可判岩性词 → None（落希腊前缀通道）。"""
+    hit = None
+    for kw, tup in _INTR_NAME:
+        if kw in str(name or ""):
+            hit = (kw, tup)
+            break
+    if hit is None:
+        return None
+    table, fam, code = hit[1]
+    if any(k in str(name) for k in _DIKE_NAME_KW):
+        fam, code = None, None  # 脉岩不赋侵入体花纹（前缀通道 dike_* 同口径）
+    suffix = re.sub(r"[^A-Za-z0-9\-]+", "", norm)
+    spec = StyleSpec(cls="intrusive")
+    if not suffix:  # 时代不明 → 表14 脉岩（与前缀通道同口径）
+        tname = _DIKE_BY_CLASS[table]
+        spec.rgb = list(lib.t14[tname])
+        spec.src = f"表14 {tname}（时代不明；名称直读 {hit[0]}）"
+    else:
+        table2 = {"dike_basic": "t10", "dike_acid": "t6",
+                  "dike_alkaline": "t12"}.get(table, table)
+        got = _intr_era_color(table2, suffix, lib)
+        if got is None:
+            spec.pending = f"时代后缀 {suffix!r} 未命中（名称直读 {hit[0]}）"
+            return spec
+        spec.rgb, spec.src = got[0], f"{got[1]}；名称直读 {hit[0]}"
+    if fam and code:
+        spec.pattern_ref = {"family": fam, "code": code}
+    return spec
+
+
 def _intr_spec(norm: str, lib: Lib) -> StyleSpec | None:
     for prefix, (table, fam, code) in _INTR_PREFIX:
         if not norm.startswith(prefix):
@@ -382,33 +470,11 @@ def _intr_spec(norm: str, lib: Lib) -> StyleSpec | None:
         # （裸码走表14）或 overrides 短路，本分支此前未被 exercised。
         table = {"dike_basic": "t10", "dike_acid": "t6",
                  "dike_alkaline": "t12"}.get(table, table)
-        # 时代后缀：t6 先世色、次前寒武 t7、后代基色；其余按代群
-        s = "Cm" if suffix == "∈" else suffix
-        if table == "t6":
-            if s in lib.t6_ep:
-                spec.rgb, spec.src = list(lib.t6_ep[s]), f"表6 {suffix}世"
-            elif s in lib.t7_ep:
-                spec.rgb, spec.src = list(lib.t7_ep[s]), f"表7 {suffix}纪"
-            elif s in lib.t6_base:
-                spec.rgb, spec.src = list(lib.t6_base[s]), f"表6 {suffix}代基色"
-            else:
-                spec.pending = f"时代后缀 {suffix!r} 未命中表6/表7"
-                return spec
-        else:
-            grp = None
-            for era, g in _ERA_GROUP.items():
-                if g and s.startswith(era):
-                    grp = g
-                    break
-            tbl = {"t9": lib.t9, "t10": lib.t10, "t11": lib.t11,
-                   "t12": lib.t12, "t13": lib.t13}[table]
-            if grp in tbl:
-                tname = {"t9": "表9 中性", "t10": "表10 基性", "t11": "表11 超基性",
-                         "t12": "表12 碱性", "t13": "表13 煌斑岩"}[table]
-                spec.rgb, spec.src = list(tbl[grp]), f"{tname} {grp}"
-            else:
-                spec.pending = f"时代后缀 {suffix!r} 未命中{table}代群"
-                return spec
+        got = _intr_era_color(table, suffix, lib)
+        if got is None:
+            spec.pending = f"时代后缀 {suffix!r} 未命中"
+            return spec
+        spec.rgb, spec.src = got
         if fam and code:
             spec.pattern_ref = {"family": fam, "code": code}
         return spec
@@ -517,7 +583,12 @@ def generate(sheet: str, lib: Lib | None = None,
         if nm.startswith("Q"):
             spec = _quat_spec(nm, lib)
         else:
-            intr = _intr_spec(nm, lib) if u.role == "侵入岩" else None
+            # 岩性直读优先（2026-10-05 用户裁定「确定侵入岩岩性时优先
+            # 读取岩浆岩本身属性字段」）：名称岩性词通道先行，
+            # 希腊字母前缀解析兜底（г/∑ 误录变体不再落占位灰）
+            intr = None
+            if u.role == "侵入岩":
+                intr = _intr_name_spec(u.name, nm, lib) or _intr_spec(nm, lib)
             if intr is not None:
                 spec = intr
             elif u.role == "变质岩":

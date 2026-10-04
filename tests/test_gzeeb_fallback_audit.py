@@ -72,8 +72,8 @@ def _independent_fallback(key, root, lat):
     lon_m = 111320.0 * math.cos(math.radians(lat))
     fl = gpd.read_file(root + r"\geojson\L1\faults.geojson") \
         .sort_values("_src_id").reset_index(drop=True)
-    ent = pd.read_csv(root + (r"\fault_entities.csv" if key == "kurgan"
-                              else rf"\fault_entities_{key}.csv"), dtype=str)
+    ent = pd.read_csv(Path(root) / (prof.entities_csv or "fault_entities.csv"),
+                      dtype=str)  # profile 通道（2026-10-05 测试债修复）
     ent_first = ent.groupby("fault_id").first()
     gsem, gzeld_sem = _load_reg(root, key)
     # 覆盖联合（priors 参数化）

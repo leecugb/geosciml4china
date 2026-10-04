@@ -40,6 +40,24 @@ def load_gzeeb_semantics(sheet_root, sheet_key: str):
     return gsem, gzeld_sem
 
 
+def load_gzeld_global_priors() -> dict:
+    """GZELD 运动学全局先验（2026-10-04 用户裁定：101=压性、102=张性、
+    103=右行走滑、104=左行走滑——全局默认层）。返回 {码值: 语义}；
+    图幅注册表裁定仍优先于本层，统计推导让位于本层。"""
+    from ..data import data_path
+    try:
+        j = json.load(open(data_path("gzeld_codes.json"), encoding="utf-8"))
+    except Exception:
+        return {}
+    out = {}
+    for code, entry in (j.get("gzeld_semantics") or {}).items():
+        if isinstance(entry, dict):
+            out[str(code)] = entry.get("semantic", entry.get("meaning", ""))
+        else:
+            out[str(code)] = str(entry)
+    return out
+
+
 def reverse_codes(gsem: dict, norm_sem) -> set:
     """逆断层期望码集（aux 互验基准，注册表驱动）：语义 ∈ {逆断层,
     推覆体边界} 的码——推覆=逆冲分量，aux 组期望逆判。

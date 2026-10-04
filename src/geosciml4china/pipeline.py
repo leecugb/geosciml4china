@@ -4,18 +4,20 @@
 阶段序（管线纪律，逐段失败即中止；与用户对齐链逐字对应）：
   ⓪ preflight     MapGIS 文件完整性检查（11 文件契约，CORE 缺即中止）
   ① convert       MapGIS 原生 → geojson/L0（pymapgis.semantics.convert_sheet + validate_l0）
-  ② calibrate     自支持地质语义判别解析（geosciml4china.calibrate 七域全包原生：
-                   gzbd（界线）→ entities（断层归组）→ auxchain（辅助点判别）
-                   → 写回 → gzeeb（断层三维）→ attitudes（产状）→ fossils（化石）
-  ②b materialize  L1 物化（语义标定写回 geojson/L1）
+  ② calibrate     自支持地质语义判别解析（geosciml4china.calibrate 八域全包原生：
+                   gzbd（界线）→ entities（断层归组）→ auxchain（辅助点判别）→ 写回
+                   → fault_contact_activity（断裂接触审计）→ gzeeb（断层三维）
+                   → attitudes（产状）→ fossils（化石）→ folds（褶皱）
+                   → inferred_faults（推测断层覆盖度核定））
+  ②b materialize  L1 物化（两相：基线 L1 供实体/辅助链消费 → 终态 L1 语义写回）
+  ②c gap_report   缺口报告（文字+单要素配图，专家裁决工作台；两路径汇聚点）
   ③ stylegen      语义→样式（lite 优先；lite 缺失时 --from-wp 引导——新幅首接）
   ④ build         L1 → GML + Lite + pending（含断层样式生成：其语义源=lite SDS 视图）
-  ⑤ verify        XSD + 业务断言
+  ⑤ verify        XSD + 业务断言（A01-A27 + C1-C7 镜像）
   ⑥ render        渲染 + L1 镜像核验（叠加层生产默认）
 
 CLI: g4c pipeline --sheet <key> [--skip-convert] [--skip-calibrate-stages]
-     [--skip-render] [--check-only（止于 verify）] [--dpi N]
-（登记缺口：推测断层标定 _calibrate_inferred_faults 未入包——挂账）
+     [--skip-render] [--check-only（止于 verify）] [--dpi N] [--no-pattern]
 """
 from __future__ import annotations
 
