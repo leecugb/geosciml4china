@@ -23,4 +23,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e . pytest
       - name: Smoke (import / package data / registry / config contract)
-        run: pytest tests/ -q
+        shell: bash
+        run: |
+          pytest tests/ -q > smoke.log 2>&1 || { \
+            grep -E "^(FAILED|ERROR)" smoke.log | \
+              sed 's/^/::error::/' || true; \
+            tail -40 smoke.log; \
+            exit 1; }
+          tail -5 smoke.log
