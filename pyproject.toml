@@ -42,8 +42,8 @@ where = ["src"]
 [tool.setuptools.package-data]
 geosciml4china = [
     "data/geosciml_xsd/**/*",
-    "data/cgi_vocabs_current/*.json",
-    "data/dzt0179_patterns/*.svg",
-    "data/dzt0179_patterns/*.json",
+    "data/cgi_vocabs_current/*",   # .ttl/.json 词表缓存全量
+    "data/dzt0179_patterns/*",    # .svg/.json/无扩展 t05_* 瓦片全量
     "data/*.json",
+    "data/*.csv",
 ]
