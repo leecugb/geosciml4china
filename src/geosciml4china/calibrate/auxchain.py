@@ -273,7 +273,12 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     if prof.anomaly_csv:
         _anom_p = sh.root / prof.anomaly_csv
         if _anom_p.exists():
-            _adf = pd.read_csv(_anom_p, dtype=str)
+            # 空表/缺列容忍（2026-10-05 x1 全新项目案）：首跑空异常册为
+            # 无表头 5 字节文件——read_csv 崩；容忍为空集
+            try:
+                _adf = pd.read_csv(_anom_p, dtype=str)
+            except Exception:
+                _adf = pd.DataFrame()
             if "aux_idx" in _adf.columns:
                 # 2026-10-03 修复（自引用振荡案）：排除通道只认人工裁定
                 # 剔除——status=confirmed_error 列或 reason 含「裁定」；
@@ -1414,12 +1419,27 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
           f"（候选池 {len(_pool)} 点，符号佐证 {sorted(set(_hdf['sym1']) | set(_hdf['sym2'])) if len(_hdf) else '无'}）")
 
     tdf = pd.DataFrame(trip_rows)
+    # 空表表头兜底（2026-10-05 x1 全新项目案——EmptyDataError 现场）：
+    # 零三联体/零审查/零异常的裸项目写空文件，materialize 回读崩。
+    # 与 hooks 同口径：空表写表头。
+    _cols_tr = ["fault_id", "src", "a1281", "a1894", "sides_1281", "side_1894",
+                "span_m", "verdict", "form", "gzeeb_check"]
+    _cols_rev = ["aux_idx", "sub_no", "issue", "evidence", "status"]
+    _cols_an = ["aux_idx", "kind", "issue", "evidence"]
+    if not len(tdf):
+        tdf = pd.DataFrame(columns=_cols_tr)
+    _rev_df = pd.DataFrame(review)
+    if not len(_rev_df):
+        _rev_df = pd.DataFrame(columns=_cols_rev)
+    _an_df = pd.DataFrame(anomalies)
+    if not len(_an_df):
+        _an_df = pd.DataFrame(columns=_cols_an)
     tdf.to_csv(outdir / f"_fault_triplets_{sh.key}.csv", index=False, encoding="utf-8-sig")
     assoc.to_csv(outdir / f"fault_aux_{sh.key}.csv", index=False, encoding="utf-8-sig")
-    pd.DataFrame(review).to_csv(outdir / f"_fault_aux_review_{sh.key}.csv",
-                                index=False, encoding="utf-8-sig")
-    pd.DataFrame(anomalies).to_csv(outdir / f"_fault_aux_anomalies_{sh.key}.csv",
-                                   index=False, encoding="utf-8-sig")
+    _rev_df.to_csv(outdir / f"_fault_aux_review_{sh.key}.csv",
+                   index=False, encoding="utf-8-sig")
+    _an_df.to_csv(outdir / f"_fault_aux_anomalies_{sh.key}.csv",
+                  index=False, encoding="utf-8-sig")
     vc = tdf["verdict"].value_counts().to_dict() if len(tdf) else {}
     print(f"三联体: {len(tdf)} 组 {vc}")
     print(f"审查册: {len(review)} 条 / 异常册: {len(anomalies)} 条")

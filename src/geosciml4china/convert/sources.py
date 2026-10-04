@@ -196,7 +196,10 @@ def read_calibration_report() -> list:
 def read_aux_assoc() -> Dict[int, dict]:
     """fault_aux_point_association.csv -> {aux_idx: row dict (typed)}"""
     out: Dict[int, dict] = {}
-    if not config.AUX_ASSOC_CSV.exists():
+    # 2026-10-05 x3 全新项目案：图幅未配 aux_assoc_csv 时 config 值为
+    # None——优雅空返回（正典通道=fault_aux_{key}.csv 直读，本路为
+    # legacy dip 兜底）
+    if not config.AUX_ASSOC_CSV or not config.AUX_ASSOC_CSV.exists():
         return out
     with open(config.AUX_ASSOC_CSV, encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
