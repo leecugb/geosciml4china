@@ -26,14 +26,12 @@ jobs:
         shell: bash
         run: |
           if ! pytest tests/ -q > smoke.log 2>&1; then \
-            mkdir -p ci_reports; \
-            cp smoke.log "ci_reports/smoke_${{ matrix.os }}_py${{ matrix.python }}.log"; \
-            git config user.email "ci@example.com"; \
-            git config user.name "ci-bot"; \
-            git add ci_reports/ && \
-            git commit -m "ci: capture smoke failure log (${{ matrix.os }}, py${{ matrix.python }}) [skip ci]" && \
-            git push origin HEAD:main || true; \
             tail -40 smoke.log; \
+            body=$(tail -60 smoke.log | python -c "import sys,json; print(json.dumps(sys.stdin.read()))"); \
+            curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/issues" \
+              -d "{\"title\":\"ci smoke failure (${{ matrix.os }}, py${{ matrix.python }})\",\"body\":$body,\"labels\":[\"ci\"]}"; \
             exit 1; \
           fi
           tail -5 smoke.log
