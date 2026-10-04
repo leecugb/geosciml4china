@@ -174,3 +174,33 @@ def test_audit_confidence_columns(audit_out):
     # 兜底行落 conflict 带（码义待裁定）
     fb = df[df["状态"] == "特殊码兜底（一般地质界线）"]
     assert (fb["conf_band_u"] == "conflict").all()
+
+
+# ---- QDUECD 字段兜底通道（2026-10-04 用户裁定「直接从侵入岩的字段读取
+# 对应岩性」：г=γ 西里尔误录、∑ 数学符变体实证驱动）--------------------
+
+def test_qduecd_fallback_age_rank():
+    """码解析→剥非 ASCII 前缀→名称时代词逐级兜底；字母跨时代后缀取均值
+    （2026-09-15 跨亚统均值裁定同构）。"""
+    # PyPI-minimal 守卫（2026-10-04 CI 泛化：_age_rank_of 依赖完整栈
+    # pdf_writer._unit_age_rank——极简环境绑定 None）
+    pytest.importorskip("pymapgis.rendering.pdf_writer")
+    from geosciml4china.calibrate.gzbd import (_age_rank_of, _era_from_name,
+                                               _lith_from_name, _era_suffix_of)
+    # 主路径：希腊码正常解析，兜底不触发
+    assert _age_rank_of({"code": "→γC", "name": "石炭纪黑云母花岗岩"}) == 600
+    # 西里尔 г=γ 误录：剥前缀后 C-P 跨时代均值 650（非 C 基 600——
+    # 防「地层新侵入老」伪覆盖）
+    assert _age_rank_of({"code": "→гC-P", "name": "未分花岗岩"}) == 650
+    # 数学符 ∑ 变体：O-D2 均值 (300+502)/2=401（_unit_age_rank 段号
+    # 平权：D2=502 非 520）
+    assert _age_rank_of({"code": "→∑O-D↓2", "name": "超基性岩"}) == 401
+    # 无时代码：剥前缀空、名称无时代词 → None（不伪填）
+    assert _age_rank_of({"code": "→δ", "name": "闪长岩"}) is None
+    # 名称时代词兜底
+    assert _age_rank_of({"code": "→δ", "name": "石炭纪闪长岩"}) == 600
+    assert _era_from_name("泥盆奥陶纪辉绿岩") == 300  # 仅「奥陶纪」成词
+    assert _lith_from_name("石炭纪黑云母花岗岩、花岗岩") == "黑云母花岗岩"
+    assert _lith_from_name("未分花岗岩") == "花岗岩"
+    assert _era_suffix_of("→гC-P") == "C-P"
+    assert _era_suffix_of("→∑O-D↓2") == "O-D2"

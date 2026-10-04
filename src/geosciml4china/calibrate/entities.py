@@ -669,7 +669,7 @@ def calibrate_entities(sheet_key: str, out_dir=None,
             for s in e["segs"]:
                 fh.write(f"{s},F{k + 1:03d},main,{e['name']},{e['type']},"
                          f"{e['len_km']:.1f},{method},{bd.C},{bd_txt},{bd.band}\n")
-    print(f"输出: {_out(_ent_csv)} + {_out("_fault_entity_links.csv")}")
+    print(f"输出: {_out(_ent_csv)} + {_out('_fault_entity_links.csv')}")
 
 
     # ---------- aux 写回（A1 修复，2026-09-29 链阶段对称统一） ----------
