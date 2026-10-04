@@ -24,6 +24,8 @@ jobs:
           pip install -e . pytest
       - name: Smoke (import / package data / registry / config contract)
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if ! pytest tests/ -q > smoke.log 2>&1; then \
             tail -40 smoke.log; \
