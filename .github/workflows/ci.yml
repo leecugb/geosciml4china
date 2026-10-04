@@ -25,8 +25,15 @@ jobs:
       - name: Smoke (import / package data / registry / config contract)
         shell: bash
         run: |
-          pytest tests/ -q > smoke.log 2>&1 || { \
-            tail -50 smoke.log | sed 's/^/::error file=smoke.log::/' | head -50 || true; \
+          if ! pytest tests/ -q > smoke.log 2>&1; then \
+            mkdir -p ci_reports; \
+            cp smoke.log "ci_reports/smoke_${{ matrix.os }}_py${{ matrix.python }}.log"; \
+            git config user.email "ci@example.com"; \
+            git config user.name "ci-bot"; \
+            git add ci_reports/ && \
+            git commit -m "ci: capture smoke failure log (${{ matrix.os }}, py${{ matrix.python }}) [skip ci]" && \
+            git push origin HEAD:main || true; \
             tail -40 smoke.log; \
-            exit 1; }
+            exit 1; \
+          fi
           tail -5 smoke.log
