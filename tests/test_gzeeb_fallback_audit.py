@@ -58,8 +58,8 @@ def _load_reg(root, key):
             j = json.load(open(cand, encoding="utf-8"))
             return (dict(j.get("gzeeb_semantics") or j.get("codes") or {}),
                     dict(j.get("gzeld_semantics", {})))
-    j = json.load(open(r"D:\geosciml4china\src\geosciml4china\data"
-                       r"\gzeeb_codes.json", encoding="utf-8"))
+    from geosciml4china.data import data_path
+    j = json.load(open(data_path("gzeeb_codes.json"), encoding="utf-8"))
     return (dict(j.get("gzeeb_semantics") or j.get("codes") or {}),
             dict(j.get("gzeld_semantics", {})))
 

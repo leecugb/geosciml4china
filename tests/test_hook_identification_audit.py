@@ -323,8 +323,8 @@ def test_hook_identification(key, root, lat):
 def test_hook_identification_static(key, root, lat):
     """静态行证：识别路径零符号字面量依赖（符号无关泛化）。"""
     from pathlib import Path
-    src = Path(r"D:\geosciml4china\src\geosciml4china\calibrate\auxchain.py") \
-        .read_text(encoding="utf-8")
+    src = (Path(__file__).resolve().parents[1] / "src" / "geosciml4china"
+           / "calibrate" / "auxchain.py").read_text(encoding="utf-8")
     # 识别区块（走滑钩空间识别注释至 tdf 初始化）
     i0 = src.index("# 走滑钩对空间识别")
     i1 = src.index("tdf = pd.DataFrame(trip_rows)")

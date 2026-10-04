@@ -17,7 +17,7 @@ import pytest
 _pw = pytest.importorskip("pymapgis.rendering.pdf_writer")
 _unit_age_rank = _pw._unit_age_rank
 
-SRC = Path(r"D:\geosciml4china\src\geosciml4china")
+SRC = Path(__file__).resolve().parents[1] / "src" / "geosciml4china"
 
 # 2026-10-04 用户裁定：审计测试以 jwss/jwsss 为测试项目；import 期
 # skipif 标记——无数据机器（CI runner）优雅跳过
