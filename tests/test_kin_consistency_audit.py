@@ -21,8 +21,10 @@ SHEETS = [("jwss", r"D:\jwss"), ("jwsss", r"D:\jwsss"),
 
 
 def _root(key):
+    """图幅根目录；数据缺席（CI runner）→ None（调用方 skip）。"""
     if key == "aoyiyayilake":
-        return glob.glob(r"D:\J45C004001*\J45C004001\MAPGIS\JWD")[0]
+        hits = glob.glob(r"D:\J45C004001*\J45C004001\MAPGIS\JWD")
+        return hits[0] if hits else None
     return dict((k, r) for k, r in SHEETS if r)[key]
 
 
@@ -77,6 +79,8 @@ def test_consistency_production_invariant(key, _r):
     """不一致段必须已登记（矛盾保持）：_kin_consistent=False 的行 verdict
     必为标定（矛盾保留）。"""
     root = _root(key)
+    if root is None:
+        pytest.skip(f"{key} 数据缺席（CI runner）")
     p = Path(root) / f"_gzeeb_calibration_{key}.csv"
     if not p.exists():
         pytest.skip(f"{key} 无 gzeeb 标定表")
@@ -98,6 +102,8 @@ def test_movement_sense_fallback_end_to_end_aoy():
     """钩对优先 + GZELD 兜底：GML movementSense 计数 ==
     |{钩右行段} ∪ {gzeld_sem 右行 且无钩段}|（sinistral 同构）。"""
     root = _root("aoyiyayilake")
+    if root is None:
+        pytest.skip("aoy 数据缺席（CI runner）")
     gmls = glob.glob(str(Path(root) / "output/geosciml/*_geosciml_full.gml"))
     lp = Path(root) / "geojson/L1/faults.geojson"
     if not gmls or not lp.exists():
@@ -136,6 +142,8 @@ def test_movement_sense_hook_priority_jwss():
     """钩优先于 GZELD 全局先验：jwss（英吉沙副本，103 全局=右行）的 3 个
     钩段为左行——GML 中其 slip=sinistral，dextral=0。"""
     root = _root("jwss")
+    if root is None:
+        pytest.skip("jwss 数据缺席（CI runner）")
     gmls = glob.glob(str(Path(root) / "output/geosciml/*_geosciml_full.gml"))
     if not gmls:
         pytest.skip("jwss GML 缺席")

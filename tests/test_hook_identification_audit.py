@@ -331,8 +331,10 @@ def test_hook_identification_static(key, root, lat):
     block = src[i0:i1]
     for literal in ("238", "239", "1539", "1882", "1883"):
         assert literal not in block, f"识别路径含符号字面量 {literal}"
-    lib = Path(r"D:\JWD\src\pymapgis\rendering\aux_logic.py").read_text(
-        encoding="utf-8")
+    _aux_src = Path(r"D:\JWD\src\pymapgis\rendering\aux_logic.py")
+    if not _aux_src.exists():
+        pytest.skip("pymapgis 本地源不在场（CI runner）")
+    lib = _aux_src.read_text(encoding="utf-8")
     j0 = lib.index("def identify_strike_slip_hooks")
     j1 = lib.index("def chain_arc_position", j0) if "def chain_arc_position" in lib[j0:] else len(lib)
     for literal in ("238", "239", "1539"):
