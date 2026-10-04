@@ -15,7 +15,7 @@ import ast
 import inspect
 from pathlib import Path
 
-SRC = Path(r"D:\geosciml4china\src\geosciml4china")
+SRC = Path(__file__).resolve().parents[1] / "src" / "geosciml4china"
 
 
 def _func_src(module, name):

@@ -156,7 +156,7 @@ def test_movement_sense_hook_priority_jwss():
 
 # ---------- ⑤ 源码漂移闸（2026-10-05 裁定链守卫） ----------
 
-_SRC = Path(r"D:\geosciml4china\src\geosciml4china")
+_SRC = Path(__file__).resolve().parents[1] / "src" / "geosciml4china"
 
 
 def test_drift_gzeld_user_edit_priority():

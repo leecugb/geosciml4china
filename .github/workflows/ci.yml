@@ -7,6 +7,9 @@ on:
 
 jobs:
   smoke:
+    # 失败时向 issues 上报需要写权限（403 修复：GITHUB_TOKEN 缺 issues:write）
+    permissions:
+      issues: write
     strategy:
       fail-fast: false
       matrix:
