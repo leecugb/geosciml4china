@@ -110,6 +110,14 @@ EXPECT = {
     "复合断层": dict(),
 }
 
+# 应力体制映射（2026-10-03 用户裁定）：逆断层/推覆体界线→压性；
+# 正断层→张性；走滑断层→剪切（左型→左行、右型→右行——
+# 左/右行为剪切体制的旋向细分；复合断层含走滑分量归剪切）
+_STRUCT_TO_KIN = {"逆断层": "压性", "推覆体边界": "压性",
+                  "正断层": "张性",
+                  "左型走滑断层": "左行", "右型走滑断层": "右行",
+                  "走滑断层": "剪切", "复合断层": "剪切"}
+
 
 def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     """执行 GZEEB 断层三维标定。out_dir 缺省=图幅 root。"""
@@ -147,6 +155,40 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                   sh.root / "data" / "gzeeb_codes.json"]
     gsem, gzeld_sem = load_gzeeb_semantics(sh.root, sh.key)
     _act_codes = activity_codes(gsem, norm_sem)
+    # 编码-地质语义映射表用户修改装载（2026-10-04 用户裁定：映射表允许
+    # 用户修改、支持修改后再转化）——上一轮映射表的 user_semantic/
+    # user_note 列在此装载并跨轮保留；消费优先级：JSON 注册表 >
+    # CSV user_semantic > 签名 > MLE（注册表码与 user_semantic 并存时
+    # 注册表优先并告警——建议将定稿修改迁入注册表固化）
+    _user_sem, _user_kin = {}, {}
+    _map_note, _kin_note = {}, {}
+    _map_p = sh.root / f"code_semantics_map_{sheet}.csv"
+    if _map_p.exists():
+        for _, _mr in pd.read_csv(_map_p, dtype=str).iterrows():
+            _c0 = str(_mr.get("GZEEB") or "").strip()
+            _u0 = str(_mr.get("user_semantic") or "").strip()
+            if _c0 and _u0 and _u0 not in ("nan", "None"):
+                _user_sem[_c0] = norm_sem(_u0)
+            _n0 = str(_mr.get("user_note") or "").strip()
+            if _c0 and _n0 and _n0 not in ("nan", "None"):
+                _map_note[_c0] = _n0
+    _kin_map_p = sh.root / f"gzeld_semantics_map_{sheet}.csv"
+    if _kin_map_p.exists():
+        for _, _kr in pd.read_csv(_kin_map_p, dtype=str).iterrows():
+            _c0 = str(_kr.get("GZELD") or "").strip()
+            _u0 = str(_kr.get("user_semantic") or "").strip()
+            if _c0 and _u0 and _u0 not in ("nan", "None"):
+                _user_kin[_c0] = _u0
+            _n0 = str(_kr.get("user_note") or "").strip()
+            if _c0 and _n0 and _n0 not in ("nan", "None"):
+                _kin_note[_c0] = _n0
+    if _user_sem or _user_kin:
+        print(f"   映射表用户修改载入: GZEEB {len(_user_sem)} 码 / "
+              f"GZELD {len(_user_kin)} 码")
+        _clash = sorted(set(_user_sem) & set(gsem))
+        if _clash:
+            print(f"   ⚠ user_semantic 与注册表并存（注册表优先）: "
+                  f"{_clash}——建议迁入注册表固化或清空 user_semantic")
 
     # 覆盖库（三维分载，adjudicated+expect 防漂移）
     ov = {}
@@ -262,6 +304,11 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             p = coords[j] * (1 - t) + coords[j + 1] * t
             tg = coords[j + 1] - coords[j]
             nm = _np.array([-tg[1], tg[0]])
+            # 法向归一化（同 _hw_fw_ranks 修复——偏移恒=probe）
+            _nml = float(_np.hypot(nm[0], nm[1]))
+            if _nml < 1e-12:
+                continue
+            nm = nm / _nml
             for sgn, acc in ((1, left), (-1, right)):
                 q = Point(p[0] + sgn * nm[0] * probe,
                           p[1] + sgn * nm[1] * probe)
@@ -295,6 +342,13 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             p = coords[j] * (1 - t) + coords[j + 1] * t
             tg = coords[j + 1] - coords[j]
             nm = _np.array([-tg[1], tg[0]])
+            # 法向归一化（2026-10-03 F090.1 幻影老盖新案修复：原未归一
+            # 致探针偏移=段长×probe（58–621m 段→5.8–62km 幻影偏移，
+            # 探针落数公里外面元产幻影老盖新）；归一后偏移恒=probe
+            _nml = float(_np.hypot(nm[0], nm[1]))
+            if _nml < 1e-12:
+                continue
+            nm = nm / _nml
             sgn_hw = 1 if (dx * nm[0] + dy * nm[1]) > 0 else -1
             for sgn, acc in ((sgn_hw, hw), (-sgn_hw, fw)):
                 q = Point(p[0] + sgn * nm[0] * probe,
@@ -363,6 +417,9 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
               f"（全段无实测倾角+真覆盖段≥2）")
 
     rows, conflicts = [], []
+    _kin_defer = []  # 运动学期望核对推迟队列（(rows 内序号, GZELD 码, 期望)）
+    _n_ev0 = {}  # 投票时刻证据数（kin 后置重评基准——不计后置注记）
+    _newold = {}  # 推覆分支两侧 rank（新盖老违反后置核对的原始值，idx→(ah,af)）
     _unreg = {}  # 码义未注册聚合（2026-10-01 泛化缺口修复）：eff 码 → [段]
     _fallback_rows = []  # 一般断层兜底档案（2026-10-02 用户裁定）
     _mle_raw = defaultdict(lambda: defaultdict(int))  # 归位前 MLE 语义分布
@@ -669,26 +726,23 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         if _sig_hit:
             checks.append("推测断层签名（未注册码：全段无实测倾角+覆盖支撑≥2段）")
         if exp.get("gzeld_kin"):
-            # 运动学语义期望（压性/张性/左行/右行），按本幅 gzeld 码义注册表比对
-            kin_ok = str(gzeld_sem_now).startswith(exp["gzeld_kin"])
-            checks.append(f"GZELD={gzeld}({gzeld_sem_now})")
-            if not kin_ok:
-                viol.append(f"GZELD={gzeld}({gzeld_sem_now}) 不符期望"
-                            f" {exp['gzeld_kin']}")
+            # 运动学期望核对后置（2026-10-03 用户裁定：GZEEB 与 GZELD 具有
+            # 成因联系——GZEEB 标定后，GZELD 由 GZEEB×GZELD 统计关系推导
+            # 标定；期望核对用「注册 ∪ 推导」语义在 GZEEB 定稿后统一执行，
+            # 见后处理 _gzeld_derive 段）
+            _kin_defer.append((len(rows), str(gzeld), str(exp["gzeld_kin"])))
         if exp.get("dip") and dip is not None and dip > 0:
             lo, hi = exp["dip"]
             checks.append(f"dip={dip:.0f}°")
-            if not (lo <= dip <= hi):
-                viol.append(f"dip={dip:.0f}° 超期望 [{lo},{hi}]°")
+            # 违反登记后置（2026-10-04 用户裁定：类别编码值拥有最高优先级
+            # ——期望核对对**继承后终态语义**统一执行；一般断层（断层泛称）
+            # 兼容所有矛盾信息，循环内只录证据不登记违反，见继承后
+            # 「期望核对后置」段）
         elif exp.get("dip") and structural_type == "推测断层":
             pass
         # aux 三元组正逆
         if exp.get("aux") and auxv:
             checks.append(f"aux={auxv}")
-            if auxv == "混合判别（交检核）":
-                viol.append("aux=混合判别（交检核）")
-            elif auxv != exp["aux"]:
-                viol.append(f"aux={auxv} 不符期望 {exp['aux']}")
         # aux 证据强度注记（组合组数：多组互证强于单组；反演标定分级）
         _ntr = seg2ntr.get(int(row.get("_src_id", idx)), "")
         if auxv and _ntr and _ntr not in ("nan", "None", "0"):
@@ -705,11 +759,9 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             checks.append(f"钩旋向 z={_z:.0f}（{_sense}，符号 "
                           f"{_hr['sym1']}/{_hr['sym2']}）")
             if exp.get("gzeld_kin") in ("左行", "右行"):
-                if _sense != exp["gzeld_kin"]:
-                    viol.append(f"钩旋向={_sense} 不符期望 {exp['gzeld_kin']}")
+                pass  # 钩旋向×运动学期望违反——后置核对（终态语义）
             elif "走滑" not in structural_type:
-                viol.append(f"非走滑语义（{structural_type}）携带走滑钩对"
-                            f"（{_sense}）——张力登记")
+                pass  # 非走滑语义携带钩对——后置核对（终态语义）
         # ---- 三类自支持补强（2026-09-26 用户定：复活/推覆/活动判别依据不足补强） ----
         _fm = LineString([(c[0] * LON_M, c[1] * 111320.0) for c in g.coords])
         if structural_type == "推覆体边界":
@@ -731,12 +783,11 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                     _ah = _aL if _hw_is_left else _aR
                     _af = _aR if _hw_is_left else _aL
                     if _ah and _af:
+                        _newold[int(row.get("_src_id", idx))] = (_ah, _af)
                         # age_rank 越大越年轻——老盖新（推覆）= 倾向盘 rank 更小
                         if _ah < _af:
                             checks.append(f"老盖新（倾向盘 {_ah} 老于下盘 {_af}）")
-                        elif _ah > _af:
-                            viol.append(f"新盖老（倾向盘 {_ah} 新于下盘 {_af}），"
-                                        f"不符推覆期望（或 dip_az 反置待核）")
+                        # 新盖老违反——后置核对（终态语义=推覆体边界时才成立）
                         # _ah == _af：同龄不判
                 elif _aL and _aR and abs(_aL - _aR) >= 200:
                     checks.append(f"新老差显著（{_aL}|{_aR}，倾向未定）")
@@ -817,6 +868,8 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             checks.append(f"复合断层（码面走滑×aux {_comp}，双分量）")
 
         # 判定与置信度（2026-10-01 用户裁定：MLE 标定+矛盾保留）
+        n_ev = 0  # 行初始化（防跨行残留——非 else 分支行继承上一行
+        # n_ev 致 verified 重评虚增，2026-10-03 修复）
         if _carto:
             # 制图误差（2026-10-02 用户裁定通道，seg217 案）：整体在宿主面元
             # 内部、图面切过覆盖系制图错误——剔除，不参与活动通道
@@ -841,6 +894,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             n_ev = len(checks)
             verdict = "verified" if n_ev >= 2 else "consistent"
             conf = 0.9 if n_ev >= 2 else (0.75 if n_ev == 1 else 0.6)
+        _n_ev0[idx] = n_ev
         rows.append(dict(
             idx=idx, fault_id=fid, GZEEB=gz, gzeeb_eff=eff,
             structural_type=structural_type, evidence_class=evidence_class,
@@ -937,11 +991,38 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     for r in rows:
         _final_raw[str(r.get("GZEEB") or "")][
             str(r.get("structural_type") or "断层泛称")] += 1
+    # 逆断层唯一码规则（2026-10-04 用户裁定——逻辑而非裁定）：逆断层
+    # 语义一幅一码——按最大似然原则由逆断层段数最多的码归属（05 案）；
+    # 其余码剔除逆断层候选后重估族义：正逆共存签名（压张交替=复活
+    # 样式，逆×≥3 且 正×≥3）→ 活动断层（31 案）；否则按主导性门槛
+    # 从剩余候选重取
+    _rev_claim = max(
+        (c for c in _unreg
+         if sum(_final_raw.get(c, {}).values())
+         and _final_raw[c].get("逆断层", 0)
+         / sum(_final_raw[c].values()) >= 0.25),
+        key=lambda c: _final_raw[c].get("逆断层", 0), default=None)
     _mle_sem_by_code = {}
+    _gzeld_derived = {}  # GZELD 推导语义（_unreg 块内填充；映射表出站兜底引用）
     for _code in _unreg:
         _evid = {k: v for k, v in _final_raw.get(_code, {}).items()
                  if k != "断层泛称"}
         _mle_sem_by_code[_code] = "断层泛称"
+        if not _evid:
+            continue
+        if _code == _rev_claim:
+            _mle_sem_by_code[_code] = "逆断层"
+            continue
+        # 剔除逆断层候选（唯一码已占）
+        _n_rev0 = _evid.pop("逆断层", 0)
+        _n_nor0 = _evid.get("正断层", 0)
+        # 正逆共存=压张交替=复活样式 → 活动断层（可比性门槛：双向
+        # 计数均 ≥3 且比值 ≥0.5——31 案 9:6=0.67 成立；01 案 34:3
+        # =0.09 属逆断层主导+零星反例，不构成复活签名）
+        if (_n_rev0 >= 3 and _n_nor0 >= 3
+                and min(_n_rev0, _n_nor0) / max(_n_rev0, _n_nor0) >= 0.5):
+            _mle_sem_by_code[_code] = "活动断层"
+            continue
         if _evid:
             _sem0, _n0 = max(_evid.items(), key=lambda kv: kv[1])
             # 决定性证据覆盖门槛（2026-10-03 用户裁定：01 码仅 11/131 段
@@ -949,66 +1030,156 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             # 语义覆盖族内 ≥25% 段；01 落无族义，段级证据语义如实保留）
             if _n0 / sum(_final_raw.get(_code, {}).values()) >= 0.25:
                 _mle_sem_by_code[_code] = _sem0
+    if _rev_claim:
+        print(f"   逆断层唯一码: GZEEB={_rev_claim}"
+              f"（逆断层段数 {_final_raw[_rev_claim].get('逆断层', 0)} 居首）")
+    # 签名通道码义接入全继承（2026-10-04 用户裁定「所有同编码要素继承」）：
+    # 推测断层签名码（如 jwsss 04）不经 MLE 提案（_unreg 外），其码义
+    # 同源最高优先级——弱证据段继承推测断层（泛称让位不登记）
+    for _sc in _sig_infer:
+        if _sc not in gsem and _sc not in _mle_sem_by_code:
+            _mle_sem_by_code[_sc] = "推测断层"
     # 码义逻辑判断继承（2026-10-03 用户裁定：逻辑判断码义扩展同码全段
     # 继承是既定逻辑——mle_semantic 结论回填该码全部泛称段；决定性证据
     # 段（正/逆/走滑/推覆/活动/推测）保持证据语义，不被覆盖）
+    # 码义全继承（2026-10-04 用户裁定：继承机制适用所有地质语义——
+    # 一旦完成编码值的地质语义标定，同编码值**全部要素**继承相同
+    # 地质语义，适用所有编码；段级语义让位码义，段级证据如实入
+    # 冲突册待裁定（矛盾保持，证据不因码义消失）；覆盖库裁定段不动）
+    # 类别编码值拥有最高优先级（2026-10-04 用户裁定）：继承无条件生效——
+    # **含码义=断层泛称（一般断层）的码**（取代同日「无族义即段级自立」
+    # 结论）：一般断层兼容所有矛盾信息，泛称继承段让位**不登记**冲突
+    # （证据留 checks 备查）；具体语义继承段让位仍登记「码义全继承」
+    # 段级自证留档（2026-10-04 三层逻辑定版：L1 段级标定结果在继承前
+    # 固化入列——校准 CSV 上 L1（own_structural_type）与 L2/L3
+    # （structural_type=码义继承终态）分层可读）
+    for r in rows:
+        r["own_structural_type"] = r["structural_type"]
     _n_inh = 0
     for r in rows:
-        _ms0 = _mle_sem_by_code.get(str(r.get("GZEEB") or ""))
-        if not _ms0 or _ms0 == "断层泛称":
+        # 全继承适用所有编码（2026-10-04 用户裁定）：逻辑判断码义
+        # （mle_semantic）与注册裁定码义（gsem）同源继承——注册码的
+        # 段级分歧段同样让位（31 案：F029/F011 老盖新票 > 注册先验
+        # 的推覆段归位活动断层，证据入册）
+        _gz0 = str(r.get("GZEEB") or "")
+        # 消费优先级（2026-10-04 裁定）：JSON 注册表 > CSV user_semantic >
+        # MLE 逻辑判断/签名（_mle_sem_by_code 已并入签名通道码义）
+        _ms0 = None
+        if _gz0 in gsem:
+            _e0 = gsem[_gz0]
+            _ms0 = norm_sem(_e0.get("semantic", _e0.get("meaning", "")))                 if isinstance(_e0, dict) else norm_sem(_e0)
+        if not _ms0:
+            _ms0 = _user_sem.get(_gz0)
+        if not _ms0:
+            _ms0 = _mle_sem_by_code.get(_gz0)
+        if not _ms0:
             continue
-        if r.get("structural_type") != "断层泛称":
+        if str(r.get("verdict")) == "裁定（覆盖库）":
+            continue  # 覆盖库绝对
+        _cur = r.get("structural_type")
+        if _cur == _ms0:
             continue
+        if _ms0 != "断层泛称" and _cur not in ("断层泛称", "", None):
+            # 具体码义下的段级例外让位——证据入册待裁定（泛称码让位不
+            # 登记：一般断层兼容所有矛盾信息，2026-10-04 用户裁定）
+            conflicts.append({
+                "fault_id": r["fault_id"], "segs": str(r["idx"]),
+                "issue": f"GZEEB={r['GZEEB']}（{_ms0}）码义全继承",
+                "evidence": (f"段级标定 {_cur} 让位码级语义（全继承）——"
+                             f"段级证据（{str(r.get('checks'))[:80]}）"
+                             f"如实保留待裁定"),
+                "status": "pending_review"})
         r["structural_type"] = _ms0
-        _note = f"码义逻辑判断继承（{_ms0}，mle_semantic 全段继承）"
+        if _ms0 == "断层泛称":
+            _note = "码义继承（断层泛称——一般断层兼容段级证据，2026-10-04 用户裁定）"
+        else:
+            _note = f"码义逻辑判断继承（{_ms0}，mle_semantic 全段继承）"
         if r.get("checks"):
             r["checks"] += f"；{_note}"
         else:
             r["checks"] = _note
-        if str(r.get("verdict")) == "兜底（一般断层）":
+        if str(r.get("verdict")) in ("兜底（一般断层）", "标定（矛盾保留）"):
             r["verdict"] = "consistent"
             r["confidence"] = "0.6"
         _n_inh += 1
     if _n_inh:
         print(f"   码义逻辑判断继承: {_n_inh} 段")
+    # ---- 期望核对后置（2026-10-04 用户裁定：类别编码值拥有最高优先级——
+    # 倾角域/aux 期望/钩旋向/新盖老等违反核对对**继承后终态语义**统一
+    # 执行；一般断层（断层泛称）兼容所有矛盾信息：EXPECT[断层泛称]=∅，
+    # 泛称继承段零违反登记，段级证据留 checks 备查；具体语义继承段的
+    # 违反与「码义全继承」登记合并去重——一段一条）----
+    _gate_conf = 0
+    _conf_by_seg = {c["segs"]: c for c in conflicts
+                    if str(c.get("segs") or "").isdigit()}
+    for r in rows:
+        if str(r.get("verdict")) in ("裁定（覆盖库）", "制图误差（剔除）"):
+            continue
+        _fin = str(r.get("structural_type") or "断层泛称")
+        if _fin == "断层泛称":
+            continue  # 一般断层兼容一切（2026-10-04 用户裁定）
+        _exp2 = EXPECT.get(_fin) or EXPECT.get(
+            re.sub(r"[（(].*?[)）]", "", _fin), {})
+        _v2 = []
+        try:
+            _dip2 = float(r.get("GZECE"))
+            if _dip2 <= 0:
+                _dip2 = None
+        except (TypeError, ValueError):
+            _dip2 = None
+        if _exp2.get("dip") and _dip2 is not None:
+            _lo2, _hi2 = _exp2["dip"]
+            if not (_lo2 <= _dip2 <= _hi2):
+                _v2.append(f"dip={_dip2:.0f}° 超期望 [{_lo2},{_hi2}]°")
+        _av2 = str(r.get("aux_verdict") or "").strip()
+        if _av2 in ("nan", "None"):
+            _av2 = ""
+        if _exp2.get("aux") and _av2:
+            if _av2 == "混合判别（交检核）":
+                _v2.append("aux=混合判别（交检核）")
+            elif _av2 != _exp2["aux"]:
+                _v2.append(f"aux={_av2} 不符期望 {_exp2['aux']}")
+        for _hr2 in hook_by_seg.get(int(r["idx"]), []):
+            _s2 = str(_hr2["sense"])
+            if _exp2.get("gzeld_kin") in ("左行", "右行"):
+                if _s2 != _exp2["gzeld_kin"]:
+                    _v2.append(f"钩旋向={_s2} 不符期望 {_exp2['gzeld_kin']}")
+            elif "走滑" not in _fin and "复合" not in _fin:
+                _v2.append(f"非走滑语义（{_fin}）携带走滑钩对"
+                           f"（{_s2}）——张力登记")
+        if _fin == "推覆体边界" and int(r["idx"]) in _newold:
+            _ah2, _af2 = _newold[int(r["idx"])]
+            if _ah2 > _af2:
+                _v2.append(f"新盖老（倾向盘 {_ah2} 新于下盘 {_af2}），"
+                           f"不符推覆期望（或 dip_az 反置待核）")
+        if not _v2:
+            continue
+        _ev2 = "；".join(_v2)
+        _ck = _conf_by_seg.get(str(r["idx"]))
+        if _ck is not None:
+            # 与「码义全继承」登记合并（一段一条，2026-10-04 去重裁定）
+            _ck["evidence"] += f"；{_ev2}"
+        else:
+            conflicts.append({
+                "fault_id": r["fault_id"], "segs": str(r["idx"]),
+                "issue": f"GZEEB={r['GZEEB']}({_fin}) 证据冲突",
+                "evidence": _ev2, "status": "pending_review"})
+            _conf_by_seg[str(r["idx"])] = conflicts[-1]
+        if str(r.get("verdict")) not in ("兜底（一般断层）", "标定（活动先验）",
+                                         "裁定（覆盖库）", "制图误差（剔除）"):
+            r["verdict"] = "标定（矛盾保留）"
+            r["confidence"] = "0.3"
+        _gate_conf += 1
+    if _gate_conf:
+        print(f"   期望核对后置（终态语义）: {_gate_conf} 条")
     # 无族义码全段归一般断层（2026-10-03 用户裁定：F106.1 案——「一旦完成
     # 标定相同编码值的要素继承该地质语义」，无族义码（mle_semantic=断层
     # 泛称）的段级证据一律让位码级语义：全部段=断层泛称；段级证据如实
-    # 入冲突册待裁定（证据不因码义消失）；覆盖库裁定段不动）
-    _n_unify = 0
-    _unify_segs = set()
-    for r in rows:
-        _gz0 = str(r.get("GZEEB") or "")
-        if _gz0 not in _unreg:
-            continue  # 注册码（02/03/05 等）有族义——注册继承，不适用本通道
-        if _mle_sem_by_code.get(_gz0, "断层泛称") != "断层泛称":
-            continue  # 有族义码的段级例外保持（35/37/16 与注册码同构）
-        if r.get("structural_type") in ("断层泛称", "", None):
-            continue
-        if str(r.get("verdict")) == "裁定（覆盖库）":
-            continue  # 覆盖库绝对
-        _old = r["structural_type"]
-        _unify_segs.add(int(r["idx"]))
-        r["structural_type"] = "断层泛称"
-        conflicts.append({
-            "fault_id": r["fault_id"], "segs": str(r["idx"]),
-            "issue": f"GZEEB={_gz0}（一般断层）码级语义归一",
-            "evidence": (f"段级标定 {_old} 让位码级语义（无族义，全段归"
-                         f"一般断层）——段级证据（{str(r.get('checks'))[:80]}）"
-                         f"如实保留待裁定"),
-            "status": "pending_review"})
-        if str(r.get("verdict")) not in ("兜底（一般断层）", "标定（活动先验）"):
-            r["verdict"] = "consistent"
-            r["confidence"] = "0.6"
-        _n_unify += 1
-    if _unify_segs:
-        # 段级语义让位后，投票期按旧语义登记的期望冲突一并转注（避免
-        # 「01(推覆体边界) 证据冲突」等过期条目与新语义打架）
-        conflicts[:] = [c for c in conflicts
-                        if not (str(c.get("segs")) in
-                                {str(s) for s in _unify_segs}
-                                and "证据冲突" in str(c.get("issue")))]
-        print(f"   无族义码全段归一般断层: {_n_unify} 段")
+    # 入冲突册待裁定（证据不因码义消失）；覆盖库裁定段不动）——
+    # 2026-10-04 用户裁定升级：该通道已由「类别编码值拥有最高优先级」
+    # 全继承取代（泛称继承不登记冲突——一般断层兼容所有矛盾信息；段级
+    # 证据语义不再自立）
+
     # 继承后重算最终分布（提案表 final_distribution 反映继承结果）
     _final_raw = defaultdict(lambda: defaultdict(int))
     for r in rows:
@@ -1032,6 +1203,100 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             _fb_p.unlink()
         print("   一般断层兜底: 0 段（陈旧件已清理）")
     if _unreg:
+        # ---- GZELD 码义统计推导 + 运动学期望核对（2026-10-03 用户裁定：
+        # GZEEB 与 GZELD 具有成因联系——GZEEB 结构语义标定后，GZELD 由
+        # GZEEB×GZELD 统计关系推导标定；注册表裁定 > 推导（不翻已裁定
+        # 码义）；混合族如实声明「运动性质不明」（期望核对中性）；
+        # 应力体制映射 _STRUCT_TO_KIN 见模块级定义（EXPECT 旁）----
+        _gzeld_raw = defaultdict(lambda: defaultdict(int))
+        for r in rows:
+            _gzeld_raw[str(r.get("GZELD") or "")][
+                str(r.get("structural_type") or "")] += 1
+        _gzeld_derived = {}
+        for _g0, _dist0 in _gzeld_raw.items():
+            if not _g0 or str(gzeld_sem.get(_g0, "")):
+                continue  # 注册表已裁定码义者不参与推导（不翻已裁定）
+            _kins = defaultdict(int)
+            for _st0, _n0 in _dist0.items():
+                _k0 = _STRUCT_TO_KIN.get(_st0)
+                if _k0:
+                    _kins[_k0] += _n0
+            if not _kins:
+                continue
+            _kdom, _ndom = max(_kins.items(), key=lambda kv: kv[1])
+            # 主导性门槛（与 GZEEB 族义同构 ≥25%）：达标→推导码义；
+            # 未达标→运动性质不明（混合族如实声明）
+            _gzeld_derived[_g0] = (_kdom if _ndom / sum(_dist0.values()) >= 0.25
+                                   else "运动性质不明")
+        if _gzeld_derived:
+            _drv_rows = []
+            for _g0 in sorted(_gzeld_derived):
+                _dist0 = _gzeld_raw[_g0]
+                _drv_rows.append({
+                    "GZELD": _g0, "segs": sum(_dist0.values()),
+                    "structural_distribution": "；".join(
+                        f"{k}×{v}" for k, v in sorted(_dist0.items(),
+                                                     key=lambda x: -x[1])),
+                    "derived_semantic": _gzeld_derived[_g0],
+                    "registered": str(gzeld_sem.get(_g0, ""))})
+            pd.DataFrame(_drv_rows).to_csv(
+                _outdir / f"_gzeld_code_semantics_proposal_{sheet}.csv",
+                index=False, encoding="utf-8-sig")
+            print(f"   GZELD 码义推导: "
+                  f"{ {k: v for k, v in sorted(_gzeld_derived.items())} }")
+        # 运动学期望核对执行（注册 ∪ 推导语义；不明→中性「无法核对」）
+        # 2026-10-04 用户裁定：期望取**继承后终态语义**（类别编码值最高
+        # 优先级）——终态无运动学期望（泛称兼容/推测/活动等）即中性，
+        # 循环时刻的段级期望不再沿用
+        _kin_conf = 0
+        for _ri, _g0, _exp_kin0 in _kin_defer:
+            r = rows[_ri]
+            _fin0 = str(r.get("structural_type") or "断层泛称")
+            _base0 = re.sub(r"[（(].*?[)）]", "", _fin0)
+            _exp_kin = (EXPECT.get(_fin0) or EXPECT.get(_base0) or {}
+                        ).get("gzeld_kin") or _STRUCT_TO_KIN.get(_base0, "")
+            _sem_eff = (gzeld_sem.get(_g0) or _user_kin.get(_g0)
+                        or _gzeld_derived.get(_g0)
+                        or _g0)
+            if not _exp_kin:
+                # 终态语义无运动学期望——中性注记（不核对、不计证据数）
+                r["checks"] += f"；GZELD={_g0}({_sem_eff})"
+                continue
+            _kin_match = (str(_sem_eff).startswith(_exp_kin)
+                          or (_exp_kin == "剪切"
+                              and str(_sem_eff) in ("左行", "右行", "剪切")))
+            if "不明" in str(_sem_eff) or _kin_match:
+                r["checks"] += f"；GZELD={_g0}({_sem_eff})"
+                # 核对文本计入证据数后重评 verified（投票时刻证据数
+                # n_ev0 + kin 文本——不计活动/继承等后置注记）
+                if str(r["verdict"]) == "consistent":
+                    _n_ev = _n_ev0.get(int(r["idx"]), 0) + 1
+                    if _n_ev >= 2:
+                        r["verdict"] = "verified"
+                        r["confidence"] = "0.9"
+                    elif _n_ev == 1:
+                        r["confidence"] = "0.75"
+                continue
+            _iv = f"GZELD={_g0}({_sem_eff}) 不符期望 {_exp_kin}"
+            _ck2 = _conf_by_seg.get(str(r["idx"]))
+            if _ck2 is not None:
+                # 一段一条（2026-10-04 去重裁定）：并入既有登记
+                _ck2["evidence"] += f"；{_iv}"
+            else:
+                conflicts.append({
+                    "fault_id": r["fault_id"], "segs": str(r["idx"]),
+                    "issue": f"GZEEB={r['GZEEB']}({r['structural_type']}) 证据冲突",
+                    "evidence": _iv, "status": "pending_review"})
+                _conf_by_seg[str(r["idx"])] = conflicts[-1]
+            if str(r["verdict"]) not in ("兜底（一般断层）", "标定（活动先验）",
+                                         "裁定（覆盖库）", "制图误差（剔除）"):
+                r["verdict"] = "标定（矛盾保留）"
+                r["confidence"] = "0.3"
+            r["checks"] += f"；GZELD={_g0}({_sem_eff})"
+            _kin_conf += 1
+        if _kin_conf:
+            print(f"   运动学期望冲突（推导后真实张力）: {_kin_conf} 条")
+
         # 码义提案出站（2026-10-02 用户对齐裁定：图幅编码语义映射依赖自身
         # 数据空间结构模式）——未注册码的归位前 MLE 分布 + 段数 = 本幅数据
         # 模式的语义提案；码义未注册冲突登记（2026-10-01 MLE 修订）：段级
@@ -1153,6 +1418,127 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         new_conf.to_csv(reg_p, index=False, encoding="utf-8-sig")
     print(f"断层类别标定: {len(rows)} 段 → {_out(f'_gzeeb_calibration_{sheet}.csv')}；", end="")
     print(f"冲突登记 {len(conflicts)} 条 → {_out(f'_gzeeb_conflicts_{sheet}.csv')}")
+
+    # ---- 编码-地质语义映射表出站（2026-10-04 用户裁定：给出清晰完整的
+    # 编码-地质语义映射表，允许用户修改，支持修改后再转化）——全码一表：
+    # semantic=当前生效码义（JSON 注册表>user_semantic>签名>MLE 同源
+    # 继承口径）；user_semantic/user_note 为用户修改列（本轮装载值带回，
+    # 编辑跨轮保留）。confidence=裁定分诊分级（2026-10-04 评估报告高
+    # 优先级项：强证=≥20段且有效证据≥50%；中证=≥10段或有效≥25%；
+    # 薄证=其余；有效=own 分布中剔除泛称/推测的决定性证据段）；
+    # evidence_votes=纯证据票仓（aux/data/act 三通道——剔除注册先验票，
+    # 消除先验回声/伪互证读表风险）。修改-再转化回路：编辑本表 → 重跑
+    # calibrate-gzeeb（编辑生效）→ pipeline --skip-convert
+    # --skip-calibrate-stages ----
+    _own_dist = defaultdict(lambda: defaultdict(int))
+    for r in rows:
+        _own_dist[str(r.get("GZEEB") or "")][
+            str(r.get("own_structural_type") or "断层泛称")] += 1
+
+    def _conf_of(_c0, _src0, _n0):
+        """裁定分诊分级：注册/用户/签名/无族义各标；MLE 逻辑判断按
+        证据厚度分级（own 分布有效证据占比×段数）。"""
+        if _src0 == "注册表":
+            return "裁定固化"
+        if _src0 == "用户修改":
+            return "用户修改"
+        if _src0 == "签名":
+            return "签名码型"
+        if _src0 == "MLE无族义(泛称)":
+            return "无族义(兜底)"
+        _dd = _own_dist.get(_c0, {})
+        _dec = sum(v for k, v in _dd.items()
+                   if k not in ("断层泛称", "推测断层"))
+        _ratio = _dec / _n0 if _n0 else 0.0
+        if _n0 >= 20 and _ratio >= 0.5:
+            return f"强证({_n0}段·{_ratio * 100:.0f}%有效)"
+        if _n0 >= 10 or (_n0 >= 5 and _ratio >= 0.25):
+            return f"中证({_n0}段·{_ratio * 100:.0f}%有效)"
+        return f"薄证({_n0}段·{_ratio * 100:.0f}%有效)"
+
+    def _evotes(_c0):
+        """纯证据票仓（剔除注册先验）：aux/data/act 三通道分组。"""
+        _parts = []
+        for _pre, _dd in (("aux", _aux_raw), ("data", _data_raw),
+                          ("act", _act_raw)):
+            _tt = "、".join(f"{k}×{v:g}" for k, v in sorted(
+                _dd.get(_c0, {}).items(), key=lambda x: -x[1]))
+            if _tt:
+                _parts.append(f"{_pre}：{_tt}")
+        return "；".join(_parts)
+
+    _map_rows = []
+    for _c0 in sorted({str(r.get("GZEEB") or "") for r in rows} - {""}):
+        _n0 = sum(1 for r in rows if str(r.get("GZEEB") or "") == _c0)
+        if _c0 in gsem:
+            _e0 = gsem[_c0]
+            _sem0 = norm_sem(_e0.get("semantic", _e0.get("meaning", ""))
+                             if isinstance(_e0, dict) else _e0)
+            _src0 = "注册表"
+        elif _c0 in _user_sem:
+            _sem0, _src0 = _user_sem[_c0], "用户修改"
+        elif _c0 in _sig_infer:
+            _sem0, _src0 = "推测断层", "签名"
+        else:
+            _sem0 = _mle_sem_by_code.get(_c0, "断层泛称")
+            _src0 = ("MLE逻辑判断" if _sem0 != "断层泛称"
+                     else "MLE无族义(泛称)")
+        _map_rows.append({
+            "GZEEB": _c0, "segs": _n0,
+            "semantic": _sem0, "source": _src0,
+            "confidence": _conf_of(_c0, _src0, _n0),
+            "mle_distribution": "；".join(
+                f"{k}×{v}" for k, v in sorted(
+                    _mle_raw.get(_c0, {}).items(), key=lambda x: -x[1])),
+            "final_distribution": "；".join(
+                f"{k}×{v}" for k, v in sorted(
+                    _final_raw.get(_c0, {}).items(), key=lambda x: -x[1])),
+            "evidence_votes": _evotes(_c0),
+            "user_semantic": _user_sem.get(_c0, ""),
+            "user_note": _map_note.get(_c0, "")})
+    pd.DataFrame(_map_rows).to_csv(_map_p, index=False, encoding="utf-8-sig")
+    print(f"   编码-地质语义映射表: {len(_map_rows)} 码 → {_map_p.name}")
+    _kin_rows = []
+    for _g0 in sorted({str(r.get("GZELD") or "") for r in rows} - {""}):
+        _dist0 = defaultdict(int)
+        for r in rows:
+            if str(r.get("GZELD") or "") == _g0:
+                _dist0[str(r.get("structural_type") or "")] += 1
+        if str(gzeld_sem.get(_g0, "")):
+            _ksem0, _ksrc0 = str(gzeld_sem[_g0]), "注册表"
+        elif _g0 in _user_kin:
+            _ksem0, _ksrc0 = _user_kin[_g0], "用户修改"
+        elif _gzeld_derived.get(_g0):
+            _ksem0, _ksrc0 = _gzeld_derived[_g0], "统计推导"
+        else:
+            _ksem0, _ksrc0 = "运动性质不明", "未标定(默认不明)"
+        _nt0 = sum(_dist0.values())
+        if _ksrc0 == "统计推导":
+            _share = sum(v for k, v in _dist0.items()
+                       if _STRUCT_TO_KIN.get(k) == _ksem0) / _nt0
+            _kconf = (f"强证({_nt0}段·{_share * 100:.0f}%)"
+                      if _nt0 >= 20 and _share >= 0.5 else
+                      f"中证({_nt0}段·{_share * 100:.0f}%)"
+                      if _nt0 >= 10 or (_nt0 >= 5 and _share >= 0.25) else
+                      f"薄证({_nt0}段·{_share * 100:.0f}%)")
+        elif _ksrc0 == "注册表":
+            _kconf = "裁定固化"
+        elif _ksrc0 == "用户修改":
+            _kconf = "用户修改"
+        else:
+            _kconf = "未标定"
+        _kin_rows.append({
+            "GZELD": _g0, "segs": _nt0,
+            "semantic": _ksem0, "source": _ksrc0,
+            "confidence": _kconf,
+            "structural_distribution": "；".join(
+                f"{k}×{v}" for k, v in sorted(
+                    _dist0.items(), key=lambda x: -x[1])),
+            "user_semantic": _user_kin.get(_g0, ""),
+            "user_note": _kin_note.get(_g0, "")})
+    pd.DataFrame(_kin_rows).to_csv(_kin_map_p, index=False,
+                                   encoding="utf-8-sig")
+    print(f"   GZELD 码义映射表: {len(_kin_rows)} 码 → {_kin_map_p.name}")
     print("三维分布:")
     print("  结构类型:", out["structural_type"].value_counts().to_dict())
     print("  证据级别:", out["evidence_class"].value_counts().to_dict())

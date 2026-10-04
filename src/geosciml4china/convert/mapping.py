@@ -3,9 +3,66 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Dict, Optional
 
 from . import config, vocab
+
+# 段级标定语义 → CGI faulttype 词（词表语义恒定，图幅无关——CGI 词表
+# 标准映射；2026-10-04 用户裁定「类别编码值拥有最高优先级」全继承后
+# structural_type≡码义——faultType 规范性槽直接消费段级标定语义，
+# 码查表路径仅保留给图幅级映射文件（ Kurgan/英吉沙正典的 pending/decided
+# 裁定）；CGI faulttype 无活动/边界/泛称/复活专词——归 fault，语义
+# 由 structural_type 槽与 description 承载）
+_SEMANTIC_FAULTTYPE = {
+    "断层": "fault", "断层泛称": "fault", "推测断层": "fault",
+    "活动断层": "fault", "复活断层": "fault",
+    "区域性大断裂": "fault", "边界断裂": "fault",
+    "逆断层": "reverse_fault", "推覆体边界": "thrust_fault",
+    "正断层": "normal_fault",
+    "右型走滑断层": "dextral_strike_slip_fault",
+    "左型走滑断层": "sinistral_strike_slip_fault",
+    "走滑断层": "strike_slip_fault",
+    "复合断层": "oblique_slip_fault",  # 双分量倾滑×走滑（gzeeb EXPECT 预注）
+}
+
+
+def faulttype_by_semantics(structural_type: str) -> str:
+    """段级标定语义 → CGI faulttype term（未覆盖语义兜底 fault）。"""
+    base = re.sub(r"[（(].*?[)）]", "", str(structural_type or "")).strip()
+    return _SEMANTIC_FAULTTYPE.get(base, "fault")
+
+
+def sheet_mapping_exists() -> bool:
+    """图幅级词表映射文件在场判定——在场时码查表（含 pending→nil 裁定）
+    优先于语义驱动默认（正典双幅回归契约）。"""
+    return bool(config.VOCAB_MAPPING and config.VOCAB_MAPPING.exists())
+
+
+# 段级界线终态语义 → CGI contacttype 词（2026-10-04 用户裁定：GZBD 同样
+# 需要标定——三层逻辑跨域兑现；contactType 规范性槽消费段级终态语义
+# sem_label（三层 L3 出站），码查表仅作图幅级裁定通道与未覆盖标签兜底；
+# 「先验建议→」建议型标签剥后缀取基签映射）
+_SEMANTIC_CONTACTTYPE = {
+    "整合接触": "conformable_contact",
+    "实测地质界线": "depositional_contact",
+    "第四系界线": "depositional_contact",
+    "角度不整合": "angular_unconformable_contact",
+    "角度不整合界线": "angular_unconformable_contact",
+    "平行不整合": "disconformable_contact",
+    "平行不整合界线": "disconformable_contact",
+    "不整合接触": "unconformable_contact",
+    "不整合或平行不整合": "unconformable_contact",
+    "岩性过渡渐变界线": "igneous_phase_contact",
+    "脉动接触界线": "igneous_phase_contact",
+}
+
+
+def contacttype_by_semantics(sem_label: str) -> Optional[str]:
+    """段级界线终态语义 → CGI contacttype term（未覆盖标签→None，回退
+    码查表）。"""
+    base = re.sub(r"（先验建议.*?）", "", str(sem_label or "")).strip()
+    return _SEMANTIC_CONTACTTYPE.get(base)
 
 _cache: Optional[dict] = None
 _cache_key: str = ""

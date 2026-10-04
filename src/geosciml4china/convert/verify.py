@@ -69,14 +69,40 @@ EXPECT = {
     # 裸接入基线——派生映射 pending 接触 405、gzeeb 兜底决定（nil 6）、
     # 自身登记册 27 对、关系 163（均实测）
     # jwss（英吉沙幅副本独立项目，2026-10-02 泛化测试）：码义对齐裁定后
+    # 基线——全新裸项目（2026-10-03 首跑实测画像；库尔干幅副本 J43C001002，
+    # 无注册表无裁定——未注册码 MLE 提案 pending 通道验证）
+    "jwsss": dict(
+        units=57, poly_mfs=713, contacts=1318, contact_nil=80, sds=310,
+        # 2026-10-04 实测：contactType 语义驱动后 nil 278→80
+        # （整合接触→conformable 等段级终态语义→CGI 词；余侵入接触
+        # 78+推测界线 1+复合标签 1 待词表裁定）
+        sds_nil_faulttype=0, planes=94, polarity=2, folds=4, fold_nil=0,
+        members=4738, compositions=12, six_mode=(51, 5, 3, 0, 30, 5),
+        orphan_tolerance=True, fossil_violations=1,
+        banners=22,  # 2026-10-04 实测：无族义即无冲突后（全继承 18+
+                      # 真实 3+码义未注册 5 基线——归一通道撤销）
+        dv_blocks=98,
+        ms_dist={"no_movement_sense": 35, "reverse": 54, "normal": 5,
+                 "sinistral": 3, "dextral": 1},
+        hwd=94, relations=113, measure_points=94, char_dist_b=277.7,
+        lite_counts={"geologic_unit_view": 713, "contact_view": 1318,
+                     "shear_displacement_structure_view": 310,
+                     "site_observation_view": 305,
+                     "fault_attitude_point_view": 94,
+                     "fossil_specimen_view": 48},
+    ),
     # 基线——图幅注册表仅 {02: 推测断层}，未注册码 MLE 提案待裁定
     "jwss": dict(
-        units=95, poly_mfs=808, contacts=1199, contact_nil=405, sds=289,
+        units=95, poly_mfs=808, contacts=1199, contact_nil=192, sds=289,
+        # 2026-10-04 实测：contactType 语义驱动后 nil 405→192
+        # （jwss 24 案对齐——段级整合接触⇄CGI conformable；余侵入
+        # 接触 186 等未覆盖标签待词表裁定）
         sds_nil_faulttype=0, planes=134, polarity=0, folds=7, fold_nil=0,
         members=4357, compositions=0, six_mode=(46, 22, 11, 7, 47, 1),
         orphan_tolerance=True,
-        banners=140,  # 2026-10-03 实测：倾向侧改属+01 码义归一后（归一登记
-                      # 21 条+倾向侧改属连锁-过期期望冲突转注）新基线
+        banners=7,  # 2026-10-04 实测：类别编码值最高优先级裁定（全继承
+                    # 含泛称，一般断层兼容一切）——8 条 01 码 dip-gate 被
+                    # 兼容吸收，余 4 真实张力+3 全继承登记（F026 单条去重）
         dv_blocks=137,
         ms_dist={"reverse": 57, "normal": 29, "no_movement_sense": 48,
                  "sinistral": 3},

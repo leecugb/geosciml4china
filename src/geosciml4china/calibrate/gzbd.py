@@ -43,6 +43,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import sys
 
@@ -1025,6 +1026,196 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
 
     for _r in interp:
         emit_columns(_r, _gzbd_shadow(_r), shadow=True)
+
+    # ---------- D. 三层逻辑 L2/L3 后处理（2026-10-04 用户裁定：GZBD 同样
+    # 需要标定——boundary_contact_priors 注入的先验知识属 L1 标定算法；
+    # L2 码级语义=用户裁定级（注册表 user_confirmed/图幅 decided/映射表
+    # user_semantic）> MLE 段级统计精化（主导具体标签 ≥25%）> 注册先验
+    # 泛义兜底；L3 全继承：通用/存疑标签段静默继承码义（泛称式升级），
+    # 具体分歧段让位+登记（矛盾保持）；「先验建议→」建议型标签为本域
+    # 自有的分歧登记机制，保持原样不再重复登记；用户裁定改码/分歧未
+    # 裁定/制图误差剔除行绝对不动） ----------
+    from pymapgis.semantics.materialize import _SEM_NORM as _GZBD_SEM_NORM
+    from ..data import data_path as _dp
+
+    _GENERIC_LBL = {"实测地质", "地质", "", "None", "nan"}  # canon 口径兜底类
+    _ROUTED_LBL = {"10": "断层接触（断裂界线）", "81": "冰雪区界线"}
+    _reg_codes = {}
+    try:
+        _reg_codes = (json.load(open(_dp("gzbd_codes.json"), encoding="utf-8"))
+                      .get("codes", {}))
+    except Exception:
+        pass
+
+    _SYN_FOLD = {"推测地质界线": "推测界线"}  # 同义折叠（SEM_NORM 补集）
+
+    def _base_lbl(_raw):
+        """展示级标签：去「（先验建议…）」后缀取基签，再走 SEM_NORM 归一。"""
+        _t = re.sub(r"（先验建议.*?）", "", str(_raw or "")).strip()
+        return _GZBD_SEM_NORM.get(_t, _t)
+
+    def _canon(_raw):
+        """比较级标签：同义折叠+可选「界线」后缀忽略——防展示变体假分歧
+        （侵入接触界线≡侵入接触；推测地质界线≡推测界线）。"""
+        _t = _SYN_FOLD.get(_base_lbl(_raw), _base_lbl(_raw))
+        return _t[:-2] if _t.endswith("界线") and len(_t) > 2 else _t
+
+    # 映射表用户修改装载（编辑跨轮保留；消费优先级见上）
+    _bmap_p = sh.root / f"boundary_semantics_map_{sh.key}.csv"
+    _user_bsem, _bmap_note = {}, {}
+    if _bmap_p.exists():
+        for _, _br in pd.read_csv(_bmap_p, dtype=str).iterrows():
+            _c0 = str(_br.get("GZBD") or "").strip()
+            _u0 = str(_br.get("user_semantic") or "").strip()
+            if _c0 and _u0 and _u0 not in ("nan", "None"):
+                _user_bsem[_c0] = _u0
+            _n0 = str(_br.get("user_note") or "").strip()
+            if _c0 and _n0 and _n0 not in ("nan", "None"):
+                _bmap_note[_c0] = _n0
+    if _user_bsem:
+        print(f"   界线映射表用户修改载入: {len(_user_bsem)} 码")
+
+    # 段级标签分布（比较级 canon 口径键控——变体合并；建议型标签的基签
+    # 同样计入统计——全样本票仓）；同 canon 下展示级形态度数（码义须以
+    # 展示形出站——渲染 STANDARD_LINE_LAYERS 以展示形键控，canon 形
+    # （剥「界线」）会断渲染键）
+    _lbl_dist = {}
+    _disp = {}
+    for _r in interp:
+        _c0 = str(_r.get("GZBD_eff") or _r.get("GZBD原码") or "")
+        if not _c0:
+            continue
+        _lbl_dist.setdefault(_c0, {})
+        _b0 = _canon(_r.get("标定语义"))
+        _lbl_dist[_c0][_b0] = _lbl_dist[_c0].get(_b0, 0) + 1
+        _disp.setdefault(_c0, {}).setdefault(_b0, {})
+        _d0 = _base_lbl(_r.get("标定语义"))
+        _disp[_c0][_b0][_d0] = _disp[_c0][_b0].get(_d0, 0) + 1
+
+    def _disp_of(_c0, _canon_lbl):
+        """canon 键 → 展示级标签（该码下同 canon 的最常见展示形）。"""
+        _dd = _disp.get(_c0, {}).get(_canon_lbl, {})
+        return max(_dd.items(), key=lambda kv: kv[1])[0] if _dd else _canon_lbl
+
+    # L2 码级语义判定
+    _code_sem = {}
+    for _c0, _dd in _lbl_dist.items():
+        _n0 = sum(_dd.values())
+        _reg_e = _reg_codes.get(_c0, {})
+        _reg_lbl = str(_reg_e.get("meaning") or "")
+        _reg_adj = str(_reg_e.get("confidence") or "") == "user_confirmed"
+        if _c0 in _ROUTED_LBL:
+            _code_sem[_c0] = (_ROUTED_LBL[_c0], "路由码")
+        elif _c0 in _user_bsem:
+            _code_sem[_c0] = (_user_bsem[_c0], "用户修改")
+        elif _reg_adj and _reg_lbl:
+            _code_sem[_c0] = (_reg_lbl, "用户裁定(注册)")
+        else:
+            _spec = {k: v for k, v in _dd.items()
+                     if k not in _GENERIC_LBL and "或" not in k}
+            if _spec:
+                _top, _nt = max(_spec.items(), key=lambda kv: kv[1])
+                if _nt / _n0 >= 0.25:
+                    _code_sem[_c0] = (_disp_of(_c0, _top), "MLE精化")
+                    continue
+            _code_sem[_c0] = (_reg_lbl or "实测地质界线",
+                              "注册先验" if _reg_lbl else "兜底")
+
+    # L3 全继承（覆盖库例外：用户裁定改码/分歧未裁定/制图误差剔除）
+    _b_conflicts = []
+    _n_binh = 0
+    for _r in interp:
+        _r["原标定语义"] = _r.get("标定语义")  # own_label 留档（L1/L2 分层可读）
+        if str(_r.get("状态")) in ("用户裁定改码", "分歧未裁定", "制图误差（剔除）"):
+            continue
+        _raw0 = str(_r.get("标定语义") or "")
+        if "（先验建议" in _raw0:
+            continue  # 建议型标签=本域分歧登记机制，保持原样
+        _c0 = str(_r.get("GZBD_eff") or _r.get("GZBD原码") or "")
+        _sem0, _src0 = _code_sem.get(_c0, (None, None))
+        if not _sem0:
+            continue
+        _b0 = _canon(_raw0)
+        if _b0 == _canon(_sem0):
+            continue
+        if _b0 in _GENERIC_LBL or "或" in _b0:
+            # 通用/存疑标签段静默继承（泛称式升级）
+            _r["标定语义"] = _sem0
+            _r["证据"] = str(_r.get("证据") or "") + f"；码义继承（{_sem0}）"
+            _n_binh += 1
+        else:
+            # 具体分歧段让位+登记（矛盾保持，证据不因码义消失）
+            _b_conflicts.append({
+                "idx": str(_r.get("idx")), "GZBD": _c0,
+                "issue": f"GZBD={_c0}（{_sem0}）码义全继承",
+                "evidence": (f"段级标定 {_b0} 让位码级语义（全继承）——"
+                             f"段级证据（{str(_r.get('证据'))[:80]}）"
+                             f"如实保留待裁定"),
+                "status": "pending_review"})
+            _r["标定语义"] = _sem0
+            _r["证据"] = str(_r.get("证据") or "") + f"；码义继承（{_sem0}）"
+            _n_binh += 1
+    if _n_binh:
+        print(f"   界线码义继承: {_n_binh} 段")
+    if _b_conflicts:
+        _new_bc = pd.DataFrame(_b_conflicts)
+        _bcp = str(_out(f"_gzbd_conflicts_{sh.key}.csv"))
+        if os.path.exists(_bcp):
+            # 登记册合并（与 gzeeb 同口径）：已裁定条目（adjudicated）
+            # 保留在前，新计算分歧在后
+            _old_bc = pd.read_csv(_bcp, dtype=str)
+            _keep_bc = _old_bc[_old_bc["status"] == "adjudicated"]
+            _new_bc = pd.concat([_keep_bc, _new_bc], ignore_index=True)
+        _new_bc.to_csv(_bcp, index=False, encoding="utf-8-sig")
+        print(f"   界线码义分歧登记: {len(_b_conflicts)} 段 → "
+              f"_gzbd_conflicts_{sh.key}.csv")
+    else:
+        _bcp = sh.root / f"_gzbd_conflicts_{sh.key}.csv"
+        if _bcp.exists():
+            _old_bc = pd.read_csv(_bcp, dtype=str)
+            _keep_bc = _old_bc[_old_bc["status"] == "adjudicated"]
+            if len(_keep_bc):
+                _keep_bc.to_csv(_bcp, index=False, encoding="utf-8-sig")
+            else:
+                _bcp.unlink()  # 清零清理陈旧件（防误读，与 gzeeb 兜底件同口径）
+
+    # 界线编码-地质语义映射表出站（全码一表；user_semantic 为用户修改
+    # 列——编辑跨轮保留，修改-再转化回路与 GZEEB 同构：编辑 → 重跑
+    # calibrate-gzbd → pipeline --skip-convert --skip-calibrate-stages）
+    _bmap_rows = []
+    for _c0 in sorted(_lbl_dist):
+        _dd = _lbl_dist[_c0]
+        _n0 = sum(_dd.values())
+        _sem0, _src0 = _code_sem[_c0]
+        _reg_lbl = str(_reg_codes.get(_c0, {}).get("meaning") or "")
+        _term0 = str(_reg_codes.get(_c0, {}).get("geosciml_contacttype") or "")
+        _nt0 = _dd.get(_canon(_sem0), 0)
+        if _src0 in ("路由码",):
+            _conf0 = "路由码"
+        elif _src0 == "用户裁定(注册)":
+            _conf0 = "裁定固化"
+        elif _src0 == "用户修改":
+            _conf0 = "用户修改"
+        else:
+            _share = _nt0 / _n0 if _n0 else 0.0
+            _conf0 = (f"强证({_n0}段·{_share * 100:.0f}%)"
+                      if _n0 >= 20 and _share >= 0.5 else
+                      f"中证({_n0}段·{_share * 100:.0f}%)"
+                      if _n0 >= 10 or (_n0 >= 5 and _share >= 0.25) else
+                      f"薄证({_n0}段·{_share * 100:.0f}%)")
+        _bmap_rows.append({
+            "GZBD": _c0, "segs": _n0,
+            "semantic": _sem0, "source": _src0, "confidence": _conf0,
+            "national_label": _reg_lbl, "contactType_term": _term0,
+            "label_distribution": "；".join(
+                f"{k}×{v}" for k, v in sorted(_dd.items(), key=lambda x: -x[1])),
+            "divergent_segs": sum(1 for _r in interp
+                                if str(_r.get("GZBD_eff") or _r.get("GZBD原码") or "") == _c0
+                                and "（先验建议" in str(_r.get("原标定语义") or "")),
+            "user_semantic": _user_bsem.get(_c0, ""),
+            "user_note": _bmap_note.get(_c0, "")})
+    pd.DataFrame(_bmap_rows).to_csv(_bmap_p, index=False, encoding="utf-8-sig")
+    print(f"   界线编码-地质语义映射表: {len(_bmap_rows)} 码 → {_bmap_p.name}")
 
     out_df = pd.DataFrame(interp)
     out_df.to_csv(_out("_gzbd_semantic_interpretation.csv"), index=False, encoding="utf-8-sig")

@@ -470,15 +470,17 @@ def _shade_slots(tong: str, n: int, lib: Lib) -> list[list[int]]:
 
 
 def _seg_shade(rgb, seg: int, n_seg: int):
-    if n_seg == 2:
-        kind = {1: "dark", 2: "light"}[seg]
-    else:
-        kind = {1: "dark", 2: "base", 3: "light"}.get(seg, "base")
-    if kind == "dark":
-        return [round(c * 0.90) for c in rgb]
-    if kind == "light":
-        return [round(c + (255 - c) * 0.30) for c in rgb]
-    return list(rgb)
+    """段间分色（2026-10-03 泛化）：同组不同段赋色必须互异——按段序
+    在 下段深(×0.90)↔上段浅(+30% 趋白) 间线性插值；n=2/3 与原
+    dark/base/light 三档逐值一致（回归兼容）。"""
+    if n_seg <= 1:
+        return list(rgb)
+    t = (seg - 1) / (n_seg - 1)
+    if t < 0.5:
+        k = 0.90 + t * 2 * 0.10
+        return [round(c * k) for c in rgb]
+    k = (t - 0.5) * 2 * 0.30
+    return [round(c + (255 - c) * k) for c in rgb]
 
 
 def _strata_parse(norm: str):
@@ -542,7 +544,10 @@ def generate(sheet: str, lib: Lib | None = None,
     # ② 组间分色（同统多组）
     by_tong: dict[str, list[UnitInput]] = {}
     for u in units:
-        if specs[u.norm].cls != "strata" or not u.role.endswith("沉积地层"):
+        # 沉积地层角色判定（2026-10-03 J2t/J2y 案）：角色分类体系含
+        # 「沉积地层」（库尔干）与「沉积岩建造」（125万数据库）两系——
+        # 原 endswith('沉积地层') 为死过滤致组间分色整体旁路
+        if specs[u.norm].cls != "strata" or not (u.role and "沉积" in u.role):
             continue
         parsed = _strata_parse(u.norm)
         if parsed and parsed[0] and not parsed[3]:

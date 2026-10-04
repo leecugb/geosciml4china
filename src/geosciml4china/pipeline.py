@@ -20,6 +20,7 @@ CLI: g4c pipeline --sheet <key> [--skip-convert] [--skip-calibrate-stages]
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -27,7 +28,8 @@ from .sheets import get_sheet, list_sheets
 
 
 def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=False,
-                 skip_render=False, check_only=False, dpi=200) -> int:
+                 skip_render=False, check_only=False, dpi=200,
+                 no_pattern=False) -> int:
     sh = get_sheet(sheet_key)
     print(f"=== g4c pipeline：{sh.title}（{sh.root}）===")
 
@@ -63,6 +65,22 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
     from pymapgis.semantics.materialize import materialize_sheet
     if skip_calibrate_stages:
         print("② 跳过（--skip-calibrate-stages）")
+        # 映射表陈旧守卫（2026-10-04 修改-再转化回路）：用户编辑映射表后
+        # 须先重跑对应标定域使编辑生效——物化前检测并提醒
+        for _map_name, _cal_name, _cmd in (
+                (f"code_semantics_map_{sh.key}.csv",
+                 f"_gzeeb_calibration_{sh.key}.csv", "calibrate-gzeeb"),
+                (f"gzeld_semantics_map_{sh.key}.csv",
+                 f"_gzeeb_calibration_{sh.key}.csv", "calibrate-gzeeb"),
+                (f"boundary_semantics_map_{sh.key}.csv",
+                 f"_gzbd_semantic_interpretation.csv", "calibrate-gzbd")):
+            _map_p = sh.root / _map_name
+            _cal_p = sh.root / _cal_name
+            if _map_p.exists() and _cal_p.exists() \
+                    and _map_p.stat().st_mtime > _cal_p.stat().st_mtime + 60:
+                print(f"⚠ {_map_name} 新于校准件——若刚编辑映射表，"
+                      f"请先重跑 g4c {_cmd} --sheet {sh.key} 再继续"
+                      f"（否则本次物化沿用旧语义）")
         print("②b L1 物化")
         materialize_sheet(sh.root)
     else:
@@ -96,10 +114,13 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
         calibrate_inferred_faults(sh.key)          # 推测断层（覆盖度核定）
         print("②b 终态 L1 物化（语义标定写回 geojson/L1）")
         materialize_sheet(sh.root)
-        # ②c 缺口报告（2026-10-03 用户裁定：缺口兜底保障管线 + 文字报告
-        # + 单要素渲染配图，供后期专家裁决）
-        from .render.gap_report import build_gap_report
-        build_gap_report(sh.key)
+
+    # ②c 缺口报告（2026-10-03 用户裁定：缺口兜底保障管线 + 文字报告
+    # + 单要素渲染配图，供后期专家裁决）——两条路径汇聚点统一执行
+    # （2026-10-04 再审修复：原仅全标定分支调用，--skip-calibrate-stages
+    # 路径从不刷新——编辑-再转化回路迭代裁定时核验卡陈旧）
+    from .render.gap_report import build_gap_report
+    build_gap_report(sh.key)
 
     # ③ stylegen（lite 优先；缺 lite 走 WP 引导——新幅首接通道）
     from .render import stylegen as _sg
@@ -123,10 +144,9 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
 
     # ④b 断层样式（语义源=lite SDS 视图，build 后必有）
     from .render import stylegen_fault as _sgf
-    import json as _json
     out_f = _sgf.generate(sheet_key, _sgf.load_overrides(sheet_key))
     Path(sh.fault_styles_generated).write_text(
-        _json.dumps(out_f, ensure_ascii=False, indent=2), encoding="utf-8")
+        json.dumps(out_f, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # ⑤ verify
     from .convert import verify as _verify
@@ -148,6 +168,8 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
     print("⑥ render（叠加层）")
     _saved = sys.argv
     sys.argv = ["g4c render", "--sheet", sheet_key, "--dpi", str(dpi)]
+    if no_pattern:
+        sys.argv.append("--no-pattern")
     try:
         return _render.main()
     finally:
@@ -164,11 +186,13 @@ def main() -> int:
     ap.add_argument("--skip-render", action="store_true")
     ap.add_argument("--check-only", action="store_true", help="止于 verify")
     ap.add_argument("--dpi", type=int, default=200)
+    ap.add_argument("--no-pattern", action="store_true",
+                    help="渲染禁花纹填充（纯色平铺加速）")
     args = ap.parse_args()
     return run_pipeline(args.sheet, skip_convert=args.skip_convert,
                         skip_calibrate_stages=args.skip_calibrate_stages,
                         skip_render=args.skip_render, check_only=args.check_only,
-                        dpi=args.dpi)
+                        dpi=args.dpi, no_pattern=args.no_pattern)
 
 
 if __name__ == "__main__":

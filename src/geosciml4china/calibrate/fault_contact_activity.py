@@ -211,10 +211,12 @@ def calibrate_fault_contact_activity(sheet_key: str, out_dir=None) -> dict:
                 _ii = _ftree.query(_fm, predicate="intersects")
                 if not len(_ii):
                     _ii = _ftree.nearest(_fm)
-                _d = _fm.distance(_fgeoms[_ii[0]])
+                # Shapely 2.x nearest() 返回标量索引（query 返回数组）——
+                # 双形态兼容（2026-10-03 jwsss 裸接入首遇标量形态崩溃案）
+                _seg = int(_ii if not hasattr(_ii, "__len__") else _ii[0])
+                _d = _fm.distance(_fgeoms[_seg])
                 if _d > ATTRIB_MAX_M:
                     continue
-                _seg = int(_ii[0])
                 _fid = _seg2fid.get(_seg, f"SEG{_seg}")
                 reg_rows.append({
                     "fault_id": _fid, "segs": str(_seg),

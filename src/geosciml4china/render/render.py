@@ -146,6 +146,9 @@ def main() -> int:
                     help="叠加 GML 语义叠加层（走滑钩线/断层产状测量点/编图矛盾）")
     ap.add_argument("--no-overlay", dest="no_overlay", action="store_true",
                     help="关闭叠加层（纯 lite 底图）")
+    ap.add_argument("--no-pattern", action="store_true",
+                    help="禁花纹填充（纯色平铺——200dpi 全幅提速约 6×，"
+                         "2026-10-03 业务流优化；pattern_engine 单源开关）")
     args = ap.parse_args()
 
     # 叠加层生产默认（2026-09-29 教训：褶皱修复轮重渲染漏带 --gml 致新幅
@@ -165,6 +168,10 @@ def main() -> int:
     fault_styles = args.fault_styles or prof["fault_styles"]
 
     set_svg_pattern_registry_path(args.svg_registry)
+    if args.no_pattern:
+        from pymapgis.rendering.pattern_engine import set_pattern_enabled
+        set_pattern_enabled(False)
+        print("花纹填充: 禁用（纯色平铺加速通道）")
 
     # L1 一致性断言：L1 目录存在且未显式跳过时执行（镜像核验通道）；
     # 无 L1 时引擎以 GeoSciML 工件自足运行（2026-09-28 全面解耦：

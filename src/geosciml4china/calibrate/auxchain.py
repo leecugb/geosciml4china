@@ -268,7 +268,18 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         if _anom_p.exists():
             _adf = pd.read_csv(_anom_p, dtype=str)
             if "aux_idx" in _adf.columns:
-                _anom_ids = {int(x) for x in _adf["aux_idx"]}
+                # 2026-10-03 修复（自引用振荡案）：排除通道只认人工裁定
+                # 剔除——status=confirmed_error 列或 reason 含「裁定」；
+                # 机器再生异常项（不可解析/配对异常等）不排除，否则
+                # 上轮机器异常会误排除下轮点致配对结果轮间翻转
+                # （b295/b296 配对 125↔129 行振荡案）
+                def _adjudicated(rr):
+                    if str(rr.get("status") or "") == "confirmed_error":
+                        return True
+                    return "裁定" in str(rr.get("reason") or "")
+                _anom_ids = {int(rr["aux_idx"]) for _, rr in _adf.iterrows()
+                             if str(rr["aux_idx"]).strip().lstrip("-").isdigit()
+                             and _adjudicated(rr)}
     aux_cat = aux_cat[~aux_cat["_src_id"].astype(int).isin(_anom_ids)]
     if _anom_ids:
         print(f"异常册排除: {len(_anom_ids)} 点（confirmed_error 裁定）")
@@ -494,22 +505,34 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         print(f"倾向侧约定: 改属 {_n_dip} 点 / 多候选维持 {_n_dip_multi} / "
               f"无候选维持 {_n_dip_none}")
 
-    # 倾角注释类别按幅探测（英吉沙=产状注释；库尔干/奥依亚依拉克=断层注释；
+    # 倾角注释配对池（2026-10-03 用户裁定 CHFCEC 判别：「产状注释」=
+    # 地层产状注释——b239 案：断层类数字文本（断层性质/断层注释类
+    # symbol_no=0 且 CHFCED 为倾角数字）在场时配对池**仅用断层类**，
+    # 产状注释类整体退出断层配对（纯地层源，b237/b238/b239 同型误配
+    # 根除）；无断层类文本时退回产状注释通道（英吉沙型既有格局）；
     # 巴什库尔干均无→跳过，倾角留空）
-    _num_cls = "断层注释" if (wt["CHFCEC"].astype(str) == "断层注释").any() else         ("产状注释" if (wt["CHFCEC"].astype(str) == "产状注释").any() else "")
-    num_cat = wt[wt["CHFCEC"].astype(str) == _num_cls] if _num_cls else         wt.iloc[0:0]
-    # 库尔干式注释：断层辅助点类内部文本行（symbol_no=0，CHFCED 为倾角数字）
     _aux_text = aux_cat[(aux_cat["symbol_no"].astype(int) == 0)
                         & (aux_cat["CHFCED"].astype(str).str.strip() != "")]
-    num_cat = pd.concat([num_cat, _aux_text])
+    _fault_txt_cls = ("断层注释" if (wt["CHFCEC"].astype(str) == "断层注释").any()
+                      else "")
+    _fault_txt = wt[wt["CHFCEC"].astype(str) == _fault_txt_cls]         if _fault_txt_cls else wt.iloc[0:0]
+    if len(_aux_text) or len(_fault_txt):
+        num_cat = pd.concat([_fault_txt, _aux_text])
+        print(f"倾角注释池: 断层类 {len(_fault_txt)} + 辅助点类 {len(_aux_text)}"
+              f"（产状注释类退出断层配对——CHFCEC 判别）")
+    else:
+        _num_cls = ("产状注释"
+                    if (wt["CHFCEC"].astype(str) == "产状注释").any() else "")
+        num_cat = wt[wt["CHFCEC"].astype(str) == _num_cls]             if _num_cls else wt.iloc[0:0]
     pairs_rows, anomalies = [], []
     if len(num_cat):
         b_pts = {}
-        _fid_int = {fid: k for k, fid in enumerate(chains)}
         for _, r in assoc[assoc["sub_no"] == 1894].iterrows():
             pt = wt.iloc[int(r["aux_idx"])].geometry
-            b_pts[int(r["aux_idx"])] = (pt.x, pt.y,
-                                         _fid_int.get(r["fault_id"], 0))
+            # sg=归属段 _src_id（文档契约 {aux_idx:(x,y,seg_idx)}——
+            # 值匹配佐证按段级 GZECE 比对；原实体 int 致值匹配空转）
+            _sg = int(float(r["seg_idx"])) if str(r["seg_idx"]).strip()                 not in ("", "nan", "None") else None
+            b_pts[int(r["aux_idx"])] = (pt.x, pt.y, _sg)
         nums = []
         for _, r in num_cat.iterrows():
             m = re.fullmatch(r"(\d+(?:\.\d+)?)°?", str(r["CHFCED"]).strip())
@@ -524,7 +547,19 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                 continue
             nums.append({"aux_idx": int(r["_src_id"]), "x": r.geometry.x,
                          "y": r.geometry.y, "dip": float(m.group(1))})
-        out = pair_dip_annotations(nums, b_pts, LON_M, LAT_M, max_pair_m=PAIR_MAX_M)
+        # 值匹配佐证（2026-09-26 用户定规则落地：|dip−GZECE|≤2° 为留配
+        # 佐证——449「70」≡GZECE=70 型精确命中优先于纯距离）
+        _gzece_of_seg = {}
+        for _si, _row in fl.iterrows():
+            try:
+                _dv = float(_row.get("GZECE") or 0)
+            except (TypeError, ValueError):
+                _dv = 0.0
+            if _dv > 0:
+                _gzece_of_seg[int(_row.get("_src_id", _si))] = _dv
+        out = pair_dip_annotations(nums, b_pts, LON_M, LAT_M,
+                                   max_pair_m=PAIR_MAX_M,
+                                   gzece_of_seg=_gzece_of_seg)
         for p in out:
             if p.get("anomaly"):
                 anomalies.append({"aux_idx": p["aux_idx"], "kind": "number",

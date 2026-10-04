@@ -167,6 +167,34 @@ def build_gap_report(sheet_key: str, out_dir=None) -> dict:
             sections.append(f"## GZBD 分歧段（{len(cards)} 段）\n"
                             f"配图：`cards/gzbd_divergence.pdf`")
 
+    # ---- 2b. GZBD 码义全继承分歧（_gzbd_conflicts_<key>.csv，2026-10-04
+    # 三层逻辑 L3 出站——段级具体标签让位码义的登记行）----
+    bc_p = Path(sh.root) / f"_gzbd_conflicts_{sh.key}.csv"
+    if bc_p.exists():
+        with open(bc_p, encoding="utf-8-sig") as f:
+            bconf = [r for r in csv.DictReader(f)
+                     if str(r.get("status")) == "pending_review"]
+        cards = []
+        for g in bconf:
+            try:
+                i = int(g.get("idx") or -1)
+            except (TypeError, ValueError):
+                continue
+            row = bnd[bnd["_src_id"].astype(int) == i]
+            if len(row) == 0:
+                continue
+            geom = row.iloc[0].geometry
+            title = (f"GZBD 码义全继承 段{i}：{g.get('issue','')}\n"
+                     f"{str(g.get('evidence',''))[:80]}")
+            cards.append((title, lambda ax, gm=geom, g=g, t=title:
+                          _card(ax, gm, _ctx(gm), t,
+                                elem_color=(0.55, 0.10, 0.55))))
+        if cards:
+            p = _multi_page_pdf(cards, cards_dir / "gzbd_inherit_conflicts.pdf")
+            stats["gzbd_inherit_conflicts"] = len(cards)
+            sections.append(f"## GZBD 码义全继承分歧（{len(cards)} 段）\n"
+                            f"配图：`cards/gzbd_inherit_conflicts.pdf`")
+
     # ---- 3+4. 断层冲突册 + 矛盾保留行 ----
     gz_p = Path(sh.root) / f"_gzeeb_calibration_{sh.key}.csv"
     if gz_p.exists():

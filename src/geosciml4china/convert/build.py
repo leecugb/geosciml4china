@@ -167,6 +167,16 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
         if sample is not None and len(out) >= sample:
             break
         decided = status == "decided" and row_map.get("term")
+        # contactType 语义驱动（2026-10-04 用户裁定「GZBD 同样需要标定」）：
+        # 图幅级映射文件在场时码查表优先（正典 pending/decided 契约）；
+        # 否则段级终态语义 sem_label → CGI 词（整合接触→conformable 等），
+        # 未覆盖标签回退码查表——jwss 24 案（码表 disconformable × 段级
+        # 整合接触 MLE 精化）的语义一致性修复
+        if not mapping.sheet_mapping_exists():
+            _ct0 = mapping.contacttype_by_semantics(row["sem_label"])
+            if _ct0:
+                decided = True
+                row_map = dict(row_map, term=_ct0)
         _cid = c_ids[int(row["_src_id"])]
         out.append(
             ContactRec(
@@ -297,6 +307,12 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         code = row["gzeeb_eff"]
         row_map = mapping.gzeeb_row(code)
         obs = row_map.get("obs") or mapping.evidence_observation(row["evidence_class"])
+        # faultType 语义驱动（2026-10-04 用户裁定「类别编码值拥有最高
+        # 优先级」）：全继承后 structural_type≡码义——规范性 faultType 槽
+        # 直接消费段级标定语义；图幅级映射文件在场时（正典双幅
+        # pending/decided 裁定）码查表优先（pending→nil 契约不变）
+        _ft_term = (row_map.get("term") if mapping.sheet_mapping_exists()
+                    else mapping.faulttype_by_semantics(row["structural_type"]))
         planes = planes_by_seg.get(seg_idx, [])
         # 2026-09-29 用户对齐裁定：断层产状测量点=实测产状——缺失倾角注释点
         # 时倾角留空，不从所属断层继承（GZECE 回落废止）。GZECE 仅存于段级
@@ -375,8 +391,8 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
                 gzeeb_eff=code,
                 structural_type=row["structural_type"],
                 evidence_class=row["evidence_class"],
-                faulttype_term=row_map.get("term"),
-                faulttype_label=row_map.get("term", ""),
+                faulttype_term=_ft_term,
+                faulttype_label=_ft_term or "",
                 observation_term=obs,
                 observation_label=(obs or "").replace("_", " "),
                 description_append=row_map.get("description_append", ""),
