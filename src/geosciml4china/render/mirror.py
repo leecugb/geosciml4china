@@ -256,6 +256,10 @@ def assemble_l1_map(l1_dir: str | Path, bbox, *, dpi: int = 200):
             g = g[g["status"].astype(str) != "excluded"]
         m.add_layer(Layer(name=lname, geodataframe=g, zorder=z, role=role))
     m.bbox = bbox
+    # 比例尺锚定画布与 GeoSciML 侧同源（样式尺寸跨幅固定——build_geosciml_map
+    # figsize=None 时同此锚定；两侧画布尺寸必须逐位一致，否则像素差分失真）
+    from .map_builder import _scale_anchored_figsize
+    m.figsize = _scale_anchored_figsize(bbox, dpi)
     return m
 
 

@@ -9,9 +9,9 @@
 
 `geosciml4china` turns a legacy MapGIS project folder into trustworthy, confidence-graded geological semantics: **MapGIS → L0 GeoJSON → self-supporting semantic calibration → semantic L1 GeoJSON → GeoSciML 4.1 → semantics-driven rendering**, with every stage machine-verifiable (scope ruling 2026-09-29: input = the MapGIS project document folder).
 
-![Semantics-driven render crop of the jws test case (Kurgan sheet J43C001002)](docs/images/jws_render_crop.svg)
+![Full-sheet render of the bundled testdata end-to-end case (scale-anchored canvas at true 1:250,000 map scale)](docs/images/td_geosciml_render.png)
 
-*Render crop of the published [jws test case](data/jws_l0_geojson/README.md): calibrated strata polygons in DZ/T 0179-2025 colors, geological boundaries (incl. GZBD 04/24 unconformity double-lines), fault lines with decorations and fault attitude measurement points (a–b–a composite semantics).*
+*Full-sheet render of the bundled [testdata end-to-end case](data/testdata_mapgis/README.md): calibrated strata polygons in DZ/T 0179-2025 colors, geological boundaries, fault lines with decorations and fault attitude measurement points (a–b–a composite semantics). The canvas is scale-anchored (≈31.75 m per pixel at 1:250,000), so style dimensions — line widths, pattern tiles, symbols — are identical across sheets regardless of sheet extent.*
 
 ## The problem
 

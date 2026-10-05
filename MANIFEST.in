@@ -5,4 +5,4 @@ recursive-include tests *.py
 prune tests/results
 global-exclude *.pyc
 global-exclude __pycache__
-recursive-include docs *.md *.svg
+recursive-include docs *.md *.svg *.png

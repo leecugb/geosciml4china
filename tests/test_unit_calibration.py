@@ -155,3 +155,30 @@ def test_color_lib_loads_package_data():
     assert lib.sys_base
     assert lib.t6_ep
     assert lib.t14
+
+
+# ---------- 比例尺锚定画布（2026-10-05 用户裁定「样式尺寸保持固定」） ----------
+
+def test_scale_anchored_figsize_constant_mpp():
+    """画布随 bbox 等比伸缩：每像素地面米恒定=1:25 万图面（250000×0.0254/dpi）
+    ——小图幅（td 41×42 km）不再被固定画布放大致样式相对变细。"""
+    from geosciml4china.render.map_builder import (_MAP_SCALE_DENOM,
+                                                   _scale_anchored_figsize)
+    dpi = 200
+    # td 级小图幅 vs y1 级大图幅：figsize 与范围（米）成正比，mpp 相同
+    bbox_td = (73.6, 39.7, 74.1, 40.1)   # ~41×44 km
+    bbox_y1 = (74.6, 39.7, 76.2, 40.8)   # ~137×122 km
+    fw_td, fh_td = _scale_anchored_figsize(bbox_td, dpi)
+    fw_y1, fh_y1 = _scale_anchored_figsize(bbox_y1, dpi)
+    import math
+    lat0_td = (bbox_td[1] + bbox_td[3]) / 2
+    lat0_y1 = (bbox_y1[1] + bbox_y1[3]) / 2
+    mpp = _MAP_SCALE_DENOM * 0.0254 / dpi
+    # mpp 恒定：宽度米 ÷ (fig_in × dpi) 恰为标准 mpp
+    w_m_td = (bbox_td[2] - bbox_td[0]) * 111320 * math.cos(math.radians(lat0_td))
+    w_m_y1 = (bbox_y1[2] - bbox_y1[0]) * 111320 * math.cos(math.radians(lat0_y1))
+    assert w_m_td / (fw_td * dpi) == pytest.approx(mpp, rel=1e-9)
+    assert w_m_y1 / (fw_y1 * dpi) == pytest.approx(mpp, rel=1e-9)
+    # 物理图面尺寸与 dpi 无关（dpi 只决定像素数）
+    fw_td_300, _ = _scale_anchored_figsize(bbox_td, 300)
+    assert fw_td_300 == pytest.approx(fw_td, rel=1e-12)

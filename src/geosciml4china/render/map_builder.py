@@ -29,13 +29,35 @@ _LAYER_TABLE = [
 ]
 
 
+# 比例尺锚定（2026-10-05 用户裁定「样式尺寸保持固定」）：画布随图幅范围
+# 等比伸缩，mpp 恒定 = 1:25 万图面每像素地面米（250000×0.0254/dpi）——
+# 点尺寸样式/花纹瓦片（SVG_TILE_SCALE 地面米锚）/mpp 换算叠加符号全部获得
+# 跨幅一致的真实地面尺寸；消除小图幅（testdata 41×42 km）因固定画布被
+# 3.4× 放大后点尺寸样式相对变细小的缺陷。figsize 显式传入时保持旧行为。
+_MAP_SCALE_DENOM = 250000.0
+
+
+def _scale_anchored_figsize(bbox: tuple[float, float, float, float],
+                            dpi: int) -> tuple[float, float]:
+    """bbox(度) → (fig_w_in, fig_h_in)：每像素地面米恒定（1:25 万）。
+    与 dpi 无关的物理图面尺寸；dpi 只决定像素数。"""
+    import math
+    minx, miny, maxx, maxy = bbox
+    lat0 = (miny + maxy) / 2.0
+    lon_m = 111320.0 * math.cos(math.radians(lat0))
+    lat_m = 111320.0
+    mpp = _MAP_SCALE_DENOM * 0.0254 / dpi  # 地面米/px
+    return ((maxx - minx) * lon_m / (mpp * dpi),
+            (maxy - miny) * lat_m / (mpp * dpi))
+
+
 def build_geosciml_map(
     lite_dir: str | Path,
     *,
     bbox: tuple[float, float, float, float] | None = None,
     bbox_margin_frac: float = 0.05,
     crop_outliers: bool = True,
-    figsize: tuple[float, float] = (24.0, 16.0),
+    figsize: tuple[float, float] | None = None,
     dpi: int = 200,
     color_mapping_path: str | Path | None = DEFAULT_COLOR_MAPPING,
     title: str | None = None,
@@ -48,7 +70,8 @@ def build_geosciml_map(
     rmap = build_reverse_unit_map(color_mapping_path)
     ztbl = zorder_tbl or zorder_table()
     # 泛化（2026-10-02 审计）：标题经参数传入（注册表 SHEET_TITLE）
-    m = Map(title=title or "GeoSciML (Lite)", figsize=figsize, dpi=dpi)
+    m = Map(title=title or "GeoSciML (Lite)",
+            figsize=figsize if figsize is not None else (24.0, 16.0), dpi=dpi)
     report: dict = {"layers": {}}
     bounds = []
     for view, lname, role, z in _LAYER_TABLE:
@@ -113,5 +136,8 @@ def build_geosciml_map(
         dx = (maxx - minx) * bbox_margin_frac
         dy = (maxy - miny) * bbox_margin_frac
         bbox = (minx - dx, miny - dy, maxx + dx, maxy + dy)
+    if figsize is None:
+        # 比例尺锚定画布（样式尺寸跨幅固定）——figsize 显式传入时保持旧行为
+        m.figsize = _scale_anchored_figsize(bbox, dpi)
     m.bbox = bbox
     return m, report
