@@ -137,6 +137,8 @@ def main() -> int:
     ap.add_argument("--no-bare", dest="bare", action="store_false")
     ap.add_argument("--dpi", type=int, default=200)
     ap.add_argument("--check-only", action="store_true")
+    ap.add_argument("--full-extent", action="store_true",
+                    help="全要素包络裁剪（不剔孤立远点——正典行为）")
     ap.add_argument("--no-l1-check", action="store_true",
                     help="跳过 L1 一致性断言（GeoSciML 自足模式）")
     ap.add_argument("--l1-dir", default=None)
@@ -203,7 +205,8 @@ def main() -> int:
 
     m, report = build_geosciml_map(
         lite_dir, dpi=args.dpi, color_mapping_path=color_mapping,
-        title=config.SHEET_TITLE)
+        title=config.SHEET_TITLE,
+        crop_outliers=not args.full_extent)
     for view, rep in report["layers"].items():
         print(f"  适配 {view}: loaded={rep['loaded']} adapted={rep['count']}"
               + (f" unmapped={rep['unmapped']}" if rep.get("unmapped") else "")

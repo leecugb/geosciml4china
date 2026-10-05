@@ -34,6 +34,7 @@ def build_geosciml_map(
     *,
     bbox: tuple[float, float, float, float] | None = None,
     bbox_margin_frac: float = 0.05,
+    crop_outliers: bool = True,
     figsize: tuple[float, float] = (24.0, 16.0),
     dpi: int = 200,
     color_mapping_path: str | Path | None = DEFAULT_COLOR_MAPPING,
@@ -86,8 +87,29 @@ def build_geosciml_map(
         bounds.append(gdf.total_bounds)
     B = np.array(bounds)
     if bbox is None:
-        minx, miny = B[:, 0].min(), B[:, 1].min()
-        maxx, maxy = B[:, 2].max(), B[:, 3].max()
+        # 分位数裁剪（2026-10-05 用户裁定 A 方案）：孤立远点（切块/编图
+        # 残迹，如 testdata 的 2 个远西要素）不撑图框——按全要素 bounds
+        # 的 1-99 分位取有效范围；crop_outliers=False 时保持全要素包络
+        if crop_outliers and len(m.layers):
+            _lo_x, _lo_y, _hi_x, _hi_y = [], [], [], []
+            for _layer in m.layers:
+                if _layer.geodataframe is None or not len(_layer.geodataframe):
+                    continue
+                _b = _layer.geodataframe.geometry.bounds
+                _lo_x += _b["minx"].tolist()
+                _lo_y += _b["miny"].tolist()
+                _hi_x += _b["maxx"].tolist()
+                _hi_y += _b["maxy"].tolist()
+            if _lo_x:
+                minx = float(np.percentile(_lo_x, 1))
+                miny = float(np.percentile(_lo_y, 1))
+                maxx = float(np.percentile(_hi_x, 99))
+                maxy = float(np.percentile(_hi_y, 99))
+            else:
+                minx, miny, maxx, maxy = B[:, 0].min(), B[:, 1].min(),                     B[:, 2].max(), B[:, 3].max()
+        else:
+            minx, miny = B[:, 0].min(), B[:, 1].min()
+            maxx, maxy = B[:, 2].max(), B[:, 3].max()
         dx = (maxx - minx) * bbox_margin_frac
         dy = (maxy - miny) * bbox_margin_frac
         bbox = (minx - dx, miny - dy, maxx + dx, maxy + dy)

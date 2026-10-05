@@ -326,6 +326,8 @@ def main() -> int:
     ap.add_argument("--report", default=None)
     ap.add_argument("--sheet", choices=[s.key for s in list_sheets()],
                     default="kurgan")
+    ap.add_argument("--write-portrait", action="store_true",
+                    help="实测值回填 EXPECT 画像块（报告+控制台）")
     args = ap.parse_args()
 
     config.init_sheet(args.sheet)
@@ -850,6 +852,50 @@ def main() -> int:
         f"映射文件 pending 节: {len(mapping.pending())} 项 → `{config.PENDING_OUT}`",
         f"nil contactType: {len(nil_contacts)}（期望 {EXP['contact_nil']}）",
     ]
+    # --write-portrait：实测值回填 EXPECT 块（2026-10-05 泛化提速——画像
+    # 回填从手工编辑变一条命令；不可从 GML 重算的字段继承现行 EXPECT）
+    if getattr(args, "write_portrait", False):
+        _exp0 = dict(EXP)
+        _lite_counts = {}
+        for _v in ("geologic_unit_view", "contact_view",
+                   "shear_displacement_structure_view", "site_observation_view",
+                   "fault_attitude_point_view", "fossil_specimen_view"):
+            _vp = lite_dir / f"{_v}.geojson"
+            if _vp.exists():
+                _lite_counts[_v] = len(json.load(open(_vp, encoding="utf-8"))
+                                       .get("features", []))
+        _block = {
+            "units": len(units_el),
+            "poly_mfs": len(poly_mfs),
+            "contacts": len(contacts_el),
+            "contact_nil": len(nil_contacts),
+            "sds": len(sds_el),
+            "sds_nil_faulttype": n_nil_ft,
+            "planes": len(plane_blocks),
+            "polarity": len(pol),
+            "folds": len(fold_el),
+            "fold_nil": n_nil_prof,
+            "members": len(members),
+            "compositions": _exp0.get("compositions", 0),
+            "six_mode": got6,
+            "orphan_tolerance": _exp0.get("orphan_tolerance", False),
+            "fossil_violations": sp_viol,
+            "banners": n_banner,
+            "dv_blocks": len(dv_el),
+            "ms_dist": dict(ms_dist),
+            "hwd": len(hwd_vals),
+            "relations": len(rel_el),
+            "measure_points": len(fp_mfs),
+            "char_dist_b": _exp0.get("char_dist_b", 0.0),
+            "lite_counts": _lite_counts,
+        }
+        if "regional_norms" in _exp0:
+            _block["regional_norms"] = _exp0["regional_norms"]
+        _portrait = json.dumps(_block, ensure_ascii=False, indent=2)
+        lines += ["", "## EXPECT 画像（--write-portrait 实测回填）", "",
+                  "```python", f'"{config.SHEET_KEY}": {_portrait},', "```"]
+        print("\n=== EXPECT 画像（实测回填，粘贴至 verify.py EXPECT）===")
+        print(_portrait)
     Path(args.report).parent.mkdir(parents=True, exist_ok=True)
     Path(args.report).write_text("\n".join(lines), encoding="utf-8")
 
