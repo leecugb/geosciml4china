@@ -60,16 +60,22 @@ def check_consistency(lite_dir: str | Path,
 
     l1_dir = Path(l1_dir)
     l1_poly = gpd.read_file(l1_dir / "polygons.geojson")
+    # 空码面元剔除对齐（2026-10-05 td 案）：build 对 QDUECC_eff 空行
+    # （原始 WP 无代号面）不发射 MF——L1 侧同口径过滤
+    l1_poly = l1_poly[l1_poly["QDUECC_eff"].astype(str).str.strip() != ""]
     l1_bnd = gpd.read_file(l1_dir / "boundaries.geojson")
     l1_flt = gpd.read_file(l1_dir / "faults.geojson")
     l1_att = gpd.read_file(l1_dir / "attitude.geojson")
 
     gzbd_eff = l1_bnd["GZBD_eff"].astype(str).str.replace(".0", "", regex=False).str.zfill(2)
     # B1 对齐（2026-09-28）：Lite 侧剔除制图误差行后，L1 侧同口径过滤
-    # status=excluded（此前 M2 掩膜承载的差异现为双侧一致排除）
+    # status=excluded（此前 M2 掩膜承载的差异现为双侧一致排除）；
+    # 2026-10-05 未标定行对齐（td 案）：build 对 verdict/sem_label 皆空的
+    # 行（零长度界线）同样剔除不发射——L1 侧同口径过滤
     is_excl = l1_bnd["status"].astype(str) == "excluded"
+    _vd_null = l1_bnd["verdict"].isna() | l1_bnd["sem_label"].isna()
     conv8 = l1_bnd[gzbd_eff.isin(list(CONTACT_CODES))
-                   & ~is_excl]
+                   & ~is_excl & ~_vd_null]
 
     feats_u = sources.load_lite_features(lite_dir, "geologic_unit_view")
     feats_c = sources.load_lite_features(lite_dir, "contact_view")

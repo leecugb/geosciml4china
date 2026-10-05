@@ -115,6 +115,11 @@ def assemble_polygon_mfs(
         if sample is not None and i >= sample:
             break
         raw = row["QDUECC_eff"]
+        # 空码行剔除（2026-10-05 td 全新项目案：原始 WP 无代号面元
+        # （row 42，微小残余面）——无单元可归，如实剔除不发射 MF；
+        # 与 boundaries 的 excluded 同语义，登记备查不入 GML）
+        if not str(raw or "").strip():
+            continue
         norm = raw2norm.get(raw)
         if norm is None:
             raise KeyError(f"QDUECC_eff {raw!r} not in color units (row {row['_src_id']})")
@@ -164,6 +169,15 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
         if str(row.get("status") or "normal") == "excluded":
             _EXCLUDED_CONTACTS.append(int(row["_src_id"]))
             continue
+        # 未标定行剔除（2026-10-05 td 全新项目案：零长度界线（GZBD=02，
+        # 6 段）经 gzbd 探针「total<1e-10 跳过」不上探针/不上解释表——
+        # verdict/sem_label 皆空。零长度界线无地质语义可标定，
+        # 如实剔除不发射；登记备查（与 excluded 同语义：判别系统结论）
+        _vd = _clean_optional_str(row.get("verdict"))
+        _sl = _clean_optional_str(row.get("sem_label"))
+        if _vd is None or _sl is None:
+            _EXCLUDED_CONTACTS.append(int(row["_src_id"]))
+            continue
         if sample is not None and len(out) >= sample:
             break
         decided = status == "decided" and row_map.get("term")
@@ -173,7 +187,8 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
         # 未覆盖标签回退码查表——jwss 24 案（码表 disconformable × 段级
         # 整合接触 MLE 精化）的语义一致性修复
         if not mapping.sheet_mapping_exists():
-            _ct0 = mapping.contacttype_by_semantics(row["sem_label"])
+            _ct0 = mapping.contacttype_by_semantics(
+                _clean_optional_str(row["sem_label"]))
             if _ct0:
                 decided = True
                 row_map = dict(row_map, term=_ct0)
@@ -183,8 +198,8 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
                 src_id=int(row["_src_id"]),
                 code=code,
                 ord=int(_cid.split(".")[1]),
-                sem_label=row["sem_label"],
-                verdict=row["verdict"],
+                sem_label=_clean_optional_str(row["sem_label"]),
+                verdict=_clean_optional_str(row["verdict"]),
                         younger_side=(
                     row.get("younger_side")
                     if isinstance(row.get("younger_side"), str)

@@ -161,6 +161,23 @@ EXPECT = {
     # 实体链判别（auxchain，2026-09-29 泛化优化）——36 组（跨段恢复 1 组）：
     # 逆 22/正 5（带外组禁止成组严格化后，2026-09-29）；配对 21；
     # 六类画像随实体链版更新。
+    # testdata（2026-10-05 用户指令）：首跑画像占位
+    "td": dict(
+        units=20, poly_mfs=107, contacts=143, contact_nil=21, sds=52,
+        sds_nil_faulttype=0, planes=8, polarity=1, folds=2, fold_nil=0,
+        members=575, compositions=2, six_mode=(1, 1, 0, 0, 6, 0),
+        orphan_tolerance=True, fossil_violations=1,
+        banners=0, dv_blocks=8,  # 2026-10-05 首跑实测（零信息接入自证；
+        # units 21 原码 norm 归一后 20；poly_mfs 107=86 面元多重展开；
+        # contacts 143=149−6（零长度界线未标定剔除）；members 575=587−6−6）
+        ms_dist={"no_movement_sense": 6, "normal": 1, "reverse": 1},
+        hwd=8, relations=10, measure_points=8, char_dist_b=0.0,
+        lite_counts={"geologic_unit_view": 107, "contact_view": 143,
+                     "shear_displacement_structure_view": 52,
+                     "site_observation_view": 23,
+                     "fault_attitude_point_view": 8,
+                     "fossil_specimen_view": 3},
+    ),
     # ---- 零信息接入三联 y1/y2/y3（2026-10-05 用户指令「不要使用其他信息」）：
     # 首跑画像占位（L0 普查计数；其余零值=待首跑实测回填）
     "y1": dict(
