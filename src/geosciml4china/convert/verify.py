@@ -161,6 +161,55 @@ EXPECT = {
     # 实体链判别（auxchain，2026-09-29 泛化优化）——36 组（跨段恢复 1 组）：
     # 逆 22/正 5（带外组禁止成组严格化后，2026-09-29）；配对 21；
     # 六类画像随实体链版更新。
+    # ---- 零信息接入三联 y1/y2/y3（2026-10-05 用户指令「不要使用其他信息」）：
+    # 首跑画像占位（L0 普查计数；其余零值=待首跑实测回填）
+    "y1": dict(
+        units=57, poly_mfs=713, contacts=1318, contact_nil=80, sds=310,
+        sds_nil_faulttype=0, planes=94, polarity=2, folds=4, fold_nil=0,
+        members=4738, compositions=12, six_mode=(51, 5, 3, 0, 30, 5),
+        orphan_tolerance=True, fossil_violations=1,
+        banners=19, dv_blocks=98,  # 2026-10-05 首跑实测（零信息接入自证）
+        ms_dist={"no_movement_sense": 35, "reverse": 54, "normal": 5,
+                 "sinistral": 3, "dextral": 1},
+        hwd=94, relations=113, measure_points=94, char_dist_b=277.0,
+        lite_counts={"geologic_unit_view": 713, "contact_view": 1318,
+                     "shear_displacement_structure_view": 310,
+                     "site_observation_view": 305,
+                     "fault_attitude_point_view": 94,
+                     "fossil_specimen_view": 48},
+    ),
+    "y2": dict(
+        units=95, poly_mfs=808, contacts=1199, contact_nil=192, sds=289,
+        sds_nil_faulttype=0, planes=134, polarity=0, folds=7, fold_nil=0,
+        members=4357, compositions=3, six_mode=(46, 22, 11, 7, 47, 1),
+        orphan_tolerance=True,
+        banners=14, dv_blocks=137,  # 2026-10-05 首跑实测（零信息接入自证；
+        # 1851 约定=180° 由 a-b-a 组装率自裁——off0 54 vs off180 68）
+        ms_dist={"no_movement_sense": 48, "normal": 29, "reverse": 57,
+                 "sinistral": 3},
+        hwd=134, relations=163, measure_points=134, char_dist_b=297.0,
+        lite_counts={"geologic_unit_view": 808, "contact_view": 1199,
+                     "shear_displacement_structure_view": 289,
+                     "site_observation_view": 165,
+                     "fault_attitude_point_view": 134,
+                     "fossil_specimen_view": 40},
+    ),
+    "y3": dict(
+        units=58, poly_mfs=543, contacts=734, contact_nil=72, sds=341,
+        sds_nil_faulttype=0, planes=61, polarity=12, folds=60, fold_nil=0,
+        members=3744, compositions=0, six_mode=(27, 6, 2, 0, 9, 17),
+        orphan_tolerance=True,
+        banners=35, dv_blocks=76,  # 2026-10-05 首跑实测（零信息接入自证；
+        # units 60 原码 norm 归一后 58——自身数据自证值）
+        ms_dist={"reverse": 29, "no_movement_sense": 26,
+                 "sinistral": 10, "normal": 6, "dextral": 5},
+        hwd=61, relations=47, measure_points=61, char_dist_b=209.6,
+        lite_counts={"geologic_unit_view": 543, "contact_view": 734,
+                     "shear_displacement_structure_view": 341,
+                     "site_observation_view": 406,
+                     "fault_attitude_point_view": 61,
+                     "fossil_specimen_view": 20},
+    ),
     # ---- 全新项目三联（2026-10-05 用户指令：D:/1 D:/2 D:/3 全量泛化测试）----
     # 首跑画像占位（L0 实测计数；其余零值=待首跑 verify 实测回填）
     "x1": dict(
