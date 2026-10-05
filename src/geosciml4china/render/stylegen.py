@@ -220,6 +220,9 @@ def read_sheet_units(sheet: str) -> list[UnitInput]:
                 g = r.geodataframe
             seen: dict[str, str] = {}
             for c, n in zip(g["QDUECC"].astype(str), g["QDUECD"].astype(str)):
+                if not c.strip():
+                    continue  # 空码行剔除（2026-10-05 td 案：与 lite 源
+                # read_lite_units 的 not key[1] 跳过、build 空码剔除同口径）
                 seen.setdefault(c, n.strip())
             for raw, name in seen.items():
                 out.append(UnitInput(raw_code=raw, norm=norm_code(raw),
