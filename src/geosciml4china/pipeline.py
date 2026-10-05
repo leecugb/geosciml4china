@@ -52,12 +52,24 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
             print(f"!! 图幅剖面未注册（pymapgis.semantics.profile.PROFILES 缺 "
                   f"{sh.key!r}）——先注册剖面再跑 pipeline")
             return 2
-        print("① MapGIS → L0 转换")
-        convert_sheet(sh.root)
-        write_profile(sh.key, sh.root)
-        if not validate_l0(sh.root):
-            print("!! L0 校验失败，中止")
-            return 1
+        # 增量跳过（2026-10-05 泛化提速）：L0 全部产物新于全部源文件时
+        # 免转——check-only 重跑/回填画像二跑的转换阶段零成本
+        _l0dir = sh.root / "geojson" / "L0"
+        _raws = [p for p in sh.root.iterdir()
+                 if p.is_file() and p.suffix in (".WL", ".WP", ".WT")]
+        _l0s = list(_l0dir.glob("*.geojson")) if _l0dir.exists() else []
+        _stale = (not _raws or not _l0s
+                  or min(p.stat().st_mtime for p in _l0s)
+                  < max(p.stat().st_mtime for p in _raws))
+        if _stale:
+            print("① MapGIS → L0 转换")
+            convert_sheet(sh.root)
+            write_profile(sh.key, sh.root)
+            if not validate_l0(sh.root):
+                print("!! L0 校验失败，中止")
+                return 1
+        else:
+            print("① 跳过（L0 新于源文件——增量通道；--skip-convert 同效）")
     else:
         print("① 跳过（--skip-convert）")
 

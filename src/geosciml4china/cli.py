@@ -75,6 +75,7 @@ _DELEGATES = {
     "build": ("geosciml4china.convert.build", "main"),
     "verify": ("geosciml4china.convert.verify", "main"),
     "render": ("geosciml4china.render.render", "main"),
+    "probe": ("geosciml4china.probe", "main"),
 }
 
 

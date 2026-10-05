@@ -310,7 +310,13 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         dm, fid = best
         ch = chains[fid]
         s_, side, dperp = _arc_side(ch, pt, LON_M, LAT_M)
-        _seg = int(fl_m.distance(pt_m).idxmin())  # b 最近段（build 键接/互验用）
+        # b 最近段（build 键接/互验用）——fl_m/pt_m 均为米制（Finding A
+        # 修复），GeoSeries 仅 CRS 元数据未更新致告警；距离计算正确，
+        # 局部静默该元数据告警（2026-10-05 泛化提速清理）
+        import warnings as _w
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            _seg = int(fl_m.distance(pt_m).idxmin())
         _ang = float(r["angle"]) if str(r["angle"]).strip() else None
         rows.append({
             "aux_idx": idx, "kind": "symbol",
