@@ -31,7 +31,7 @@ from .sheets import get_sheet, list_sheets
 
 def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=False,
                  skip_render=False, check_only=False, dpi=200,
-                 no_pattern=False) -> int:
+                 no_pattern=False, accept_portrait=False) -> int:
     sh = get_sheet(sheet_key)
     print(f"=== g4c pipeline：{sh.title}（{sh.root}）===")
 
@@ -167,6 +167,8 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
     print("⑤ verify")
     _saved = sys.argv
     sys.argv = ["g4c verify", "--sheet", sheet_key]
+    if accept_portrait:
+        sys.argv.append("--accept-portrait")
     try:
         rc = _verify.main()
     finally:
@@ -202,11 +204,14 @@ def main() -> int:
     ap.add_argument("--dpi", type=int, default=200)
     ap.add_argument("--no-pattern", action="store_true",
                     help="渲染禁花纹填充（纯色平铺加速）")
+    ap.add_argument("--accept-portrait", action="store_true",
+                    help="首次画像接受：verify 落盘画像并 exit 0（消除 re-run）")
     args = ap.parse_args()
     return run_pipeline(args.sheet, skip_convert=args.skip_convert,
                         skip_calibrate_stages=args.skip_calibrate_stages,
                         skip_render=args.skip_render, check_only=args.check_only,
-                        dpi=args.dpi, no_pattern=args.no_pattern)
+                        dpi=args.dpi, no_pattern=args.no_pattern,
+                        accept_portrait=args.accept_portrait)
 
 
 if __name__ == "__main__":

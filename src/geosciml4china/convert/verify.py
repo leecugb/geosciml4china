@@ -327,11 +327,19 @@ def main() -> int:
     ap.add_argument("--sheet", choices=[s.key for s in list_sheets()],
                     default="kurgan")
     ap.add_argument("--write-portrait", action="store_true",
-                    help="实测值回填 EXPECT 画像块（报告+控制台）")
+                    help="实测值回填 EXPECT 画像块（报告+控制台+画像文件）")
+    ap.add_argument("--accept-portrait", action="store_true",
+                    help="首次画像接受：无画像文件时落盘并 exit 0（消除 re-run）")
     args = ap.parse_args()
 
     config.init_sheet(args.sheet)
-    EXP = EXPECT[args.sheet]
+    EXP = dict(EXPECT[args.sheet])
+    # 图幅画像文件优先（2026-10-05 消除 re-run：首跑 --accept-portrait 落盘，
+    # 二跑起按画像严格核验——画像回填从手工两步变首跑自证）
+    _portrait_p = Path(config.SHEET_ROOT) / "verify_portrait.json"
+    _had_portrait = _portrait_p.exists()
+    if _had_portrait:
+        EXP.update(json.load(open(_portrait_p, encoding="utf-8")))
     gml_path = Path(args.gml or str(config.GML_OUT))
     lite_dir = Path(args.lite_dir or str(config.LITE_OUT))
     args.report = args.report or str(config.REPORT_OUT)
@@ -854,7 +862,8 @@ def main() -> int:
     ]
     # --write-portrait：实测值回填 EXPECT 块（2026-10-05 泛化提速——画像
     # 回填从手工编辑变一条命令；不可从 GML 重算的字段继承现行 EXPECT）
-    if getattr(args, "write_portrait", False):
+    if (getattr(args, "write_portrait", False)
+            or getattr(args, "accept_portrait", False)):
         _exp0 = dict(EXP)
         _lite_counts = {}
         for _v in ("geologic_unit_view", "contact_view",
@@ -896,6 +905,10 @@ def main() -> int:
                   "```python", f'"{config.SHEET_KEY}": {_portrait},', "```"]
         print("\n=== EXPECT 画像（实测回填，粘贴至 verify.py EXPECT）===")
         print(_portrait)
+        _portrait_p.write_text(_portrait, encoding="utf-8")
+        print(f"画像已落盘: {_portrait_p}")
+    _accept = (getattr(args, "accept_portrait", False)
+               and not _had_portrait and (fails or warns))
     Path(args.report).parent.mkdir(parents=True, exist_ok=True)
     Path(args.report).write_text("\n".join(lines), encoding="utf-8")
 
@@ -904,6 +917,9 @@ def main() -> int:
         print(f"  {mark} {cid}: {msg}")
     print(f"\nreport: {args.report}")
     print(f"PASS {sum(1 for r in results if r[1]=='PASS')} / WARN {len(warns)} / FAIL {len(fails)}")
+    if _accept:
+        print("首次画像接受（--accept-portrait，画像已落盘）——下轮起严格核验")
+        return 0
     return 1 if fails else 0
 
 

@@ -7,7 +7,7 @@
 不变量断言（空码面元剔除/零长度界线剔除/语义三轴分布）。
 
 环境契约：pymapgis.semantics 在场才运行（本地完整栈）；CI（PyPI 极简
-pymapgis）整模块跳过。运行时长约 3-5 分钟（小图幅端到端）。
+pymapgis）整模块跳过。运行时长约 15 秒（小图幅端到端）。
 """
 from pathlib import Path
 
@@ -137,3 +137,35 @@ def test_fault_contact_activity_layer(td_project):
     assert p.exists()
     fc = pd.read_csv(p, dtype=str)
     assert len(fc) >= 0  # 层执行（候选数随数据，不断言）
+
+
+def test_probe_census_matches_bundled(td_project):
+    """零注入普查（probe）自持回归：bundled 图幅自身数据的普查值逐项
+    锁定（lat/aux 类词/子图号/计数/形态预警）——onboarding 通道防漂移。
+    管道跑过的进程内 probe 仍须读原始 MapGIS（JWD_SOURCE 强制 raw）。"""
+    import contextlib
+    import io
+    from geosciml4china.probe import probe
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        out = probe(td_project, "probec", register=False)
+    assert out["lat_mid"] == 39.3
+    assert out["aux_filter"] == "断层辅助点"
+    assert out["b_symbol_raw"] == 1894
+    assert out["counts"] == {"faults": 52, "boundaries": 353,
+                             "attitudes": 23, "folds": 2}
+    assert out["poly_dist"] == {"LDZOFBB001.WP": 86, "LDZOFBB002.WP": 7,
+                                "LDZOFBB003.WP": 9, "LDZOFBB004.WP": 6}
+    assert out["n_units_raw"] == 21
+    assert any("空码面元" in w for w in out["warnings"])
+    assert any("零长度界线" in w for w in out["warnings"])
+
+
+def test_incremental_skip_second_run(td_project, capsys):
+    """增量通道（2026-10-05 泛化提速）：L0 全部产物新于源文件时二次全链
+    免转——二跑打印跳过行且仍全绿（幂等重跑，零语义漂移）。"""
+    from geosciml4china import pipeline
+    rc = pipeline.run_pipeline("tdc", check_only=True)
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "① 跳过（L0 新于源文件" in out, "二次全链应命中增量通道"

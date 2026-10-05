@@ -24,7 +24,9 @@ from pathlib import Path
 
 
 def _load_l0(root: Path, fname: str):
-    os.environ.setdefault("JWD_SOURCE", "raw")
+    # 强制 raw：普查契约=图幅原始 MapGIS 数据（管道运行过的进程内
+    # JWD_SOURCE 可能已被标定域设为 geojson——setdefault 会静默读错源）
+    os.environ["JWD_SOURCE"] = "raw"
     from pymapgis.semantics import load_source_layer
     return load_source_layer(str(root), fname, graphic=(fname.endswith(".WT")))
 
