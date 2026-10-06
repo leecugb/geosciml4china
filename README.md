@@ -64,7 +64,13 @@ Invariants across all four: zero pending codes, zero nil faultType, zero XSD err
 
 ## Pipeline
 
-`g4c pipeline` runs ⓪ preflight (11-file contract) → ① MapGIS→L0 conversion (incremental skip when L0 is newer than the sources) → ② self-supporting calibration (nine domains, two-phase materialization) → ②c gap report (per-feature plots for adjudication) → ③ style generation (semantics + DZ/T 0179-2025 color library → styles, single source) → ④ GeoSciML build (GML + Lite views + pending register) → ⑤ verification (XSD + assertions; portrait files with `--write-portrait` / `--accept-portrait` eliminate first-run re-runs) → ⑥ semantics-driven rendering with mirror reconciliation (1–99 percentile crop by default, `--full-extent` to disable).
+The pipeline is organized as **three orthogonal interfaces** (2026-10-06); each is independently runnable and its input/output contract is one artefact:
+
+1. **`g4c prepare`** — file-completeness check (11-file contract) → MapGIS→L0 conversion (incremental skip when L0 is newer) → nine-domain self-supporting calibration (two-phase materialization) → gap report → **emits the codebook** (`codebook_<key>.json`, the reconstructed dictionary; user-editable, edits preserved across regeneration).
+2. **`g4c convert`** — GeoSciML conversion **built on the codebook**: stylegen (semantics + DZ/T 0179-2025 colour library) → build (GML + Lite views + pending register) → verify (XSD + 29 assertions; `--accept-portrait` locks the first-run portrait).
+3. **`g4c render`** — semantics-driven rendering with C1–C7 L1-mirror reconciliation (1–99 percentile crop by default, scale-anchored canvas at true 1:250,000 map scale, overlays).
+
+`g4c pipeline` composes the three in order (backward-compatible flags). Typical loops: edit the codebook → `g4c convert`; change styles → `g4c render`.
 
 - **Calibration** (`geosciml4china.calibrate`): nine domains — boundaries (GZBD, adaptive 40/100/250 m flanking-unit probes), fault entity grouping, fault aux-point chains (a–b/a–b–a patterns, strike-slip hook pairs), fault-contact activity audit, fault kinematics (GZEEB, with GZELD global kinematic priors 101 compressive / 102 extensional / 103 dextral / 104 sinistral), attitudes (strike⊥dip hard invariant), fossils/mud volcanoes, folds, inferred faults. Prior library driven (Xinjiang regional contact-relationship priors = dual-source highest-knowledge base, shipped as package data).
 - **Conversion** (`geosciml4china.convert`): six feature classes (GeologicUnit / MappedFeature / Contact / ShearDisplacementStructure / Foliation / Fold + fault attitude measurement points); specimens live in the official portrayal view because the GeoSciML 4.1 Sampling package is unpublished.
@@ -95,8 +101,9 @@ pip install geosciml4china            # this package
 
 ```bash
 g4c probe --root D:/my-sheet --key mykey --register   # census from the sheet's own data + registration
-g4c check --sheet mykey                               # preflight: 11-file contract (CORE missing → abort)
-g4c pipeline --sheet mykey --accept-portrait          # full chain; first run locks the verify portrait
+g4c prepare --sheet mykey                             # interface 1: completeness + calibration → codebook
+g4c convert --sheet mykey --accept-portrait           # interface 2: codebook-based GeoSciML conversion
+g4c render --sheet mykey                              # interface 3: rendering + mirror checks
 ```
 
 ## Reproducible test cases
@@ -157,13 +164,20 @@ Third-party sheet registration (pick one):
 ## CLI
 
 ```bash
+# three interfaces (2026-10-06)
 g4c probe --root D:/sheet --key s1 [--register]    # zero-injection onboarding census
-g4c check --sheet s1                               # sheet preflight: 11-file completeness contract
+g4c prepare --sheet s1 [--skip-convert] [--skip-calibrate-stages]   # interface 1
+g4c convert --sheet s1 [--accept-portrait]         # interface 2 (codebook-based)
+g4c render --sheet s1 [--no-overlay] [--full-extent]   # interface 3
 g4c pipeline --sheet s1 [--skip-convert] [--skip-calibrate-stages] [--skip-render]
                 [--check-only] [--accept-portrait] [--no-pattern] [--dpi 200]
+g4c codebook --sheet s1                            # regenerate the codebook JSON
+
+g4c check --sheet s1                               # sheet preflight: 11-file completeness contract
 g4c sheets                                         # list registered sheets and resolved roots
 g4c data                                           # package-data paths and existence
 
+# domain-level commands (debug / stepwise)
 g4c calibrate-gzbd --sheet s1                      # boundary calibration (GZBD)
 g4c entities --sheet s1                            # fault entity grouping
 g4c auxchain --sheet s1                            # fault aux-point entity-chain discrimination
@@ -179,7 +193,6 @@ g4c stylegen --sheet s1 [--diff]                   # polygon style generation (s
 g4c stylegen-fault --sheet s1                      # fault style generation
 g4c build --sheet s1 [--only gml|lite|pending] [--sample N]
 g4c verify --sheet s1 [--write-portrait] [--accept-portrait]   # XSD + business assertions
-g4c render --sheet s1 [--no-overlay] [--check-only] [--full-extent]
 ```
 
 Pipeline order for stepwise debugging: **stylegen → build → verify** (the render

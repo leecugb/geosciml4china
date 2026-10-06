@@ -345,6 +345,15 @@ def main() -> int:
     lite_dir = Path(args.lite_dir or str(config.LITE_OUT))
     args.report = args.report or str(config.REPORT_OUT)
 
+    # codebook 陈旧提示（2026-10-06 三接口结构）：codebook 编辑后未重建
+    # 产品时提醒——仅控制台提示，不进 WARN 计数（正常接口二流程
+    # codebook 先于 GML 落盘，恒不触发）
+    _cb_p = Path(config.SHEET_ROOT) / f"codebook_{config.SHEET_KEY}.json"
+    if _cb_p.exists() and gml_path.exists() \
+            and _cb_p.stat().st_mtime > gml_path.stat().st_mtime + 5:
+        print(f"ℹ codebook_{config.SHEET_KEY}.json 新于 GML——"
+              f"codebook 编辑后请重跑 g4c convert --sheet {config.SHEET_KEY}")
+
     # --- XSD validation -------------------------------------------------------
     ok, err_log = validate.validate(gml_path)
     check("XSD", ok, f"full document validates against geoSciMLExtension.xsd ({len(err_log)} errors)")  # noqa: E501
