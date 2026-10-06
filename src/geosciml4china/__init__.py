@@ -14,7 +14,7 @@
 示例：``examples/``（零注入接入/标定件检查/修改-再转化/GeoSciML 读取）。
 """
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 # 顶层 API（模块级导入安全：pipeline/probe 的 pymapgis 依赖均在函数内懒装载，
 # PyPI 极简环境下 import geosciml4china 照常可用，仅调用管线函数时自然报错）
