@@ -335,8 +335,9 @@ def main() -> int:
     config.init_sheet(args.sheet)
     EXP = dict(EXPECT[args.sheet])
     # 图幅画像文件优先（2026-10-05 消除 re-run：首跑 --accept-portrait 落盘，
-    # 二跑起按画像严格核验——画像回填从手工两步变首跑自证）
-    _portrait_p = Path(config.SHEET_ROOT) / "verify_portrait.json"
+    # 二跑起按画像严格核验——画像回填从手工两步变首跑自证）。
+    # 按 key 分域（2026-10-05 修复：同一 root 多键接入时画像互不覆盖）
+    _portrait_p = Path(config.SHEET_ROOT) / f"verify_portrait_{args.sheet}.json"
     _had_portrait = _portrait_p.exists()
     if _had_portrait:
         EXP.update(json.load(open(_portrait_p, encoding="utf-8")))

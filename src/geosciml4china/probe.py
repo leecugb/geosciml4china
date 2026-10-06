@@ -134,44 +134,74 @@ def probe(root: Path, key: str, register: bool = False) -> dict:
           f'l1_stages=[], verify_stages=[])')
 
     if register:
-        from geosciml4china.sheets import register_sheet, Sheet
-        from pymapgis.semantics.profile import PROFILES, SheetProfile
-        PROFILES[key] = SheetProfile(
-            sheet=key, sheet_title=f"零注入接入 {key}",
-            center_lat_hint=lat_mid, bbox_margin_frac=0.05,
-            aux_filter=aux_cat, b_symbol_raw=b_raw, b_dip_offset_deg=0.0,
-            char_dists={}, b_angle_remap_deg=0.0,
-            color_mapping=f"output/geosciml/{key}_style_generated.json",
-            fault_styles=f"output/geosciml/{key}_fault_styles_generated.json",
-            svg_pattern_registry="",
-            assoc_csv=f"fault_aux_{key}.csv",
-            entities_csv=f"fault_entities_{key}.csv",
-            anomaly_csv="_fault_aux_anomalies.csv",
-            render_themes=[], l1_stages=[], verify_stages=[])
-        register_sheet(Sheet(
-            key=key, code=f"J43T00000{key[-1]}", title=f"零注入接入 {key}",
-            root=Path(root),
-            aux_pairs_csv=f"fault_aux_number_{b_raw}_pairs.csv",
-            aux_assoc_csv=f"fault_aux_{key}.csv",
-            aux_triplets_csv=f"_fault_triplets_{key}.csv",
-            calibration_csv="_gzbd_calibration_report.csv"))
-        from geosciml4china.convert import verify
-        verify.EXPECT[key] = dict(
-            units=len(units), poly_mfs=sum(poly_dist.values()), contacts=0,
-            contact_nil=0, sds=counts["faults"], sds_nil_faulttype=0,
-            planes=counts["attitudes"], polarity=0, folds=counts["folds"],
-            fold_nil=0, members=0, compositions=0,
-            six_mode=(0, 0, 0, 0, 0, 0), orphan_tolerance=True,
-            banners=0, dv_blocks=0, ms_dist={}, hwd=0, relations=0,
-            measure_points=0, char_dist_b=0.0,
-            lite_counts={"geologic_unit_view": poly_dist.get("LDZOFBB001.WP", 0),
-                         "contact_view": 0,
-                         "shear_displacement_structure_view": counts["faults"],
-                         "site_observation_view": counts["attitudes"],
-                         "fault_attitude_point_view": 0,
-                         "fossil_specimen_view": 0})
+        _register(out, Path(root), key, title=None, code=None)
         print(f"\n已注册 {key}（profile+sheet+EXPECT 占位）——"
               f"可运行 g4c pipeline --sheet {key}")
+    return out
+
+
+def _register(out: dict, root: Path, key: str, title=None, code=None) -> None:
+    """运行时注册（probe --register 与 onboard 共用）：PROFILES + sheets +
+    verify EXPECT 占位画像。title/code 缺省取零注入模板值。"""
+    from geosciml4china.sheets import register_sheet, Sheet
+    from pymapgis.semantics.profile import PROFILES, SheetProfile
+    _title = title or f"零注入接入 {key}"
+    _code = code or f"J43T00000{key[-1]}"
+    PROFILES[key] = SheetProfile(
+        sheet=key, sheet_title=_title,
+        center_lat_hint=out["lat_mid"], bbox_margin_frac=0.05,
+        aux_filter=out["aux_filter"], b_symbol_raw=out["b_symbol_raw"],
+        b_dip_offset_deg=0.0, char_dists={}, b_angle_remap_deg=0.0,
+        color_mapping=f"output/geosciml/{key}_style_generated.json",
+        fault_styles=f"output/geosciml/{key}_fault_styles_generated.json",
+        svg_pattern_registry="",
+        assoc_csv=f"fault_aux_{key}.csv",
+        entities_csv=f"fault_entities_{key}.csv",
+        anomaly_csv="_fault_aux_anomalies.csv",
+        render_themes=[], l1_stages=[], verify_stages=[])
+    register_sheet(Sheet(
+        key=key, code=_code, title=_title, root=root,
+        aux_pairs_csv=f"fault_aux_number_{out['b_symbol_raw']}_pairs.csv",
+        aux_assoc_csv=f"fault_aux_{key}.csv",
+        aux_triplets_csv=f"_fault_triplets_{key}.csv",
+        calibration_csv="_gzbd_calibration_report.csv"))
+    from geosciml4china.convert import verify
+    verify.EXPECT[key] = dict(
+        units=out["n_units_raw"], poly_mfs=sum(out["poly_dist"].values()),
+        contacts=0, contact_nil=0,
+        sds=out["counts"]["faults"], sds_nil_faulttype=0,
+        planes=out["counts"]["attitudes"], polarity=0,
+        folds=out["counts"]["folds"], fold_nil=0,
+        members=0, compositions=0,
+        six_mode=(0, 0, 0, 0, 0, 0), orphan_tolerance=True,
+        banners=0, dv_blocks=0, ms_dist={}, hwd=0, relations=0,
+        measure_points=0, char_dist_b=0.0,
+        lite_counts={
+            "geologic_unit_view": out["poly_dist"].get("LDZOFBB001.WP", 0),
+            "contact_view": 0,
+            "shear_displacement_structure_view": out["counts"]["faults"],
+            "site_observation_view": out["counts"]["attitudes"],
+            "fault_attitude_point_view": 0,
+            "fossil_specimen_view": 0})
+
+
+def onboard(root, key: str, title=None, code=None) -> dict:
+    """零注入接入一步式 Python API：普查 + 运行时注册（sheet+profile+EXPECT）。
+
+    等价于 ``g4c probe --root ROOT --key KEY --register``，供程序化接入：:
+
+        from geosciml4china import onboard
+        from geosciml4china.pipeline import run_pipeline
+        onboard("D:/my-sheet", "mykey", title="My sheet")
+        run_pipeline("mykey", check_only=True)   # 首跑 --accept-portrait 落盘画像
+
+    需要 pymapgis 完整栈在场（profiles/semantics）。返回普查结果 dict
+    （lat_mid/aux_filter/b_symbol_raw/counts/poly_dist/n_units_raw/warnings）。
+    """
+    out = probe(Path(root), key, register=False)
+    _register(out, Path(root), key, title=title, code=code)
+    print(f"\nonboard 完成：{key} 已注册（profile+sheet+EXPECT 占位）——"
+          f"可运行 g4c pipeline --sheet {key}")
     return out
 
 

@@ -1,18 +1,34 @@
 """g4c 统一命令行入口。
 
-子命令转发现有一切 main()（参数面零变化）：
+零注入接入三步（新图幅最快路径）：
 
-- ``g4c sheets``                     列出已注册图幅（root 解析后）
-- ``g4c calibrate-gzbd --sheet K``    GZBD 界线先验标定（业务逻辑第一步）
-- ``g4c calibrate-gzeeb --sheet K``   GZEEB 断层三维标定（aux 语义反演，业务第三步）
-- ``g4c check --sheet K``            图幅预检（11 文件完整性，处理前必过）
-- ``g4c data``                       列出包数据路径与存在性
-- ``g4c stylegen ...``               面元样式生成（render.stylegen）
-- ``g4c stylegen-fault ...``         断层样式生成（render.stylegen_fault）
-- ``g4c pipeline --sheet K``        全链：MapGIS 文件夹→标定→转换→渲染
-- ``g4c build ...``                  MapGIS/L1 → GeoSciML GML+Lite（convert.build）
-- ``g4c verify ...``                 XSD+业务断言（convert.verify）
-- ``g4c render ...``                 渲染 + 镜像核验（render.render）
+    g4c probe --root D:/my-sheet --key mykey --register   # 普查+注册（零外部信息）
+    g4c check --sheet mykey                               # 11 文件预检
+    g4c pipeline --sheet mykey --accept-portrait          # 全链（首跑落盘画像）
+
+子命令（转发现有一切 main()，参数面零变化）：
+
+- ``g4c probe --root P --key K [--register]``   零注入普查；--register 运行时注册
+- ``g4c sheets``                                列出已注册图幅（root 解析后）
+- ``g4c check --sheet K``                       图幅预检（11 文件完整性，处理前必过）
+- ``g4c data``                                  列出包数据路径与存在性
+- ``g4c pipeline --sheet K``                    全链：MapGIS 文件夹→标定→转换→渲染
+                                                （--skip-convert/--skip-calibrate-stages/
+                                                --skip-render/--check-only/--accept-portrait/
+                                                --no-pattern/--dpi N）
+- 标定域（可按域单独执行）：
+    calibrate-gzbd / entities / auxchain / calibrate-gzeeb /
+    calibrate-fault-contact-activity / calibrate-attitudes /
+    calibrate-fossils / calibrate-folds / calibrate-inferred-faults
+    （均 ``--sheet K``；另 report-gaps 输出缺口报告+单要素配图）
+- 转换与渲染：
+    ``g4c stylegen --sheet K``     面元样式生成（render.stylegen）
+    ``g4c stylegen-fault --sheet K``  断层样式生成（render.stylegen_fault）
+    ``g4c build --sheet K``        L1 → GeoSciML GML+Lite（convert.build）
+    ``g4c verify --sheet K``       XSD+29 业务断言（convert.verify；
+                                   --write-portrait/--accept-portrait）
+    ``g4c render --sheet K``       渲染 + C1-C7 镜像核验（--no-overlay/
+                                   --check-only/--full-extent/--no-pattern）
 
 管线序：**stylegen → build → verify**（render 前 F3 样式重生自动兜底）。
 """
