@@ -1,23 +1,21 @@
-"""全链编排器（2026-10-02 用户对齐定版）：MapGIS 工程文件夹 → L0 → 自支持
-地质语义判别解析（L1）→ GeoSciML → 语义渲染。
+"""管线三接口（2026-10-06 用户裁定）：geosciml4china 管线整体分三个接口。
 
-阶段序（管线纪律，逐段失败即中止；与用户对齐链逐字对应）：
-  ⓪ preflight     MapGIS 文件完整性检查（11 文件契约，CORE 缺即中止）
-  ① convert       MapGIS 原生 → geojson/L0（pymapgis.semantics.convert_sheet + validate_l0）
-  ② calibrate     自支持地质语义判别解析（geosciml4china.calibrate 八域全包原生：
-                   gzbd（界线）→ entities（断层归组）→ auxchain（辅助点判别）→ 写回
-                   → fault_contact_activity（断裂接触审计）→ gzeeb（断层三维）
-                   → attitudes（产状）→ fossils（化石）→ folds（褶皱）
-                   → inferred_faults（推测断层覆盖度核定））
-  ②b materialize  L1 物化（两相：基线 L1 供实体/辅助链消费 → 终态 L1 语义写回）
-  ②c gap_report   缺口报告（文字+单要素配图，专家裁决工作台；两路径汇聚点）
-  ③ stylegen      语义→样式（lite 优先；lite 缺失时 --from-wp 引导——新幅首接）
-  ④ build         L1 → GML + Lite + pending（含断层样式生成：其语义源=lite SDS 视图）
-  ⑤ verify        XSD + 业务断言（A01-A27 + C1-C7 镜像）
-  ⑥ render        渲染 + L1 镜像核验（叠加层生产默认）
+  **接口一 prepare**  检验项目文件完整性（11 文件契约预检）+ 完成地质语义
+      标定（L0 转换 → 九域自支持标定 → 两相物化 → 缺口报告），生成
+      **codebook**（编码-地质语义映射表 JSON，用户可改）。
+  **接口二 convert**  按照 codebook 完成 GeoSciML 转换（stylegen → build
+      → verify：GML + Lite 六视图 + pending，XSD + 29 业务断言）。
+  **接口三 render**   完成 GeoSciML 渲染（DZ/T 0179-2025 样式 + 叠加层 +
+      C1-C7 L1 镜像核验）。
 
-CLI: g4c pipeline --sheet <key> [--skip-convert] [--skip-calibrate-stages]
-     [--skip-render] [--check-only（止于 verify）] [--dpi N] [--no-pattern]
+接口正交可独立执行（codebook 编辑后只需重跑接口二；产品重建后只需重跑
+接口三）；``run_pipeline`` = 三接口顺序编排（向后兼容原 g4c pipeline）。
+
+CLI:
+  g4c prepare --sheet K [--skip-convert] [--skip-calibrate-stages]
+  g4c convert --sheet K [--accept-portrait]
+  g4c render  --sheet K [--dpi N] [--no-pattern] [--no-overlay] [--full-extent]
+  g4c pipeline --sheet K [全链，参数兼容]
 """
 from __future__ import annotations
 
@@ -29,11 +27,11 @@ from pathlib import Path
 from .sheets import get_sheet, list_sheets
 
 
-def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=False,
-                 skip_render=False, check_only=False, dpi=200,
-                 no_pattern=False, accept_portrait=False) -> int:
+def prepare(sheet_key: str, *, skip_convert=False,
+            skip_calibrate_stages=False) -> int:
+    """接口一：完整性检验 + 地质语义标定 + codebook 生成。"""
     sh = get_sheet(sheet_key)
-    print(f"=== g4c pipeline：{sh.title}（{sh.root}）===")
+    print(f"=== g4c prepare：{sh.title}（{sh.root}）===")
 
     # ⓪ 图幅预检（2026-09-29 用户裁定：处理图幅前先查 11 文件完整性；
     # CORE 缺即中止，CONDITIONAL 缺声明登记继续）
@@ -50,7 +48,7 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
         from pymapgis.semantics.profile import PROFILES, write_profile
         if sh.key not in PROFILES:
             print(f"!! 图幅剖面未注册（pymapgis.semantics.profile.PROFILES 缺 "
-                  f"{sh.key!r}）——先注册剖面再跑 pipeline")
+                  f"{sh.key!r}）——先注册剖面再跑 prepare")
             return 2
         # 增量跳过（2026-10-05 泛化提速）：L0 全部产物新于全部源文件时
         # 免转——check-only 重跑/回填画像二跑的转换阶段零成本
@@ -142,6 +140,13 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
     from .calibrate.codebook import build_codebook, summary as _cb_summary
     print("②d codebook（编码-地质语义映射表 JSON = codebook）")
     print(_cb_summary(build_codebook(sh.key)))
+    return 0
+
+
+def convert(sheet_key: str, *, accept_portrait=False) -> int:
+    """接口二：按照 codebook 完成 GeoSciML 转换（stylegen → build → verify）。"""
+    sh = get_sheet(sheet_key)
+    print(f"=== g4c convert：{sh.title}（按 codebook 转换 GeoSciML）===")
 
     # ③ stylegen（lite 优先；缺 lite 走 WP 引导——新幅首接通道）
     from .render import stylegen as _sg
@@ -177,18 +182,16 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
     if accept_portrait:
         sys.argv.append("--accept-portrait")
     try:
-        rc = _verify.main()
+        return _verify.main()
     finally:
         sys.argv = _saved
-    if rc != 0 or check_only:
-        return rc
 
-    # ⑥ render（叠加层生产默认）
-    if skip_render:
-        print("⑥ 跳过（--skip-render）")
-        return 0
+
+def render_stage(sheet_key: str, *, dpi=200, no_pattern=False) -> int:
+    """接口三：完成 GeoSciML 渲染（叠加层生产默认 + L1 镜像核验）。"""
+    sh = get_sheet(sheet_key)
+    print(f"=== g4c render：{sh.title}（GeoSciML 渲染）===")
     from .render import render as _render
-    print("⑥ render（叠加层）")
     _saved = sys.argv
     sys.argv = ["g4c render", "--sheet", sheet_key, "--dpi", str(dpi)]
     if no_pattern:
@@ -197,6 +200,45 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
         return _render.main()
     finally:
         sys.argv = _saved
+
+
+def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=False,
+                 skip_render=False, check_only=False, dpi=200,
+                 no_pattern=False, accept_portrait=False) -> int:
+    """全链 = 三接口顺序编排（向后兼容原 g4c pipeline 参数面）。"""
+    rc = prepare(sheet_key, skip_convert=skip_convert,
+                 skip_calibrate_stages=skip_calibrate_stages)
+    if rc != 0:
+        return rc
+    rc = convert(sheet_key, accept_portrait=accept_portrait)
+    if rc != 0 or check_only:
+        return rc
+    if skip_render:
+        print("⑥ 跳过（--skip-render）")
+        return 0
+    return render_stage(sheet_key, dpi=dpi, no_pattern=no_pattern)
+
+
+def prepare_main() -> int:
+    ap = argparse.ArgumentParser(prog="g4c prepare")
+    ap.add_argument("--sheet", choices=[s.key for s in list_sheets()],
+                    required=True)
+    ap.add_argument("--skip-convert", action="store_true")
+    ap.add_argument("--skip-calibrate-stages", action="store_true",
+                    help="跳过标定阶段脚本（仅物化+codebook——基线/调试通道）")
+    args = ap.parse_args()
+    return prepare(args.sheet, skip_convert=args.skip_convert,
+                   skip_calibrate_stages=args.skip_calibrate_stages)
+
+
+def convert_main() -> int:
+    ap = argparse.ArgumentParser(prog="g4c convert")
+    ap.add_argument("--sheet", choices=[s.key for s in list_sheets()],
+                    required=True)
+    ap.add_argument("--accept-portrait", action="store_true",
+                    help="首次画像接受：verify 落盘画像并 exit 0（消除 re-run）")
+    args = ap.parse_args()
+    return convert(args.sheet, accept_portrait=args.accept_portrait)
 
 
 def main() -> int:

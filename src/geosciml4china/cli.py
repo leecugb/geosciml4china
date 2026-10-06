@@ -1,29 +1,35 @@
 """g4c 统一命令行入口。
 
-零注入接入三步（新图幅最快路径）：
+管线三接口（2026-10-06 用户裁定，正交可独立执行）：
 
-    g4c probe --root D:/my-sheet --key mykey --register   # 普查+注册（零外部信息）
-    g4c check --sheet mykey                               # 11 文件预检
-    g4c pipeline --sheet mykey --accept-portrait          # 全链（首跑落盘画像）
+    g4c probe --root D:/my-sheet --key mykey --register   # 零注入普查+注册
+    g4c prepare --sheet mykey            # 接口一：完整性检验+地质语义标定
+                                         #   → 生成 codebook（用户可改 JSON）
+    g4c convert --sheet mykey            # 接口二：按 codebook 转换 GeoSciML
+                                         #   （stylegen→build→verify）
+    g4c render  --sheet mykey            # 接口三：GeoSciML 渲染+镜像核验
+    g4c pipeline --sheet mykey           # 全链 = 三接口顺序编排
 
 子命令（转发现有一切 main()，参数面零变化）：
 
 - ``g4c probe --root P --key K [--register]``   零注入普查；--register 运行时注册
 - ``g4c sheets``                                列出已注册图幅（root 解析后）
-- ``g4c check --sheet K``                       图幅预检（11 文件完整性，处理前必过）
+- ``g4c check --sheet K``                       图幅预检（11 文件完整性）
 - ``g4c data``                                  列出包数据路径与存在性
-- ``g4c pipeline --sheet K``                    全链：MapGIS 文件夹→标定→转换→渲染
-                                                （--skip-convert/--skip-calibrate-stages/
-                                                --skip-render/--check-only/--accept-portrait/
-                                                --no-pattern/--dpi N）
+- ``g4c prepare --sheet K``                     接口一（--skip-convert/
+                                                --skip-calibrate-stages）
+- ``g4c convert --sheet K``                     接口二（--accept-portrait）
+- ``g4c pipeline --sheet K``                    全链（--skip-convert/
+                                                --skip-calibrate-stages/
+                                                --skip-render/--check-only/
+                                                --accept-portrait/--no-pattern/--dpi N）
 - 标定域（可按域单独执行）：
     calibrate-gzbd / entities / auxchain / calibrate-gzeeb /
     calibrate-fault-contact-activity / calibrate-attitudes /
     calibrate-fossils / calibrate-folds / calibrate-inferred-faults
     （均 ``--sheet K``；另 report-gaps 输出缺口报告+单要素配图）
-- ``g4c codebook --sheet K``                   生成 codebook（编码-地质语义映射表
-                                                JSON = codebook；用户可改 JSON，
-                                                后续 GeoSciML 转换建立在 codebook 上）
+- ``g4c codebook --sheet K``                   重新生成 codebook（编码-地质语义
+                                                映射表 JSON = codebook）
 - 转换与渲染：
     ``g4c stylegen --sheet K``     面元样式生成（render.stylegen）
     ``g4c stylegen-fault --sheet K``  断层样式生成（render.stylegen_fault）
@@ -77,6 +83,8 @@ def _data() -> int:
 
 _DELEGATES = {
     "pipeline": ("geosciml4china.pipeline", "main"),
+    "prepare": ("geosciml4china.pipeline", "prepare_main"),
+    "convert": ("geosciml4china.pipeline", "convert_main"),
     "calibrate-gzbd": ("geosciml4china.calibrate.gzbd", "main"),
     "entities": ("geosciml4china.calibrate.entities", "main"),
     "auxchain": ("geosciml4china.calibrate.auxchain", "main"),

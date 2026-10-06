@@ -46,6 +46,12 @@ def _norm_code(c) -> str:
     return str(c).strip().zfill(2)
 
 
+def _norm_txt(v) -> str:
+    """CSV 空单元（pandas NaN→'nan'）归一为空串。"""
+    t = str(v or "").strip()
+    return "" if t in ("nan", "None") else t
+
+
 def _load_csv_entries(root: Path, key: str) -> dict:
     """三 CSV 映射表 → {family: {code: entry}}（校准推导层）。"""
     out = {}
@@ -64,8 +70,8 @@ def _load_csv_entries(root: Path, key: str) -> dict:
                 "source": str(r.get("source") or "校准推导").strip(),
                 "segs": int(float(r.get("segs") or 0)),
                 "confidence": str(r.get("confidence") or "").strip(),
-                "user_semantic": str(r.get("user_semantic") or "").strip(),
-                "user_note": str(r.get("user_note") or "").strip(),
+                "user_semantic": _norm_txt(r.get("user_semantic")),
+                "user_note": _norm_txt(r.get("user_note")),
             }
         out[fam] = fam_d
     return out
@@ -193,7 +199,7 @@ def summary(cb: dict) -> str:
     lines = [f"codebook {cb['sheet']}（{cb['codebook']}，生成 {cb['generated']}）"]
     for fam, fam_d in cb["codes"].items():
         n_user = sum(1 for e in fam_d.values()
-                     if str(e.get("user_semantic") or "").strip())
+                     if _norm_txt(e.get("user_semantic")))
         n_reg = sum(1 for e in fam_d.values() if e.get("source") == "registry")
         lines.append(f"  {fam}: {len(fam_d)} 码"
                      f"（注册表 {n_reg} / 用户编辑 {n_user}）")
