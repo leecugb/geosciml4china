@@ -169,3 +169,70 @@ def test_incremental_skip_second_run(td_project, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "① 跳过（L0 新于源文件" in out, "二次全链应命中增量通道"
+
+
+def test_codebook_is_conversion_basis(td_project):
+    """codebook 裁定（2026-10-06）：校准产出 codebook_<key>.json；
+    用户可改 JSON；后续 GeoSciML 转换建立在 codebook 上——编辑
+    user_semantic 后仅重跑 build（不重跑校准），GML 语义随编辑变化；
+    还原编辑后 GML 复原。"""
+    import json
+    import sys
+    from lxml import etree
+    from geosciml4china.calibrate.codebook import (build_codebook,
+                                                   codebook_path,
+                                                   semantic_of)
+    from geosciml4china.convert import build as _build
+
+    cbp = codebook_path(td_project, "tdc")
+    assert cbp.exists(), "管线未产出 codebook"
+    cb = json.loads(cbp.read_text(encoding="utf-8"))
+    assert cb["codebook"] == "geosciml4china/codebook/v1"
+
+    # 选一个 td 在场码：其段当前语义与 codebook 一致（未编辑时字节稳定）
+    fam = cb["codes"]["GZEEB"]
+    code = sorted(fam, key=lambda c: -fam[c].get("segs", 0))[0]
+    sem0 = semantic_of(cb, "GZEEB", code)
+    assert sem0, "codebook 语义缺席"
+
+    gml = td_project / "output/geosciml/tdc_geosciml_full.gml"
+    ns = {"gsmlb": "http://www.opengis.net/gsml/4.1/GeoSciML-Basic"}
+
+    def fault_types():
+        doc = etree.parse(str(gml))
+        out = {}
+        for s in doc.findall(".//gsmlb:ShearDisplacementStructure", ns):
+            ft = s.find("gsmlb:faultType", ns)
+            href = (ft.get("{http://www.w3.org/1999/xlink}href", "?")
+                    if ft is not None else "nil")
+            out[href] = out.get(href, 0) + 1
+        return out
+
+    ft0 = fault_types()
+
+    # 用户编辑：该码 user_semantic → 逆断层（直达转换层，不重跑校准）
+    cb["codes"]["GZEEB"][code]["user_semantic"] = "逆断层"
+    cbp.write_text(json.dumps(cb, ensure_ascii=False, indent=1),
+                   encoding="utf-8")
+    saved = sys.argv
+    sys.argv = ["g4c build", "--sheet", "tdc"]
+    try:
+        assert _build.main() == 0
+    finally:
+        sys.argv = saved
+    ft1 = fault_types()
+    rev = "http://resource.geosciml.org/classifier/cgi/faulttype/reverse_fault"
+    assert ft1.get(rev, 0) > ft0.get(rev, 0), \
+        f"编辑 codebook 未改变 faultType（{ft0.get(rev,0)}→{ft1.get(rev,0)}）"
+
+    # 还原：清空用户编辑 + 再生成（跨轮保留机制下显式清空）→ 重跑 build
+    cb["codes"]["GZEEB"][code]["user_semantic"] = ""
+    cbp.write_text(json.dumps(cb, ensure_ascii=False, indent=1),
+                   encoding="utf-8")
+    saved = sys.argv
+    sys.argv = ["g4c build", "--sheet", "tdc"]
+    try:
+        assert _build.main() == 0
+    finally:
+        sys.argv = saved
+    assert fault_types() == ft0, "还原后 GML 语义未复原"

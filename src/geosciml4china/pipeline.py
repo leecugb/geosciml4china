@@ -136,6 +136,13 @@ def run_pipeline(sheet_key: str, *, skip_convert=False, skip_calibrate_stages=Fa
     from .render.gap_report import build_gap_report
     build_gap_report(sh.key)
 
+    # ②d codebook（2026-10-06 用户裁定：校准完成后以 JSON 输出编码-地质
+    # 语义映射表；用户可改 JSON；后续 GeoSciML 转换建立在 codebook 上——
+    # 这个 JSON 就是 codebook。用户编辑跨轮保留；两路径汇聚点统一生成）
+    from .calibrate.codebook import build_codebook, summary as _cb_summary
+    print("②d codebook（编码-地质语义映射表 JSON = codebook）")
+    print(_cb_summary(build_codebook(sh.key)))
+
     # ③ stylegen（lite 优先；缺 lite 走 WP 引导——新幅首接通道）
     from .render import stylegen as _sg
     lite_unit = sh.lite_out / "geologic_unit_view.geojson"

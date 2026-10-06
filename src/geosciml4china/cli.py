@@ -21,6 +21,9 @@
     calibrate-fault-contact-activity / calibrate-attitudes /
     calibrate-fossils / calibrate-folds / calibrate-inferred-faults
     （均 ``--sheet K``；另 report-gaps 输出缺口报告+单要素配图）
+- ``g4c codebook --sheet K``                   生成 codebook（编码-地质语义映射表
+                                                JSON = codebook；用户可改 JSON，
+                                                后续 GeoSciML 转换建立在 codebook 上）
 - 转换与渲染：
     ``g4c stylegen --sheet K``     面元样式生成（render.stylegen）
     ``g4c stylegen-fault --sheet K``  断层样式生成（render.stylegen_fault）
@@ -92,6 +95,7 @@ _DELEGATES = {
     "verify": ("geosciml4china.convert.verify", "main"),
     "render": ("geosciml4china.render.render", "main"),
     "probe": ("geosciml4china.probe", "main"),
+    "codebook": ("geosciml4china.calibrate.codebook", "main"),
 }
 
 

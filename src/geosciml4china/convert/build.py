@@ -155,6 +155,8 @@ _EXCLUDED_CONTACTS: List[int] = []
 
 
 def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
+    from . import codebook as _cb_mod
+    _cb = _cb_mod.load()          # codebook（在场时=转换语义基础）
     gdf = sources.read_theme("boundaries")
     # 语义 id（2026-10-02 裁定）：c.{GZBD_eff}.{类内序}——图元 _src_id 不入产品
     c_ids = ids.contact_ids(gdf)
@@ -185,10 +187,21 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
         # 图幅级映射文件在场时码查表优先（正典 pending/decided 契约）；
         # 否则段级终态语义 sem_label → CGI 词（整合接触→conformable 等），
         # 未覆盖标签回退码查表——jwss 24 案（码表 disconformable × 段级
-        # 整合接触 MLE 精化）的语义一致性修复
+        # 整合接触 MLE 精化）的语义一致性修复。
+        # codebook 语义基础（2026-10-06 裁定）：codebook 在场时，非分歧段
+        # 的接触语义以 codebook 为准（注册表/用户编辑直达转换层，无需重跑
+        # 校准）；分歧未裁定段维持 L1 段级语义（pending 待裁定）
         if not mapping.sheet_mapping_exists():
-            _ct0 = mapping.contacttype_by_semantics(
-                _clean_optional_str(row["sem_label"]))
+            _sl_eff = _clean_optional_str(row["sem_label"])
+            if _cb is not None:
+                _vd1 = str(row.get("verdict") or "")
+                if "分歧" not in _vd1 and "矛盾" not in _vd1:
+                    _sem_cb = _cb_mod.sem_of(
+                        _cb, "GZBD",
+                        row.get("GZBD_eff") or row.get("GZBD"))
+                    if _sem_cb:
+                        _sl_eff = _sem_cb
+            _ct0 = mapping.contacttype_by_semantics(_sl_eff)
             if _ct0:
                 decided = True
                 row_map = dict(row_map, term=_ct0)
@@ -217,6 +230,8 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
 
 
 def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
+    from . import codebook as _cb_mod
+    _cb = _cb_mod.load()          # codebook（在场时=转换语义基础）
     gdf = sources.read_theme("faults")
     aux_gdf = sources.read_theme("fault_aux")
     assoc = sources.read_aux_assoc()
@@ -323,12 +338,16 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         row_map = mapping.gzeeb_row(code)
         obs = row_map.get("obs") or mapping.evidence_observation(row["evidence_class"])
         # movementSense 回退通道（2026-10-05 契约审计修复 P1-1）：钩对
-        # 旋向优先（区间语义）；无钩段回退 GZELD 运动学语义（L1 内化
-        # gzeld_sem——注册表/用户编辑/全局先验/推导链产物）：
+        # 旋向优先（区间语义）；无钩段回退 GZELD 运动学语义——codebook
+        # 在场时以 codebook 为准（2026-10-06 裁定；注册表/用户编辑/全局
+        # 先验链），缺席回退 L1 内化 gzeld_sem：
         # 右行→dextral、左行→sinistral；未记录/不明→空（不伪出站）
         _slip = slip_by_seg.get(seg_idx, "")
         if not _slip:
             _gzsem = str(row.get("gzeld_sem") or "")
+            if _cb is not None:
+                _gzsem = _cb_mod.sem_of(_cb, "GZELD", row.get("GZELD")) \
+                    or _gzsem
             if _gzsem.startswith("右行"):
                 _slip = "dextral"
             elif _gzsem.startswith("左行"):
@@ -336,9 +355,17 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         # faultType 语义驱动（2026-10-04 用户裁定「类别编码值拥有最高
         # 优先级」）：全继承后 structural_type≡码义——规范性 faultType 槽
         # 直接消费段级标定语义；图幅级映射文件在场时（正典双幅
-        # pending/decided 裁定）码查表优先（pending→nil 契约不变）
+        # pending/decided 裁定）码查表优先（pending→nil 契约不变）。
+        # codebook 语义基础（2026-10-06 裁定）：codebook 在场时非矛盾段的
+        # 结构语义以 codebook 为准（用户编辑 JSON 直达转换层）；矛盾保留段
+        # 维持 L1 段级语义（矛盾保持原则）
+        _ft_src = row["structural_type"]
+        if _cb is not None:
+            _vd2 = str(row.get("verdict") or "")
+            if "矛盾" not in _vd2 and "存疑" not in _vd2:
+                _ft_src = _cb_mod.sem_of(_cb, "GZEEB", code) or _ft_src
         _ft_term = (row_map.get("term") if mapping.sheet_mapping_exists()
-                    else mapping.faulttype_by_semantics(row["structural_type"]))
+                    else mapping.faulttype_by_semantics(_ft_src))
         planes = planes_by_seg.get(seg_idx, [])
         # 2026-09-29 用户对齐裁定：断层产状测量点=实测产状——缺失倾角注释点
         # 时倾角留空，不从所属断层继承（GZECE 回落废止）。GZECE 仅存于段级
