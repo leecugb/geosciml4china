@@ -118,6 +118,7 @@ def adapt_shear_structures(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict
             "GZEAB": _clean_name(p.get("name")),
             "FEATUREID": feature_id(p.get("identifier_value") or ""),
             "faultType": p.get("faultType"),
+            "observationMethod": p.get("observationMethod"),
             "description": p.get("description"),
             "evidence_class": str(p.get("evidence_class") or ""),
             "structural_type": str(p.get("structural_type") or ""),
