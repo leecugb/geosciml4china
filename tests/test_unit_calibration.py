@@ -157,6 +157,21 @@ def test_color_lib_loads_package_data():
     assert lib.t14
 
 
+# ---------- 版本一致性守卫（2026-10-06 教训：pyproject 与 __init__ 双版本源
+# 曾两次不一致，导致 PyPI 发行版 __version__ 滞后） ----------
+
+def test_version_matches_distribution():
+    import geosciml4china
+    from importlib import metadata
+    try:
+        dist_v = metadata.version("geosciml4china")
+    except metadata.PackageNotFoundError:
+        pytest.skip("geosciml4china 未安装为发行版（源码直跑）")
+    assert geosciml4china.__version__ == dist_v, (
+        f"__init__.__version__={geosciml4china.__version__} != "
+        f"发行版版本 {dist_v}——发布前必须同步")
+
+
 # ---------- 比例尺锚定画布（2026-10-05 用户裁定「样式尺寸保持固定」） ----------
 
 def test_scale_anchored_figsize_constant_mpp():
