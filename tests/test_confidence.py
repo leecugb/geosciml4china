@@ -24,16 +24,22 @@ def cf_root(tmp_path):
         root=tmp_path, aux_pairs_csv="", aux_assoc_csv="",
         aux_triplets_csv="", calibration_csv=""))
     pd.DataFrame([
-        dict(idx=0, GZBD原码="01", 标定语义="整合接触", 状态="标定通过",
-             conf_band_u="consistent"),
-        dict(idx=1, GZBD原码="01", 标定语义="整合接触", 状态="标定通过",
-             conf_band_u="consistent"),
-        dict(idx=2, GZBD原码="02", 标定语义="不整合接触（先验建议→04/24）",
-             状态="分歧未裁定", conf_band_u="conflict"),
-        dict(idx=3, GZBD原码="10", 标定语义="断层接触", 状态="断层标定",
-             conf_band_u="consistent"),
-        dict(idx=4, GZBD原码="16", 标定语义="", 状态="未覆盖（先验缺口）",
-             conf_band_u="unassessed"),
+        dict(idx=0, GZBD原码="01", 原码语义="实测地质界线", 标定语义="整合接触",
+             状态="标定通过", 证据="志书单元对规则", 先验年轻侧="",
+             conf_band_u="consistent", confidence_u="0.51"),
+        dict(idx=1, GZBD原码="01", 原码语义="实测地质界线", 标定语义="整合接触",
+             状态="标定通过", 证据="志书单元对规则", 先验年轻侧="",
+             conf_band_u="consistent", confidence_u="0.51"),
+        dict(idx=2, GZBD原码="02", 原码语义="实测地质界线",
+             标定语义="不整合接触（先验建议→04/24）",
+             状态="分歧未裁定", 证据="单元对 期望 04/24", 先验年轻侧="right",
+             conf_band_u="conflict", confidence_u="0.0"),
+        dict(idx=3, GZBD原码="10", 原码语义="断层", 标定语义="断层接触",
+             状态="断层标定", 证据="与 FBA003 重合 100%", 先验年轻侧="",
+             conf_band_u="consistent", confidence_u="0.85"),
+        dict(idx=4, GZBD原码="16", 原码语义="推测界线", 标定语义="",
+             状态="未覆盖（先验缺口）", 证据="", 先验年轻侧="",
+             conf_band_u="unassessed", confidence_u="0.18"),
     ]).to_csv(tmp_path / "_gzbd_semantic_interpretation.csv", index=False)
     pd.DataFrame([
         dict(idx=0, structural_type="逆断层", verdict="verified",
@@ -46,6 +52,8 @@ def cf_root(tmp_path):
     pd.DataFrame([
         dict(idx=0, GZBBGA="202001", host_code="D2t", probe_method="contains",
              sem_type="bedding", verdict="pass"),
+        dict(idx=1, GZBBGA="202004", host_code="ηγT2", probe_method="contains",
+             sem_type="bedding", verdict="违反 R2'（待裁定）"),
     ]).to_csv(tmp_path / "_attitude_calibration.csv", index=False)
     # 既有 codebook（含一笔用户编辑）
     (tmp_path / "codebook_cfu.json").write_text(json.dumps({
@@ -80,7 +88,23 @@ def test_schema_domains_and_reconciliation(cf_root):
     assert f["structural_types"]["逆断层"] == 2
     # 断层覆盖口径：1 兜底 → 66.7%
     assert f["coverage_pct"] == 66.7
-    assert conf["domains"]["attitudes"]["total"] == 1
+    assert conf["domains"]["attitudes"]["total"] == 2
+
+
+def test_conflicts_detail_records(cf_root):
+    """矛盾冲突逐段明细（2026-10-07 用户建议）：图面码×先验/证据冲突
+    逐段入档——记录但不修改编码。"""
+    conf = build_confidence("cfu")
+    b = conf["conflicts"]["boundaries"]
+    assert len(b) == 1
+    e = b[0]
+    assert e["idx"] == 2 and e["code"] == "02"
+    assert e["code_semantic"] == "实测地质界线"
+    assert "先验建议" in e["suggested"]
+    assert e["conf_band"] == "conflict" and e["confidence"] == 0.0
+    a = conf["conflicts"]["attitudes"]
+    assert len(a) == 1 and a[0]["verdict"].startswith("违反")
+    assert a[0]["host_code"] == "ηγT2"
 
 
 def test_codebook_quality_and_provenance(cf_root):

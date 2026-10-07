@@ -153,6 +153,11 @@ def test_codebook_confidence_reconciles(td_project):
     si = pd.read_csv(td_project / "_gzbd_semantic_interpretation.csv", dtype=str)
     assert b["total"] == len(si), "界线 total 与解释表行数不恒等"
     assert b["pending"] == int((si["状态"] == "分歧未裁定").sum())
+    # 矛盾明细与裁定队列等长（2026-10-07 用户建议逐段入档）
+    det = conf.get("conflicts", {}).get("boundaries", [])
+    assert len(det) == b["pending"], "矛盾明细数≠裁定队列数"
+    if det:
+        assert {"idx", "code", "suggested", "evidence"} <= set(det[0])
     f = conf["domains"]["faults"]
     cal = pd.read_csv(td_project / "_gzeeb_calibration_tdc.csv", dtype=str)
     assert f["total"] == len(cal), "断层 total 与标定件行数不恒等"

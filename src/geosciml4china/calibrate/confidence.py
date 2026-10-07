@@ -114,6 +114,7 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
     root.mkdir(parents=True, exist_ok=True)
 
     domains: dict = {}
+    conflicts: dict = {}   # 逐段矛盾冲突明细（2026-10-07 用户建议入档）
 
     p = root / "_gzbd_semantic_interpretation.csv"
     if p.exists():
@@ -132,6 +133,19 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         cr = root / f"_gzbd_conflicts_{sheet_key}.csv"
         if cr.exists():
             domains["boundaries"]["conflict_register"] = cr.name
+        # 矛盾明细：图面码×先验期望冲突（永不改码，只登记）
+        sub = df[st == "分歧未裁定"]
+        if len(sub):
+            conflicts["boundaries"] = [
+                {"idx": int(r["idx"]), "code": str(r.get("GZBD原码") or ""),
+                 "code_semantic": str(r.get("原码语义") or ""),
+                 "suggested": str(r.get("标定语义") or ""),
+                 "evidence": str(r.get("证据") or ""),
+                 "younger_side": str(r.get("先验年轻侧") or ""),
+                 "conf_band": str(r.get("conf_band_u") or ""),
+                 "confidence": float(r.get("confidence_u") or 0)}
+                for _, r in sub.iterrows()
+            ]
 
     p = root / f"_gzeeb_calibration_{sheet_key}.csv"
     if p.exists():
@@ -151,14 +165,43 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         cr = root / f"_gzeeb_conflicts_{sheet_key}.csv"
         if cr.exists():
             domains["faults"]["conflict_register"] = cr.name
+        sub = df[df["verdict"].astype(str).str.contains("矛盾|存疑|分歧", regex=True)]
+        if len(sub):
+            conflicts["faults"] = [
+                {"idx": int(r["idx"]),
+                 "structural_type": str(r.get("structural_type") or ""),
+                 "verdict": str(r.get("verdict") or ""),
+                 "conf_band": str(r.get("conf_band_u") or "")}
+                for _, r in sub.iterrows()
+            ]
 
     p = root / "_attitude_calibration.csv"
     if p.exists():
         domains["attitudes"] = _domain_csv(p, "verdict", pending_kw=("违反",))
+        _dfa = pd.read_csv(p, dtype=str)
+        sub = _dfa[_dfa["verdict"].astype(str).str.contains("违反", regex=True)]
+        if len(sub):
+            conflicts["attitudes"] = [
+                {"idx": int(r["idx"]), "GZBBGA": str(r.get("GZBBGA") or ""),
+                 "sem_type": str(r.get("sem_type") or ""),
+                 "host_code": str(r.get("host_code") or ""),
+                 "verdict": str(r["verdict"])}
+                for _, r in sub.iterrows()
+            ]
 
     p = root / f"_fossil_calibration_{sheet_key}.csv"
     if p.exists():
         domains["fossils"] = _domain_csv(p, "verdict", pending_kw=("违反",))
+        _dff = pd.read_csv(p, dtype=str)
+        sub = _dff[_dff["verdict"].astype(str).str.contains("违反", regex=True)]
+        if len(sub):
+            conflicts["fossils"] = [
+                {"idx": int(r["idx"]), "category": str(r.get("category") or ""),
+                 "sem_type": str(r.get("sem_type") or ""),
+                 "host_code": str(r.get("host_code") or ""),
+                 "verdict": str(r["verdict"])}
+                for _, r in sub.iterrows()
+            ]
 
     p = root / f"_fold_calibration_{sheet_key}.csv"
     if p.exists():
@@ -217,6 +260,8 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         "note": "只读标定统计档案——机械汇总既有标定 CSV（不重算）；"
                 "人工裁定请编辑 codebook_<key>.json",
         "domains": domains,
+        "conflicts": conflicts,   # 逐段矛盾冲突明细（2026-10-07 用户建议：
+        # 图面码×先验/证据冲突逐段登记——记录但不修改编码）
         "codebook_quality": _codebook_quality(cb),
         "provenance": {
             "generator": "geosciml4china prepare",
@@ -239,6 +284,10 @@ def summary(conf: dict) -> str:
         lines.append(f"  {dom}: total={d.get('total')}"
                      + (f" 覆盖率={cov}%" if cov is not None else "")
                      + (f" pending={d['pending']}" if d.get("pending") else ""))
+    n_conf = sum(len(v) for v in conf.get("conflicts", {}).values())
+    if n_conf:
+        lines.append(f"  conflicts: {n_conf} 段矛盾冲突明细在档"
+                     f"（{ {k: len(v) for k, v in conf['conflicts'].items()} }）")
     for fam, q in conf.get("codebook_quality", {}).items():
         lines.append(f"  [{fam}] {q['codes']} 码（源分布 {q['by_source']}，"
                      f"用户编辑 {q['user_edits']}）")
