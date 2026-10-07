@@ -139,6 +139,26 @@ def test_fault_contact_activity_layer(td_project):
     assert len(fc) >= 0  # 层执行（候选数随数据，不断言）
 
 
+def test_codebook_confidence_reconciles(td_project):
+    """置信度文件（2026-10-07 配套裁定）：管线产出 codebook_confidence
+    文件；机械汇总与标定 CSV 恒等对账（total==CSV 行数）。"""
+    import json
+    from geosciml4china.calibrate.confidence import confidence_path
+    p = confidence_path(td_project, "tdc")
+    assert p.exists(), "管线未产出 codebook 置信度文件"
+    conf = json.loads(p.read_text(encoding="utf-8"))
+    assert conf["codebook_confidence"] == "geosciml4china/codebook-confidence/v1"
+    assert conf["readonly"] is True
+    b = conf["domains"]["boundaries"]
+    si = pd.read_csv(td_project / "_gzbd_semantic_interpretation.csv", dtype=str)
+    assert b["total"] == len(si), "界线 total 与解释表行数不恒等"
+    assert b["pending"] == int((si["状态"] == "分歧未裁定").sum())
+    f = conf["domains"]["faults"]
+    cal = pd.read_csv(td_project / "_gzeeb_calibration_tdc.csv", dtype=str)
+    assert f["total"] == len(cal), "断层 total 与标定件行数不恒等"
+    assert conf["codebook_quality"], "codebook_quality 缺席"
+
+
 def test_probe_census_matches_bundled(td_project):
     """零注入普查（probe）自持回归：bundled 图幅自身数据的普查值逐项
     锁定（lat/aux 类词/子图号/计数/形态预警）——onboarding 通道防漂移。

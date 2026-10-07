@@ -104,6 +104,7 @@ _DELEGATES = {
     "render": ("geosciml4china.render.render", "main"),
     "probe": ("geosciml4china.probe", "main"),
     "codebook": ("geosciml4china.calibrate.codebook", "main"),
+    "confidence": ("geosciml4china.calibrate.confidence", "main"),
 }
 
 

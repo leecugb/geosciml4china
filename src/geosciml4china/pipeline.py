@@ -140,6 +140,12 @@ def prepare(sheet_key: str, *, skip_convert=False,
     from .calibrate.codebook import build_codebook, summary as _cb_summary
     print("②d codebook（编码-地质语义映射表 JSON = codebook）")
     print(_cb_summary(build_codebook(sh.key)))
+
+    # ②e codebook 置信度文件（2026-10-07 用户裁定配套）：只读标定统计
+    # 档案——机械汇总既有标定 CSV（不重算），与 codebook 同批纪元
+    from .calibrate.confidence import build_confidence, summary as _cf_summary
+    print("②e codebook 置信度文件（只读标定统计档案）")
+    print(_cf_summary(build_confidence(sh.key)))
     return 0
 
 
