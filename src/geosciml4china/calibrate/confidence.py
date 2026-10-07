@@ -113,6 +113,10 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
     root = Path(out_dir) if out_dir else Path(sh.root)
     root.mkdir(parents=True, exist_ok=True)
 
+    from .codebook import codebook_path, load_codebook
+    cb = load_codebook(root, sheet_key)   # 前置装载：码级×段级张力检测与
+                                          # codebook_quality 共用（2026-10-07）
+
     domains: dict = {}
     conflicts: dict = {}   # 逐段矛盾冲突明细（2026-10-07 用户建议入档）
 
@@ -205,6 +209,28 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
                     .value_counts().to_dict(),
                 }
             domains["attitudes"]["GZBBGA_codes"] = _cq
+        # 码级×段级语义张力（2026-10-07 用户裁定：片麻理×面理类矛盾
+        # 记录在置信度文件——段级宿主裁定语义 ≠ codebook 码级语义的段
+        # 逐条登记：sem_type（段级）× codebook_semantic（码级产品语义））
+        from .codebook import semantic_of as _cb_sem_of
+        _cbg = (cb or {}).get("codes", {}).get("GZBBGA") or {}
+        _tensions = []
+        for _, r in _dfa.iterrows():
+            _code = str(r.get("GZBBGA") or "")
+            _seg = str(r.get("sem_type") or "")
+            _cbs = _cb_sem_of({"codes": {"GZBBGA": _cbg}}, "GZBBGA", _code) \
+                or str(r.get("code_sem") or "")
+            if _seg and _cbs and _seg != _cbs:
+                _tensions.append({
+                    "idx": int(r["idx"]), "GZBBGA": _code,
+                    "segment_semantic": _seg,
+                    "codebook_semantic": _cbs,
+                    "host_code": str(r.get("host_code") or ""),
+                    "verdict": str(r.get("verdict") or ""),
+                })
+        if _tensions:
+            conflicts["attitudes_semantic_tension"] = _tensions
+            domains["attitudes"]["semantic_tensions"] = len(_tensions)
 
     p = root / f"_fossil_calibration_{sheet_key}.csv"
     if p.exists():
@@ -268,8 +294,6 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
             "units": int(codes[codes != ""].nunique()),
         }
 
-    from .codebook import codebook_path, load_codebook
-    cb = load_codebook(root, sheet_key)
     conf = {
         "codebook_confidence": CONFIDENCE_SCHEMA,
         "sheet": sheet_key,

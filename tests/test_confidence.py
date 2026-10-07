@@ -107,6 +107,36 @@ def test_conflicts_detail_records(cf_root):
     assert a[0]["host_code"] == "ηγT2"
 
 
+def test_semantic_tension_gneissic_vs_foliation(cf_root):
+    """码级×段级语义张力（2026-10-07 用户裁定）：段级宿主裁定（片麻理）
+    × codebook 码级语义（面理）的矛盾逐条记录在置信度文件。"""
+    # codebook 补 GZBBGA 202007 → 面理产状；标定 CSV 补 135 式 Pt1 片麻理段
+    cbp = cf_root / "codebook_cfu.json"
+    import json as _json
+    cb = _json.loads(cbp.read_text(encoding="utf-8"))
+    cb["codes"]["GZBBGA"] = {"202007": {"semantic": "面理产状",
+                                        "source": "registry", "segs": 0,
+                                        "user_semantic": "", "user_note": ""}}
+    cbp.write_text(_json.dumps(cb, ensure_ascii=False, indent=1),
+                   encoding="utf-8")
+    pd.DataFrame([
+        dict(idx=135, GZBBGA="202007", host_code="Pt1K.", host_layer="metamorphic",
+             host_era="Pc", sem_type="片麻理产状", verdict="裁定（Pt1 时代规则）",
+             code_sem="片麻理产状", code_source="registry"),
+        dict(idx=134, GZBBGA="202007", host_code="ηγT2", host_layer="intrusive",
+             host_era="Mz-Cz", sem_type="面理产状", verdict="通过",
+             code_sem="面理产状", code_source="registry"),
+    ]).to_csv(cf_root / "_attitude_calibration.csv", index=False)
+    conf = build_confidence("cfu")
+    t = conf["conflicts"].get("attitudes_semantic_tension", [])
+    assert len(t) == 1, f"张力应恰 1 条（135），实 {len(t)}"
+    e = t[0]
+    assert e["idx"] == 135
+    assert e["segment_semantic"] == "片麻理产状"
+    assert e["codebook_semantic"] == "面理产状"
+    assert conf["domains"]["attitudes"]["semantic_tensions"] == 1
+
+
 def test_codebook_quality_and_provenance(cf_root):
     conf = build_confidence("cfu")
     q = conf["codebook_quality"]
