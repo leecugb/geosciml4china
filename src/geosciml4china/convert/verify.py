@@ -341,6 +341,12 @@ def main() -> int:
     _had_portrait = _portrait_p.exists()
     if _had_portrait:
         EXP.update(json.load(open(_portrait_p, encoding="utf-8")))
+        # JSON round-trip 类型复原（2026-10-07 A22 案）：six_mode 等 tuple
+        # 型画像字段经 json.dumps 落盘为 list，读回须归 tuple——
+        # 否则 got6(tuple) == EXP(list) 恒假（元素全等也 FAIL）
+        for _tk in ("six_mode",):
+            if isinstance(EXP.get(_tk), list):
+                EXP[_tk] = tuple(EXP[_tk])
     gml_path = Path(args.gml or str(config.GML_OUT))
     lite_dir = Path(args.lite_dir or str(config.LITE_OUT))
     args.report = args.report or str(config.REPORT_OUT)
