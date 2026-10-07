@@ -188,19 +188,19 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
         # 否则段级终态语义 sem_label → CGI 词（整合接触→conformable 等），
         # 未覆盖标签回退码查表——jwss 24 案（码表 disconformable × 段级
         # 整合接触 MLE 精化）的语义一致性修复。
-        # codebook 语义基础（2026-10-06 裁定）：codebook 在场时，非分歧段
-        # 的接触语义以 codebook 为准（注册表/用户编辑直达转换层，无需重跑
-        # 校准）；分歧未裁定段维持 L1 段级语义（pending 待裁定）
+        # codebook 语义基础（2026-10-06/07 裁定）：codebook 在场时接触语义
+        # 一律以 codebook 为准——「转换按 codebook 完成、GeoSciML 完全脱离
+        # MapGIS 编码系统」。冲突段同样继承码级语义（176 案裁定：176 继承
+        # 整合接触）；冲突信息留接口一影子列与置信度文件（记录职能），
+        # 段级 sem_label/verdict 经 ContactRec 携带供溯源（不改产品语义）
         if not mapping.sheet_mapping_exists():
             _sl_eff = _clean_optional_str(row["sem_label"])
             if _cb is not None:
-                _vd1 = str(row.get("verdict") or "")
-                if "分歧" not in _vd1 and "矛盾" not in _vd1:
-                    _sem_cb = _cb_mod.sem_of(
-                        _cb, "GZBD",
-                        row.get("GZBD_eff") or row.get("GZBD"))
-                    if _sem_cb:
-                        _sl_eff = _sem_cb
+                _sem_cb = _cb_mod.sem_of(
+                    _cb, "GZBD",
+                    row.get("GZBD_eff") or row.get("GZBD"))
+                if _sem_cb:
+                    _sl_eff = _sem_cb
             _ct0 = mapping.contacttype_by_semantics(_sl_eff)
             if _ct0:
                 decided = True
@@ -356,14 +356,12 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         # 优先级」）：全继承后 structural_type≡码义——规范性 faultType 槽
         # 直接消费段级标定语义；图幅级映射文件在场时（正典双幅
         # pending/decided 裁定）码查表优先（pending→nil 契约不变）。
-        # codebook 语义基础（2026-10-06 裁定）：codebook 在场时非矛盾段的
-        # 结构语义以 codebook 为准（用户编辑 JSON 直达转换层）；矛盾保留段
-        # 维持 L1 段级语义（矛盾保持原则）
+        # codebook 语义基础（2026-10-06/07 裁定）：codebook 在场时结构语义
+        # 一律以 codebook 为准（用户编辑 JSON 直达转换层）；矛盾保留段的
+        # 冲突信息留接口一影子列与置信度文件（记录职能，不改产品语义）
         _ft_src = row["structural_type"]
         if _cb is not None:
-            _vd2 = str(row.get("verdict") or "")
-            if "矛盾" not in _vd2 and "存疑" not in _vd2:
-                _ft_src = _cb_mod.sem_of(_cb, "GZEEB", code) or _ft_src
+            _ft_src = _cb_mod.sem_of(_cb, "GZEEB", code) or _ft_src
         _ft_term = (row_map.get("term") if mapping.sheet_mapping_exists()
                     else mapping.faulttype_by_semantics(_ft_src))
         planes = planes_by_seg.get(seg_idx, [])
