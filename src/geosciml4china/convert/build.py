@@ -462,6 +462,8 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
 def assemble_attitudes(
     units: Dict[str, model.UnitRec], sample: Optional[int] = None
 ) -> List[AttitudeRec]:
+    from . import codebook as _cb_mod
+    _cb = _cb_mod.load()          # codebook（在场时=转换语义基础）
     gdf = sources.read_theme("attitude")
     raw2norm = unit_mod.raw_to_norm_map()
     # 语义 id（2026-10-02 裁定）：fol.{host}.{宿主内序}
@@ -471,6 +473,14 @@ def assemble_attitudes(
         if sample is not None and i >= sample:
             break
         sem = row["sem_type"]
+        # codebook 语义基础（2026-10-07 用户裁定：严格 codebook 转换——
+        # Foliation 与 Contact 同逻辑：GZBBGA 码 → codebook 语义为准，
+        # 段级宿主裁定语义（片麻理等）留接口一影子列与置信度文件
+        # （记录职能，不改产品语义）；codebook 缺席回退现行 sem_type 通道
+        if _cb is not None:
+            _sem_cb = _cb_mod.sem_of(_cb, "GZBBGA", row["GZBBGA"])
+            if _sem_cb:
+                sem = _sem_cb
         row_map = mapping.foliation_row(sem)
         if not row_map.get("term"):
             row_map = mapping.foliation_row(row["GZBBGA"])

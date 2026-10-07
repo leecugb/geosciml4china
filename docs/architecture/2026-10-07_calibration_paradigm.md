@@ -154,3 +154,128 @@ geosciml4china 的全部工作就是在两者之间做**语义收紧**。
 
 收紧的边界同样诚实：收紧不了的部分（真张力）如实登记交人裁定，
 **绝不假装收紧成功**——这是公设 4 在问题域层面的推论。
+
+---
+
+## 7. 数学模型（2026-10-07）
+
+范式的形式化——每一式都对应生产代码中的可执行机制（括号内为锚点）。
+
+### 7.1 对象与记号
+
+```
+S   段集，|S| = N（jwsss 310 / jwss 289）
+C   码集（图幅内 GZEEB 编码值）
+g : S → C          编码映射（原编图者赋予，不可改）
+Σ   语义词表 = Σ_d（决定性：正/逆/推覆/走滑/活动/复合…）
+               ∪ { σ_∅ = 断层泛称（null 语义）, 推测断层（证据轴） }
+K   证据通道集（注册先验/断层名/签名/GZELD/倾角域/aux/覆盖/Q-界线重合）
+P   先验知识库（接触表 / 时代 rank / 注册表 / 覆盖库）
+```
+
+### 7.2 L1 · 段级 MLE 投票（样本级标定）
+
+通道 k 对段 s 产出指向 σ 的证据量 $v_k(s,\sigma)\ge 0$，通道权重 $w_k$：
+
+$$V(s,\sigma) = \sum_{k\in K} w_k \, v_k(s,\sigma)$$
+
+$$\hat\sigma_1(s) = \begin{cases} \arg\max_\sigma V(s,\sigma), & V(s,\hat\sigma_1) \ge \theta_{\min} \\ \sigma_\varnothing, & \text{否则（证据不足不硬标）} \end{cases}$$
+
+权重为裁定常数（先验+3/名+2/签名+2/GZELD+2/aux+2/覆盖+2~3/倾角域+1），$\theta_{\min}=2$。
+
+**强证据规则（决定性通道，免投票直判）**：
+$$\operatorname{rank}(u_{hw}) < \operatorname{rank}(u_{fw}) \;\Rightarrow\; \hat\sigma_1 = \text{推覆体边界} \quad (\text{老盖新，探针算子 } \mathcal{T}_{\text{probe}})$$
+
+### 7.3 L2 · 码级分层估计（总体级标定）
+
+段级分布按码聚合：
+
+$$n(c,\sigma) = \bigl|\{ s : g(s)=c,\ \hat\sigma_1(s)=\sigma \}\bigr|$$
+
+**族义判定**（主导门槛 $\theta_{\text{dom}} = 0.25$，01 码 8% 不足判推覆案）：
+
+$$\hat\sigma_2(c) = \sigma^* = \arg\max_{\sigma\in\Sigma_d} n(c,\sigma), \quad \text{iff } \frac{n(c,\sigma^*)}{\sum_\tau n(c,\tau)} \ge \theta_{\text{dom}}$$
+
+**结构规则**：
+
+逆断层一幅一码（唯一码主张）：
+$$c_{\text{rev}} = \arg\max_{c} n(c,\text{逆断层}); \qquad \forall c \ne c_{\text{rev}}: \text{逆} \notin \text{cand}(c)$$
+
+复活签名（正逆共存且可比 → 活动断层）：
+$$n(c,\text{逆})\ge 3 \ \land\ n(c,\text{正})\ge 3 \ \land\ \frac{\min}{\max} \ge 0.5 \;\Rightarrow\; \hat\sigma_2(c) = \text{活动断层}$$
+
+**三源优先级**（$\succ$ = 覆盖）：
+$$\hat\sigma_2^{\text{reg}}(c) \succ \hat\sigma_2^{\text{sig}}(c) \succ \hat\sigma_2^{\text{mle}}(c)$$
+
+**null 语义**：无族义 $\Rightarrow \hat\sigma_2(c) = \sigma_\varnothing$（一般断层）。
+
+### 7.4 L3 · 继承演绎与证伪算子
+
+$$\sigma_{\text{final}}(s) = \hat\sigma_2\bigl(g(s)\bigr), \quad \forall s \notin S_{\text{adj}}$$
+
+$S_{\text{adj}}$ = 覆盖库裁定段（人工绝对，$S_{\text{adj}} \succ \hat\sigma_2$）。
+
+**期望集与冲突算子**（证伪保持，期望核对后置）：
+
+$$\operatorname{EXPECT}(\sigma) \subset \{\text{倾角域 } [lo,hi],\ \text{aux 期望},\ \text{运动学期望}\}$$
+
+$$\operatorname{conflict}(s) = \{ e \in E(s) : e \notin \operatorname{EXPECT}(\sigma_{\text{final}}(s)) \} \quad \text{（一段一条登记）}$$
+
+**兼容定理（null 语义的性质）**：
+$$\operatorname{EXPECT}(\sigma_\varnothing) = \varnothing \;\Longrightarrow\; \forall e \in E(s): \neg\operatorname{conflict}(e,\sigma_\varnothing)$$
+
+——一般断层兼容所有矛盾信息：兼容性不是豁免规则，而是期望集为空的数据模型推论。
+
+### 7.5 拓扑测量算子族（观测层，公设 3 的形式化）
+
+$$\begin{aligned}
+\mathcal{T}_{\text{probe}} &: S \times \mathbb{R}^+ \to \mathcal{U} \times \mathcal{U}, \quad (s,\delta{=}100\text{m}) \mapsto (u_L, u_R) && \text{面元-线探针}\\
+\mathcal{C} &: S \times \mathcal{U} \to [0,1], \quad (s,U) \mapsto \frac{|s \cap \partial U|}{|s|} && \text{线-界线重合}\\
+\mathcal{I} &: S \times \mathcal{U} \to [0,1], \quad (s,U) \mapsto \frac{|s \cap U|}{|s|} && \text{线-面包含}\\
+\mathcal{N} &: P \times \Gamma \to S \times \mathbb{R} \times \mathbb{R}^+ \times \{-1,+1\}, \quad p \mapsto (s^*, s_{\text{arc}}, d_\perp, \text{side}) && \text{点-链邻近}\\
+\Pi &: B \times A \to \arg\min_{\text{1:1 指派}} \sum d(b_i, a_{\pi(i)}) && \text{点-点配对}
+\end{aligned}$$
+
+**假设驱动观测**：先验 $\mathcal{P}$ 决定算子的存在性——无接触表则无探针必要，无符号语义则无配对算子。测量是知识对数据提出的问题。
+
+### 7.6 贝叶斯解释
+
+$$\underbrace{P(\sigma \mid c)}_{\text{注册表先验}} \;\propto\; \underbrace{\prod_{s:\, g(s)=c} P\bigl(e(s)\,\big|\,\sigma\bigr)}_{\text{段级似然（投票 } w_k v_k \propto -\log P\text{ 的离散近似）}}$$
+
+$$\hat\sigma_2(c) = \arg\max_\sigma \; P(\sigma \mid c) \prod_{s:\, g(s)=c} P\bigl(e(s) \mid \sigma\bigr) \quad (\text{MAP 估计})$$
+
+`user_semantic` 编辑 = 后验固化：人工以点质量 $\delta(\sigma - \sigma_u)$ 重写先验 $P(\sigma \mid c)$。
+
+### 7.7 收敛性（人机协同的不动点迭代）
+
+$$\mathcal{P}_t \;\xrightarrow{\ \mathcal{M}\ }\; K_t \;\xrightarrow{\ \text{裁定}\ }\; \Delta\mathcal{P}_t \;\xrightarrow{\cup}\; \mathcal{P}_{t+1} \;\xrightarrow{\ \mathcal{M}\ }\; \cdots$$
+
+- $\mathcal{M}$ = 标定算子（7.2–7.4 的复合，确定性：同输入同输出——编辑-回退逐字节回归实证）；
+- $K_t$ = 第 t 轮矛盾集（pending_review）；
+- 裁定只追加不翻案（**永不自动改码**）⟹ $\mathcal{P}_t \subseteq \mathcal{P}_{t+1}$ 单调；
+- 收敛判据：$|K_{t+1} \setminus K_t| \to 0$（新增张力清零；基线断言 A23 即其数值闸）。
+
+### 7.8 置信度模型（S×I×F）
+
+$$C = S \times I \times F$$
+
+- $S$：证据强度（独立证据计数）；
+- $I$：证据独立性（`multi_root / intra_class / single`——谱系同源防双计，F1 裁定）；
+- $F \in [0,1]$：拟合优度（期望符合度；违反即 $F{=}0$ 直落冲突册）。
+
+### 7.9 全链算子复合
+
+$$\text{GeoSciML} = \mathcal{R} \circ \mathcal{I} \circ \mathcal{M} \circ \mathcal{T}(\,D,\ \mathcal{P}\,)$$
+
+| 算子 | 含义 | 管线位置 |
+|---|---|---|
+| $\mathcal{T}$ | 拓扑测量（7.5） | ② calibrate 各域循环 |
+| $\mathcal{M}$ | 统计标定（7.2 L1 + 7.3 L2） | ② 后处理（映射表出站） |
+| $\mathcal{I}$ | 继承演绎（7.4） | ② 继承段 → ②b 物化 |
+| $\mathcal{R}$ | 语义出站/渲染 | ③ stylegen → ④ build → ⑥ render |
+
+**核心恒等式（范式一句话的数学形态）**：
+$$\sigma_{\text{final}}(s) \;=\; \hat\sigma_2\bigl(g(s)\bigr), \qquad \hat\sigma_2 = \operatorname{MAP}\bigl(\mathcal{P},\ \{ \mathcal{T}(s) \}_{s:\, g(s)=c}\bigr)$$
+
+——每段的终态语义 = 其码在先验与该码全体段拓扑测量上的最大后验。
+
