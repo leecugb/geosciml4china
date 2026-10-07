@@ -100,7 +100,7 @@ def test_conflicts_detail_records(cf_root):
     e = b[0]
     assert e["idx"] == 2 and e["code"] == "02"
     assert e["code_semantic"] == "实测地质界线"
-    assert "先验建议" in e["suggested"]
+    assert "先验建议" in e["segment_semantic"], "段级语义须以 segment_semantic 保持在档"
     assert e["conf_band"] == "conflict" and e["confidence"] == 0.0
     a = conf["conflicts"]["attitudes"]
     assert len(a) == 1 and a[0]["verdict"].startswith("违反")

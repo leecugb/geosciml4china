@@ -157,7 +157,8 @@ def test_codebook_confidence_reconciles(td_project):
     det = conf.get("conflicts", {}).get("boundaries", [])
     assert len(det) == b["pending"], "矛盾明细数≠裁定队列数"
     if det:
-        assert {"idx", "code", "suggested", "evidence"} <= set(det[0])
+        assert {"idx", "code", "segment_semantic", "evidence"} <= set(det[0]), \
+            "冲突段的段级语义须以 segment_semantic 保持在置信度文件"
     f = conf["domains"]["faults"]
     cal = pd.read_csv(td_project / "_gzeeb_calibration_tdc.csv", dtype=str)
     assert f["total"] == len(cal), "断层 total 与标定件行数不恒等"

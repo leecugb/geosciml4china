@@ -133,13 +133,15 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         cr = root / f"_gzbd_conflicts_{sheet_key}.csv"
         if cr.exists():
             domains["boundaries"]["conflict_register"] = cr.name
-        # 矛盾明细：图面码×先验期望冲突（永不改码，只登记）
+        # 矛盾明细：图面码×先验期望冲突（永不改码，只登记）。
+        # segment_semantic = 冲突段的段级标定语义（2026-10-07 用户裁定：
+        # 段级语义保持在置信度文件；接口二产品语义以 codebook 为准）
         sub = df[st == "分歧未裁定"]
         if len(sub):
             conflicts["boundaries"] = [
                 {"idx": int(r["idx"]), "code": str(r.get("GZBD原码") or ""),
                  "code_semantic": str(r.get("原码语义") or ""),
-                 "suggested": str(r.get("标定语义") or ""),
+                 "segment_semantic": str(r.get("标定语义") or ""),
                  "evidence": str(r.get("证据") or ""),
                  "younger_side": str(r.get("先验年轻侧") or ""),
                  "conf_band": str(r.get("conf_band_u") or ""),
@@ -170,6 +172,7 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
             conflicts["faults"] = [
                 {"idx": int(r["idx"]),
                  "structural_type": str(r.get("structural_type") or ""),
+                 "segment_semantic": str(r.get("structural_type") or ""),
                  "verdict": str(r.get("verdict") or ""),
                  "conf_band": str(r.get("conf_band_u") or "")}
                 for _, r in sub.iterrows()
@@ -184,6 +187,7 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
             conflicts["attitudes"] = [
                 {"idx": int(r["idx"]), "GZBBGA": str(r.get("GZBBGA") or ""),
                  "sem_type": str(r.get("sem_type") or ""),
+                 "segment_semantic": str(r.get("sem_type") or ""),
                  "host_code": str(r.get("host_code") or ""),
                  "verdict": str(r["verdict"])}
                 for _, r in sub.iterrows()
@@ -198,6 +202,7 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
             conflicts["fossils"] = [
                 {"idx": int(r["idx"]), "category": str(r.get("category") or ""),
                  "sem_type": str(r.get("sem_type") or ""),
+                 "segment_semantic": str(r.get("sem_type") or ""),
                  "host_code": str(r.get("host_code") or ""),
                  "verdict": str(r["verdict"])}
                 for _, r in sub.iterrows()
@@ -261,7 +266,9 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
                 "人工裁定请编辑 codebook_<key>.json",
         "domains": domains,
         "conflicts": conflicts,   # 逐段矛盾冲突明细（2026-10-07 用户建议：
-        # 图面码×先验/证据冲突逐段登记——记录但不修改编码）
+        # 图面码×先验/证据冲突逐段登记——记录但不修改编码；
+        # segment_semantic 字段=冲突段的段级标定语义（同日裁定：段级语义
+        # 保持在置信度文件；接口二产品语义以 codebook 为准））
         "codebook_quality": _codebook_quality(cb),
         "provenance": {
             "generator": "geosciml4china prepare",
