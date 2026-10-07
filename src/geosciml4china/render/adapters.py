@@ -86,6 +86,7 @@ def adapt_contacts(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict]:
         sem = str(p.get("genericSymbolizer") or p.get("name") or "")
         rows.append({
             "sem_label": sem,
+            "contactType": str(p.get("contactType") or ""),  # 接口二继承语义
             "status": "normal",
             "younger_side": _side(p.get("younger_side")),
             "contact_id": feature_id(p.get("identifier_value") or ""),
@@ -119,6 +120,7 @@ def adapt_shear_structures(features: list[dict]) -> tuple[gpd.GeoDataFrame, dict
             "FEATUREID": feature_id(p.get("identifier_value") or ""),
             "faultType": p.get("faultType"),
             "observationMethod": p.get("observationMethod"),
+            "contactType": p.get("contactType"),
             "description": p.get("description"),
             "evidence_class": str(p.get("evidence_class") or ""),
             "structural_type": str(p.get("structural_type") or ""),
