@@ -26,8 +26,29 @@ from ..sheets import get_sheet
 
 CONFIDENCE_SCHEMA = "geosciml4china/codebook-confidence/v1"
 
-# 裁决口径中「已建立语义」的排除类（状态/裁决含这些词的段未建立具体语义）
-_UNSETTLED_HINTS = ("未覆盖", "兜底", "分歧", "存疑")
+# 分域规范裁决分类（2026-10-07 一阶标定审计优化）：各域裁决词汇不同
+# （状态/verdict/通过/违反/decided…），全局关键字匹配会漏判——
+# attitudes/fossils 的「违反（待裁定）」不含 未覆盖/兜底/分歧 字样。
+# 每域显式给出 pending（待裁定）与 fallback（兜底回落）判定；其余=已建立。
+def _settle(df: pd.DataFrame, col: str, pending_kw=(), fallback_kw=()):
+    """返回 (established, pending, fallback) 计数。pending/fallback 互斥优先。"""
+    s = df[col].astype(str)
+    pend = s.apply(lambda v: any(k in v for k in pending_kw)) if pending_kw \
+        else pd.Series(False, index=df.index)
+    fall = s.apply(lambda v: any(k in v for k in fallback_kw)) if fallback_kw \
+        else pd.Series(False, index=df.index)
+    est = ~(pend | fall)
+    return int(est.sum()), int(pend.sum()), int(fall.sum())
+
+
+def _band_consistent_pct(df: pd.DataFrame) -> float | None:
+    """置信带已评价率（consistent+verified 占比）——与「语义建立率」互补：
+    verdict=consistent 但 band=unassessed 的继承段（无独立核验）在此显形。"""
+    for col in ("conf_band_u", "conf_band"):
+        if col in df.columns and len(df):
+            b = df[col].astype(str)
+            return round(100.0 * float(b.isin(("consistent", "verified")).mean()), 1)
+    return None
 
 
 def confidence_path(root: Path, key: str) -> Path:
@@ -40,13 +61,8 @@ def _vc(df: pd.DataFrame, col: str) -> dict:
     return df[col].astype(str).value_counts().to_dict()
 
 
-def _established_pct(df: pd.DataFrame, col: str) -> float | None:
-    """覆盖率 = 1 − 未建立语义段占比（未覆盖/兜底/分歧/存疑）。"""
-    if col not in df.columns or not len(df):
-        return None
-    s = df[col].astype(str)
-    unsettled = s.apply(lambda v: any(h in v for h in _UNSETTLED_HINTS))
-    return round(100.0 * (1.0 - float(unsettled.mean())), 1)
+def _coverage(est: int, total: int) -> float | None:
+    return round(100.0 * est / total, 1) if total else None
 
 
 def _band_counts(df: pd.DataFrame) -> dict:
@@ -56,13 +72,17 @@ def _band_counts(df: pd.DataFrame) -> dict:
     return {}
 
 
-def _domain_csv(root: Path, verdict_col: str, extra: dict | None = None) -> dict | None:
+def _domain_csv(root: Path, verdict_col: str, pending_kw=(), fallback_kw=(),
+                extra: dict | None = None) -> dict | None:
     df = pd.read_csv(root, dtype=str)
+    est, pend, fall = _settle(df, verdict_col, pending_kw, fallback_kw)
     out = {
         "total": int(len(df)),
         "verdicts": _vc(df, verdict_col),
         "conf_bands": _band_counts(df),
-        "coverage_pct": _established_pct(df, verdict_col),
+        "established": est, "pending": pend, "fallback": fall,
+        "coverage_pct": _coverage(est, len(df)),
+        "band_consistent_pct": _band_consistent_pct(df),
     }
     if extra:
         out.update(extra)
@@ -99,12 +119,15 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
     if p.exists():
         df = pd.read_csv(p, dtype=str)
         st = df["状态"].astype(str)
+        est, unsettled, fall = _settle(df, "状态", pending_kw=("未覆盖", "分歧"))
         domains["boundaries"] = {
             "total": int(len(df)),
             "verdicts": _vc(df, "状态"),
             "conf_bands": _band_counts(df),
-            "coverage_pct": _established_pct(df, "状态"),
-            "pending": int((st == "分歧未裁定").sum()),
+            "established": est, "unsettled": unsettled, "fallback": fall,
+            "pending": int((st == "分歧未裁定").sum()),  # 严格裁定队列
+            "coverage_pct": _coverage(est, len(df)),
+            "band_consistent_pct": _band_consistent_pct(df),
         }
         cr = root / f"_gzbd_conflicts_{sheet_key}.csv"
         if cr.exists():
@@ -113,12 +136,17 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
     p = root / f"_gzeeb_calibration_{sheet_key}.csv"
     if p.exists():
         df = pd.read_csv(p, dtype=str)
+        est, pend, fall = _settle(df, "verdict",
+                                  pending_kw=("矛盾", "存疑", "分歧"),
+                                  fallback_kw=("兜底",))
         domains["faults"] = {
             "total": int(len(df)),
             "verdicts": _vc(df, "verdict"),
             "conf_bands": _band_counts(df),
             "structural_types": _vc(df, "structural_type"),
-            "coverage_pct": _established_pct(df, "verdict"),
+            "established": est, "pending": pend, "fallback": fall,
+            "coverage_pct": _coverage(est, len(df)),
+            "band_consistent_pct": _band_consistent_pct(df),
         }
         cr = root / f"_gzeeb_conflicts_{sheet_key}.csv"
         if cr.exists():
@@ -126,13 +154,23 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
 
     p = root / "_attitude_calibration.csv"
     if p.exists():
-        domains["attitudes"] = _domain_csv(p, "verdict")
+        domains["attitudes"] = _domain_csv(p, "verdict", pending_kw=("违反",))
 
-    for dom, tmpl in (("folds", f"_fold_calibration_{sheet_key}.csv"),
-                      ("fossils", f"_fossil_calibration_{sheet_key}.csv")):
-        p = root / tmpl
-        if p.exists():
-            domains[dom] = _domain_csv(p, "verdict")
+    p = root / f"_fossil_calibration_{sheet_key}.csv"
+    if p.exists():
+        domains["fossils"] = _domain_csv(p, "verdict", pending_kw=("违反",))
+
+    p = root / f"_fold_calibration_{sheet_key}.csv"
+    if p.exists():
+        # 褶皱=词表码义标定域（无段级证据通道，2026-10-03 裁定）——
+        # 置信带按设计缺席，显式标注而非留空
+        df = pd.read_csv(p, dtype=str)
+        domains["folds"] = {
+            "total": int(len(df)),
+            "verdicts": _vc(df, "verdict"),
+            "mode": "vocabulary_only",
+            "note": "词表码义标定域（无段级证据通道，置信带按设计缺席）",
+        }
 
     p = root / f"fault_aux_{sheet_key}.csv"
     if p.exists():
@@ -144,6 +182,18 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         an = root / f"_fault_aux_anomalies_{sheet_key}.csv"
         if an.exists():
             domains["aux_points"]["anomaly_register"] = an.name
+    # 辅助点判别裁决在三联体件（_fault_triplets_<key>.csv）——
+    # 聚合其模式/裁决分布（逆断层产状点/正断层产状点/存疑）
+    tp = root / f"_fault_triplets_{sheet_key}.csv"
+    if tp.exists():
+        t = pd.read_csv(tp, dtype=str)
+        est, pend, _ = _settle(t, "verdict", pending_kw=("存疑",))
+        domains.setdefault("aux_points", {})["triplets"] = {
+            "total": int(len(t)),
+            "verdicts": _vc(t, "verdict"),
+            "forms": _vc(t, "form"),
+            "established": est, "pending": pend,
+        }
 
     p = root / "geojson" / "L1" / "polygons.geojson"
     if p.exists():
