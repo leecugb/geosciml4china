@@ -38,6 +38,48 @@ _FAMILIES = {
 }
 
 
+def _load_attitude_entries(root: Path, key: str) -> dict:
+    """GZBBGA/GZCE 族收录（codebook v1.1，2026-10-07 复审 F-1 修复）：
+
+    GZBBGA 码义来源 = 标定 CSV 的 code_sem/code_source 列（先验拟合标定：
+    registry 注册转录 / fitted 拟合提案 / pending 未拟合）——逐码聚合；
+    GZCE 褶皱 = 词表码义标定域（source=registry）。
+    用户编辑 user_semantic 经 attitudes/folds 标定域消费生效（编辑→
+    prepare 回路，与 GZEEB 修改-再转化同构）。
+    """
+    out = {}
+    p = root / "_attitude_calibration.csv"
+    if p.exists():
+        df = pd.read_csv(p, dtype=str)
+        fam_d = {}
+        for code, grp in df.groupby("GZBBGA"):
+            sem = str(grp["code_sem"].iloc[0]) if "code_sem" in df.columns \
+                else str(grp["sem_type"].mode().iloc[0])
+            src = str(grp["code_source"].iloc[0]) \
+                if "code_source" in df.columns else "registry"
+            fam_d[_norm_code(code) if not str(code).startswith("2")
+                  else str(code)] = {
+                "semantic": sem, "source": src,
+                "segs": int(len(grp)), "confidence": "",
+                "user_semantic": "", "user_note": "",
+            }
+        out["GZBBGA"] = fam_d
+    p = root / f"_fold_calibration_{key}.csv"
+    if p.exists():
+        df = pd.read_csv(p, dtype=str)
+        fam_d = {}
+        for code, grp in df.groupby("GZCE"):
+            sem = str(grp["semantic"].mode().iloc[0]) \
+                if "semantic" in df.columns else ""
+            fam_d[_norm_code(code)] = {
+                "semantic": sem, "source": "registry",
+                "segs": int(len(grp)), "confidence": "",
+                "user_semantic": "", "user_note": "",
+            }
+        out["GZCE"] = fam_d
+    return out
+
+
 def codebook_path(root: Path, key: str) -> Path:
     return Path(root) / f"codebook_{key}.json"
 
@@ -138,6 +180,9 @@ def build_codebook(sheet_key: str, out_dir=None) -> dict:
     root.mkdir(parents=True, exist_ok=True)
 
     codes = _load_csv_entries(root, sheet_key)
+    # GZBBGA/GZCE 族收录（v1.1）：先验拟合/词表域的码义入册
+    for fam, fam_d in _load_attitude_entries(root, sheet_key).items():
+        codes.setdefault(fam, {}).update(fam_d)
     # 全局先验补缺（不覆盖校准推导）
     for fam, fam_d in _load_global_priors().items():
         dst = codes.setdefault(fam, {})

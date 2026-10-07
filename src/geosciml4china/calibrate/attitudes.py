@@ -332,9 +332,18 @@ def calibrate_attitudes(sheet_key: str, out_dir=None) -> dict:
 
     # 码级先验拟合（2026-10-07 用户裁定：GZBBGA 纳入先验拟合标定范畴）——
     # 未注册码据宿主签名统计获语义（source=fitted）；已注册码族级张力检测
-    # （拟合族≠注册族 → 登记 _attitude_anomalies，不改码义）
+    # （拟合族≠注册族 → 登记 _attitude_anomalies，不改码义）。
+    # codebook GZBBGA 用户编辑居最高通道（v1.1 收录闭环：编辑 codebook →
+    # prepare 生效，与 GZEEB 修改-再转化同构）
     _dfc = pd.DataFrame(rows)
     _code_sem = _fit_code_semantics(_dfc)
+    from .codebook import load_codebook
+    _cb = load_codebook(sh.root, sh.key)
+    if _cb:
+        for code, ent in (_cb.get("codes", {}).get("GZBBGA") or {}).items():
+            u = str(ent.get("user_semantic") or "").strip()
+            if u and u not in ("nan", "None") and code in _code_sem:
+                _code_sem[code] = (u, "user")
     for i, r in enumerate(rows):
         t = str(r["GZBBGA"])
         _sem_c, _src_c = _code_sem[t]
@@ -347,12 +356,19 @@ def calibrate_attitudes(sheet_key: str, out_dir=None) -> dict:
                                  host_era="—", rule="码义拟合张力",
                                  reason=f"注册码义 {_sem_c} × 宿主拟合 {_fitted}"
                                         f"（登记不改码义）"))
-        # 未注册码：拟合语义回填（无拟合则保持原码 + pending）
+        # 未注册码：拟合语义回填（无拟合则保持原码 + pending）；
+        # source=user（codebook 编辑）的码全段回填（编辑→prepare 生效，
+        # 违反/裁定行豁免——宿主裁定规则不因码级编辑失效）
         if _src_c == "fitted" and r["sem_type"] == t and \
                 "违反" not in str(r["verdict"]) and \
                 "裁定" not in str(r["verdict"]):
             r["sem_type"] = _sem_c
             r["verdict"] = "标定（拟合提案待裁定）"
+        elif _src_c == "user" and \
+                "违反" not in str(r["verdict"]) and \
+                "裁定" not in str(r["verdict"]):
+            r["sem_type"] = _sem_c
+            r["verdict"] = "标定（codebook 用户裁定）"
         elif _src_c == "pending" and r["sem_type"] == t and \
                 "违反" not in str(r["verdict"]):
             r["verdict"] = "标定（未拟合·待裁定）"

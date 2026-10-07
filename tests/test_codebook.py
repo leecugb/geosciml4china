@@ -50,6 +50,22 @@ def cb_root(tmp_path):
         {"gzeeb_semantics": {"16": {"semantic": "左型走滑断层",
                                      "verdict": "adjudicated"}},
          "gzeld_semantics": {}}, ensure_ascii=False), encoding="utf-8")
+    # GZBBGA 标定件（先验拟合族收录源，v1.1）
+    pd.DataFrame([
+        dict(idx=0, GZBBGA="202001", host_code="N1k", host_layer="sediment",
+             host_era="Mz-Cz", sem_type="地层产状", verdict="通过",
+             code_sem="地层产状", code_source="registry"),
+        dict(idx=1, GZBBGA="999999", host_code="ηγT2", host_layer="intrusive",
+             host_era="Mz-Cz", sem_type="面理产状", verdict="标定（拟合提案待裁定）",
+             code_sem="面理产状", code_source="fitted"),
+        dict(idx=2, GZBBGA="999999", host_code="ηγT2", host_layer="intrusive",
+             host_era="Mz-Cz", sem_type="面理产状", verdict="标定（拟合提案待裁定）",
+             code_sem="面理产状", code_source="fitted"),
+    ]).to_csv(tmp_path / "_attitude_calibration.csv", index=False)
+    pd.DataFrame([
+        dict(idx=0, GZCE="01", semantic="背斜", profile="overturned",
+             verdict="decided"),
+    ]).to_csv(tmp_path / "_fold_calibration_cbu.csv", index=False)
     return tmp_path
 
 
@@ -94,3 +110,17 @@ def test_user_edit_preserved_across_regeneration(cb_root):
     # load_codebook 读取
     assert load_codebook(cb_root, "cbu")["codes"]["GZBD"]["01"]["semantic"] \
         == "整合接触"
+
+
+def test_attitude_fold_families_in_codebook(cb_root):
+    """codebook v1.1：GZBBGA/GZCE 族收录——注册转录 + 拟合提案入册。"""
+    cb = build_codebook("cbu")
+    g = cb["codes"]["GZBBGA"]
+    assert g["202001"]["semantic"] == "地层产状"
+    assert g["202001"]["source"] == "registry"
+    assert g["999999"]["semantic"] == "面理产状"
+    assert g["999999"]["source"] == "fitted"
+    assert g["999999"]["segs"] == 2
+    f = cb["codes"]["GZCE"]
+    assert f["01"]["semantic"] == "背斜"
+    assert f["01"]["source"] == "registry"
