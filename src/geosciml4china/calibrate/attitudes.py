@@ -65,6 +65,70 @@ _CODE_SEM = {"202001": "地层产状", "202004": "倒转层理",
              "202005": "片理产状", "202007": "面理产状",
              "202011": "面理产状"}
 
+# 族映射（先验拟合张力检测用：层理族含 地层/倒转 两个标签——
+# 族级比较避免 202004 倒转层理 被误报张力）
+_FAMILY_OF = {"地层产状": "层理", "倒转层理": "层理", "片理产状": "片理",
+              "面理产状": "面理", "片麻理产状": "片麻理"}
+
+# 宿主签名 → 拟合候选语义（2026-10-07 用户裁定：GZBBGA 纳入先验拟合标定；
+# 先验=宿主岩性族×时代组的地质学约束，与 R1'-R4'/Pt1 裁定同源）
+_HOST_FIT = {
+    ("intrusive", "*"): "面理产状",
+    ("metamorphic", "Pc"): "片麻理产状",
+    ("metamorphic", "Pz"): "片理产状",
+    ("sediment", "*"): "地层产状",
+    ("volcanic", "*"): "地层产状",
+}
+
+FIT_MIN_SEGS = 5        # 码级拟合最少段数
+FIT_DOMINANCE = 0.6     # 码级拟合主导阈值
+
+
+def _fit_candidate(grp: pd.DataFrame) -> str | None:
+    """宿主签名投票 → 主导拟合候选（≥FIT_MIN_SEGS 且 ≥FIT_DOMINANCE）；
+    无主导 → None。纯统计，不含注册表优先级。
+
+    变质宿主按 Pt1 时代规则分流（2026-10-07 修复：原「Pc→片麻理」把
+    全部前寒武误当 Pt1——ChSt./ChA.（长城系 Pt2）合法宿主是片理）：
+    Pt1 → 片麻理；其余变质（Pt2/Pt3/Pz）→ 片理。
+    """
+    from collections import Counter
+    votes = Counter()
+    for _, r in grp.iterrows():
+        hl = r.get("host_layer")
+        he = r.get("host_era")
+        hc = r.get("host_code")
+        if hl is None:
+            continue  # 无宿主点不投票
+        if hl == "metamorphic":
+            sem = "片麻理产状" if hc is not None and is_pt1_host(hc) \
+                else "片理产状"
+        else:
+            sem = _HOST_FIT.get((hl, he)) or _HOST_FIT.get((hl, "*"))
+        if sem:
+            votes[sem] += 1
+    if len(grp) < FIT_MIN_SEGS:
+        return None
+    top, n = votes.most_common(1)[0] if votes else ("", 0)
+    return top if top and n / len(grp) >= FIT_DOMINANCE else None
+
+
+def _fit_code_semantics(df: pd.DataFrame) -> dict:
+    """码级先验拟合（纯函数，CI 可测）：{GZBBGA: (语义, 来源)}。
+
+    注册表码 → (注册码义, registry)；未注册码 → 宿主签名统计拟合：
+    主导候选存在 → (拟合语义, fitted)；否则 → (原码, pending)。
+    """
+    out = {}
+    for code, grp in df.groupby("GZBBGA"):
+        code = str(code)
+        if code in _CODE_SEM:
+            out[code] = (_CODE_SEM[code], "registry")
+            continue
+        cand = _fit_candidate(grp)
+        out[code] = (cand, "fitted") if cand else (code, "pending")
+    return out
+
 
 def norm(c):
     return re.sub(r"[→↓↑.]", "", str(c)).strip()
@@ -185,6 +249,7 @@ def calibrate_attitudes(sheet_key: str, out_dir=None) -> dict:
                              reason="倾角字段缺失"))
         # 同码继承原则（2026-10-03 用户裁定）：码义已标定的编码值——要素
         # sem_type 直接继承码义语义标签（_CAT 表承载码义），不再携带原码；
+        # 未注册码走先验拟合码义（2026-10-07 裁定，下方码级拟合后回填）；
         # 宿主派生规则（侵入岩→面理、Pt1→片麻理）在下方覆盖
         sem = _CODE_SEM.get(t, t)
         verdict = "通过"
@@ -264,6 +329,33 @@ def calibrate_attitudes(sheet_key: str, out_dir=None) -> dict:
                              host_era=fam["host_era"], rule="单元混标审查",
                              reason=f"宿主族允许 {sorted(allow)}，实有 "
                                     f"{sorted(cats)}"))
+
+    # 码级先验拟合（2026-10-07 用户裁定：GZBBGA 纳入先验拟合标定范畴）——
+    # 未注册码据宿主签名统计获语义（source=fitted）；已注册码族级张力检测
+    # （拟合族≠注册族 → 登记 _attitude_anomalies，不改码义）
+    _dfc = pd.DataFrame(rows)
+    _code_sem = _fit_code_semantics(_dfc)
+    for i, r in enumerate(rows):
+        t = str(r["GZBBGA"])
+        _sem_c, _src_c = _code_sem[t]
+        r["code_sem"] = _sem_c
+        r["code_source"] = _src_c
+        if _src_c == "registry" and len(_dfc[_dfc["GZBBGA"] == t]) >= FIT_MIN_SEGS:
+            _fitted = _fit_candidate(_dfc[_dfc["GZBBGA"] == t])
+            if _fitted and _FAMILY_OF.get(_fitted) != _FAMILY_OF.get(_sem_c):
+                anom.append(dict(idx="码级", gzbbga=t, host="—", host_layer="—",
+                                 host_era="—", rule="码义拟合张力",
+                                 reason=f"注册码义 {_sem_c} × 宿主拟合 {_fitted}"
+                                        f"（登记不改码义）"))
+        # 未注册码：拟合语义回填（无拟合则保持原码 + pending）
+        if _src_c == "fitted" and r["sem_type"] == t and \
+                "违反" not in str(r["verdict"]) and \
+                "裁定" not in str(r["verdict"]):
+            r["sem_type"] = _sem_c
+            r["verdict"] = "标定（拟合提案待裁定）"
+        elif _src_c == "pending" and r["sem_type"] == t and \
+                "违反" not in str(r["verdict"]):
+            r["verdict"] = "标定（未拟合·待裁定）"
 
     # 影子置信度（统一框架 S×I×F，2026-09-27 裁定参数；旧列 confidence 不动）
     from pymapgis.semantics.confidence import (emit_columns, evaluate,

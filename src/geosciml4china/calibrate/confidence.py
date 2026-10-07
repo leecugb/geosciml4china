@@ -192,6 +192,19 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
                  "verdict": str(r["verdict"])}
                 for _, r in sub.iterrows()
             ]
+        # GZBBGA 码级质量（2026-10-07 裁定：GZBBGA 纳入先验拟合标定——
+        # 码义来源 registry/fitted/pending 分布）
+        if "code_source" in _dfa.columns:
+            _cq = {}
+            for _g, _grp in _dfa.groupby("GZBBGA"):
+                _cq[str(_g)] = {
+                    "segments": int(len(_grp)),
+                    "code_sem": str(_grp["code_sem"].iloc[0])
+                    if "code_sem" in _dfa.columns else "",
+                    "by_source": _grp["code_source"].astype(str)
+                    .value_counts().to_dict(),
+                }
+            domains["attitudes"]["GZBBGA_codes"] = _cq
 
     p = root / f"_fossil_calibration_{sheet_key}.csv"
     if p.exists():
