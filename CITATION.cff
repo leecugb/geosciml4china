@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "geosciml4china: self-supporting semantic calibration and GeoSciML 4.1 interoperability for China's 1:250,000 geological map sheets"
+version: 0.1.5
+date-released: "2026-10-08"
+authors:
+  - family-names: Li
+    given-names: Shijie
+    affiliation: "Xi'an Mineral Resources Survey, China Geological Survey"
+    email: 1045105061@qq.com
+  - family-names: He
+    given-names: Haiyang
+    affiliation: "Xi'an Mineral Resources Survey, China Geological Survey"
+    email: hehaiyangcugb@foxmail.com
+  - family-names: Sun
+    given-names: Xu
+    affiliation: "Xi'an Mineral Resources Survey, China Geological Survey"
+  - family-names: Qin
+    given-names: Haoyang
+    affiliation: "Xi'an Mineral Resources Survey, China Geological Survey"
+  - family-names: Liu
+    given-names: Xiaoyu
+    affiliation: "Xi'an Mineral Resources Survey, China Geological Survey"
+  - family-names: Feng
+    given-names: Yilin
+    affiliation: "Xi'an Mineral Resources Survey, China Geological Survey"
+  - family-names: Zuo
+    given-names: Zengyun
+    affiliation: "Xi'an Mineral Resources Survey, China Geological Survey"
+keywords:
+  - GeoSciML
+  - MapGIS
+  - geological map
+  - semantic calibration
+  - DZ/T 0179
+  - codebook
+license: Apache-2.0
+repository-code: "https://github.com/leecugb/geosciml4china"

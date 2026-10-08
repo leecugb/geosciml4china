@@ -1,0 +1,22 @@
+{
+  "title": "geosciml4china: self-supporting semantic calibration and GeoSciML 4.1 interoperability for China's 1:250,000 geological map sheets",
+  "description": "geosciml4china turns a legacy MapGIS 6.x/67 project folder into trustworthy, confidence-graded geological semantics: MapGIS → L0 GeoJSON → self-supporting semantic calibration (nine domains, code-level codebook + confidence statistics) → GeoSciML 4.1 (fully decoupled from the MapGIS code system) → GeoSciML-semantics-driven rendering (DZ/T 0179-2025). Attribute-code semantics are recovered from the map's own geometry, topology and graphic parameters when the code dictionary is unavailable; contradictions are registered for expert adjudication and the original encoding is never rewritten.",
+  "license": "Apache-2.0",
+  "upload_type": "software",
+  "creators": [
+    {"name": "Li, Shijie", "orcid": "", "affiliation": "Xi'an Mineral Resources Survey, China Geological Survey"},
+    {"name": "He, Haiyang", "orcid": "", "affiliation": "Xi'an Mineral Resources Survey, China Geological Survey"},
+    {"name": "Sun, Xu", "orcid": "", "affiliation": "Xi'an Mineral Resources Survey, China Geological Survey"},
+    {"name": "Qin, Haoyang", "orcid": "", "affiliation": "Xi'an Mineral Resources Survey, China Geological Survey"},
+    {"name": "Liu, Xiaoyu", "orcid": "", "affiliation": "Xi'an Mineral Resources Survey, China Geological Survey"},
+    {"name": "Feng, Yilin", "orcid": "", "affiliation": "Xi'an Mineral Resources Survey, China Geological Survey"},
+    {"name": "Zuo, Zengyun", "orcid": "", "affiliation": "Xi'an Mineral Resources Survey, China Geological Survey"}
+  ],
+  "keywords": [
+    "GeoSciML", "MapGIS", "geological map", "semantic calibration",
+    "DZ/T 0179", "CGI vocabularies", "codebook", "legacy data"
+  ],
+  "related_identifiers": [
+    {"identifier": "https://github.com/leecugb/mapgis2shp", "relation": "isSupplementTo", "scheme": "url"}
+  ]
+}
