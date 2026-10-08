@@ -294,6 +294,104 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
             "units": int(codes[codes != ""].nunique()),
         }
 
+    # 测量误差项（2026-10-08 用户建模裁定：codebook 明确后，理论与实测
+    # 的偏差构成测量误差——ε₁ 界线：codebook 接触语义 vs 段级实测语义
+    # （地质志+人工标定）；ε₂ 断层：codebook 结构语义 vs 附属产状测量点
+    # 运动学语义（_kin_consistent 抽象约束 + aux 反演互验））
+    measurement_error: dict = {}
+
+    # ε₁ 界线：解释表逐段 vs codebook GZBD 语义
+    _bp = root / "_gzbd_semantic_interpretation.csv"
+    if _bp.exists():
+        from .codebook import semantic_of as _semof
+        _dfb = pd.read_csv(_bp, dtype=str)
+        _cbs = (cb or {}).get("codes", {}).get("GZBD") or {}
+
+        def _norm_sem(v):
+            s = str(v or "")
+            s = s.split("（")[0].strip()
+            return {"角度不整合界线": "角度不整合",
+                    "平行不整合界线": "平行不整合"}.get(s, s)
+        _match = _dev = _contra = 0
+        _dev_segs = []
+        for _, r in _dfb.iterrows():
+            _seg = _norm_sem(r.get("标定语义"))
+            _cod = _semof({"codes": {"GZBD": _cbs}}, "GZBD",
+                          r.get("GZBD_eff") or r.get("GZBD原码"))
+            _st = str(r.get("状态") or "")
+            if _st == "分歧未裁定":
+                _contra += 1
+                _dev_segs.append({"idx": int(r["idx"]),
+                                  "segment_semantic": _seg,
+                                  "codebook_semantic": _cod,
+                                  "class": "contradiction"})
+            elif _seg and _cod and _seg != _cod:
+                _dev += 1
+                _dev_segs.append({"idx": int(r["idx"]),
+                                  "segment_semantic": _seg,
+                                  "codebook_semantic": _cod,
+                                  "class": "deviation"})
+            else:
+                _match += 1
+        measurement_error["boundary_deviation"] = {
+            "total": int(len(_dfb)),
+            "match": _match, "deviation": _dev,
+            "contradiction": _contra,   # 分歧未裁定=超阈保留观测
+            "segments": _dev_segs,
+        }
+
+    # ε₂ 断层：结构×运动学一致性扫描（violation=超阈测量误差）+ aux 反演
+    _fp = root / f"_gzeeb_calibration_{sheet_key}.csv"
+    if _fp.exists():
+        from .gzeeb import _kin_consistent as _kc
+        _dff = pd.read_csv(_fp, dtype=str)
+        _ok = _viol = _neutral = 0
+        _viol_segs = []
+        for _, r in _dff.iterrows():
+            _res = _kc(str(r.get("structural_type") or ""),
+                        str(r.get("gzeld_sem") or ""))
+            if _res is False:
+                _viol += 1
+                _viol_segs.append({"idx": int(r["idx"]),
+                                   "structural_type":
+                                       str(r.get("structural_type") or ""),
+                                   "kinematic_semantic":
+                                       str(r.get("gzeld_sem") or ""),
+                                   "class": "violation"})
+            elif _res is True:
+                _ok += 1
+            else:
+                _neutral += 1
+        # 证据冲突（aux 产状测量点反演互验等——冲突登记册 issue 含
+        # 「证据冲突」类）：真测量误差项；「码义未注册/全继承」为
+        # 注册状态记录，不计入测量误差
+        _crp = root / f"_gzeeb_conflicts_{sheet_key}.csv"
+        _ev_conf = []
+        if _crp.exists():
+            import ast as _ast
+            _dfc = pd.read_csv(_crp, dtype=str)
+            for _, r in _dfc.iterrows():
+                if "证据冲突" not in str(r.get("issue") or ""):
+                    continue
+                try:
+                    _sg = _ast.literal_eval(str(r.get("segs")))
+                    if not isinstance(_sg, list):
+                        _sg = [int(_sg)]
+                except Exception:
+                    _sg = []
+                for _s in _sg:
+                    _ev_conf.append({"idx": int(_s),
+                                     "issue": str(r.get("issue") or ""),
+                                     "evidence": str(r.get("evidence") or "")[:120],
+                                     "class": "evidence_conflict"})
+        measurement_error["fault_kinematic_deviation"] = {
+            "total": int(len(_dff)),
+            "consistent": _ok, "violation": _viol, "neutral": _neutral,
+            "segments": _viol_segs,
+            "evidence_conflicts": _ev_conf,
+            "evidence_conflict_count": len(_ev_conf),
+        }
+
     conf = {
         "codebook_confidence": CONFIDENCE_SCHEMA,
         "sheet": sheet_key,
@@ -306,6 +404,8 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         # 图面码×先验/证据冲突逐段登记——记录但不修改编码；
         # segment_semantic 字段=冲突段的段级标定语义（同日裁定：段级语义
         # 保持在置信度文件；接口二产品语义以 codebook 为准））
+        "measurement_error": measurement_error,   # 测量误差项（2026-10-08
+        # 用户建模裁定：理论(codebook) vs 实测(段级/产状点) 的偏差=测量误差）
         "codebook_quality": _codebook_quality(cb),
         "provenance": {
             "generator": "geosciml4china prepare",

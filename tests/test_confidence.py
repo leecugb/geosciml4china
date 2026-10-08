@@ -66,7 +66,14 @@ def cf_root(tmp_path):
                    "segs": 2, "user_semantic": "", "user_note": ""}},
             "GZELD": {
             "101": {"semantic": "压性", "source": "global_prior",
-                    "segs": 0, "user_semantic": "", "user_note": ""}}},
+                    "segs": 0, "user_semantic": "", "user_note": ""}},
+            "GZBD": {
+            "01": {"semantic": "整合接触", "source": "MLE精化",
+                   "segs": 0, "user_semantic": "", "user_note": ""},
+            "10": {"semantic": "断层接触（断裂界线）", "source": "路由码",
+                   "segs": 0, "user_semantic": "", "user_note": ""},
+            "16": {"semantic": "推测地质界线", "source": "registry",
+                   "segs": 0, "user_semantic": "", "user_note": ""}}},
     }, ensure_ascii=False), encoding="utf-8")
     return tmp_path
 
@@ -148,3 +155,20 @@ def test_codebook_quality_and_provenance(cf_root):
     # 摘要可读且不炸
     s = summary(conf)
     assert "boundaries" in s and "GZEEB" in s
+
+
+def test_measurement_error_terms(cf_root):
+    """测量误差项（2026-10-08 用户建模裁定）：ε₁ 界线（codebook 理论 vs
+    段级实测语义偏差）+ ε₂ 断层（kin 一致性 + aux 证据冲突）。"""
+    conf = build_confidence("cfu")
+    me = conf["measurement_error"]
+    b = me["boundary_deviation"]
+    assert b["contradiction"] == 1          # 分歧未裁定（idx 2）= 超阈保留
+    assert b["match"] >= 1 and b["deviation"] >= 1
+    segs = {s["idx"]: s for s in b["segments"]}
+    assert segs[2]["class"] == "contradiction"
+    f = me["fault_kinematic_deviation"]
+    assert f["total"] == 3
+    # 合成件无 gzeld_sem → 全中性（无测量）；无冲突册 → 证据冲突 0
+    assert f["neutral"] == 3 and f["violation"] == 0
+    assert f["evidence_conflict_count"] == 0

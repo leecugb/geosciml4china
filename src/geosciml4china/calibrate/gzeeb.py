@@ -172,6 +172,14 @@ def _kin_consistent(structural: str, kin_sem: str):
     return ks_norm in exp
 
 
+# 超参数环境钩子（2026-10-08 论文 E3）：默认=生产裁定值，环境变量
+# 覆盖用于灵敏度分析；确定性重放保持（零变化时行为逐字节一致）
+_TH_DOM = float(os.environ.get("G4C_TH_DOM", "0.25"))
+_TH_REACT = float(os.environ.get("G4C_TH_REACT", "0.5"))
+_TH_REACT_N = int(os.environ.get("G4C_TH_REACT_N", "3"))
+_TH_MINV = float(os.environ.get("G4C_TH_MINV", "2"))
+
+
 def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     """执行 GZEEB 断层三维标定。out_dir 缺省=图幅 root。"""
     sh = get_sheet(sheet_key)
@@ -620,20 +628,27 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         # GZELD 运动学 +2 / GZECE 倾角域 +1 / aux 判别 +2 / 界线重合 +2~3；
         # argmax 即标定；覆盖库 adjudicated 结构裁定=绝对；并列取注册先验、
         # 无先验并列落泛称；最高票 <2 落泛称（证据不足不硬标）
+        # 消融钩子（2026-10-08 论文 E2）：环境变量 G4C_ABLATE=通道名,..
+        # 关停对应投票通道；默认空=零行为变化（确定性重放保持）
+        _ABLATE = frozenset(x.strip() for x in
+                          os.environ.get("G4C_ABLATE", "").split(",")
+                          if x.strip())
         votes = defaultdict(float)
         _v_prior = defaultdict(float)   # 先验知识类票
         _v_data = defaultdict(float)    # 数据模式类票
         _v_aux = defaultdict(float)     # aux 判别票（a-b-a/a-b 产状测量点）
-        if _sem_from_reg:
+        if _sem_from_reg and "prior" not in _ABLATE:
             votes[sem_name] += 3
             _v_prior[sem_name] += 3
-        if _ns_hit:
+        if _ns_hit and "name" not in _ABLATE:
             votes[sem_name] += 2
             _v_prior[sem_name] += 2
-        if _sig_hit and _own_c is None:
+        if _sig_hit and _own_c is None and "sig" not in _ABLATE:
             votes["推测断层"] += 2
             _v_data["推测断层"] += 2
-        if str(gzeld_sem_now).startswith("压性"):
+        if "kin" in _ABLATE:
+            pass  # 消融关停：运动学整链跳过
+        elif str(gzeld_sem_now).startswith("压性"):
             votes["逆断层"] += 2
             _v_prior["逆断层"] += 2
             votes["推覆体边界"] += 2
@@ -655,7 +670,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             _v_prior["右型走滑断层"] += 3
             votes["走滑断层"] += 2
             _v_prior["走滑断层"] += 2
-        if dip is not None and dip > 0:
+        if "dip" not in _ABLATE and dip is not None and dip > 0:
             if 25 <= dip <= 85:
                 votes["逆断层"] += 1
                 _v_data["逆断层"] += 1
@@ -665,7 +680,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             if 0 <= dip <= 35:
                 votes["推覆体边界"] += 1
                 _v_data["推覆体边界"] += 1
-        if auxv == "逆断层产状点":
+        if "aux" not in _ABLATE and auxv == "逆断层产状点":
             votes["逆断层"] += 2
             _v_aux["逆断层"] += 2
         elif auxv == "正断层产状点":
@@ -680,7 +695,9 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         _qfrac = (g.intersection(quat_u).length / g.length
                   if (quat_u is not None and g is not None
                       and not g.is_empty and g.length > 0) else 0.0)
-        if _own_c is None and _qfrac >= _q_interior_frac:
+        if "cover" in _ABLATE:
+            pass  # 消融关停：覆盖证据整链跳过
+        elif _own_c is None and _qfrac >= _q_interior_frac:
             votes["推测断层"] += 3
             _v_data["推测断层"] += 3
         elif _own_c is None and fc >= 0.5:
@@ -694,7 +711,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             if _dedge0 is not None and _dedge0 <= 1000.0:
                 votes["推测断层"] += 2
                 _v_data["推测断层"] += 2
-        if _own_c is not None:
+        if "coinc" not in _ABLATE and _own_c is not None:
             # 界线证据直投活动断层（2026-10-03 用户裁定）
             votes["活动断层"] += 2 if _tier_c == "弱重合" else 3
             _v_data["活动断层"] += 2 if _tier_c == "弱重合" else 3
@@ -723,23 +740,24 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                                    for c in g.coords])
                 _ahv, _afv = _hw_fw_ranks(_fmv, _da2v)
                 if _ahv is not None and _afv is not None and _ahv < _afv:
-                    votes["推覆体边界"] += 3
-                    _v_data["推覆体边界"] += 3
+                    if "nappe" not in _ABLATE:
+                        votes["推覆体边界"] += 3
+                        _v_data["推覆体边界"] += 3
         # 走滑钩对进回归（2026-10-03 用户：解析出走滑断层码——钩旋向
         # z 算法判定的左行/右行证据直投走滑票；16 码×GZELD=103×左行钩）
         _hps0 = hook_by_seg.get(int(row.get("_src_id", idx)), [])
         if _hps0:
             _sense0 = str(_hps0[0].get("sense") or "")
-            if _sense0 == "左行":
+            if "hook" not in _ABLATE and _sense0 == "左行":
                 votes["左型走滑断层"] += 3
                 _v_data["左型走滑断层"] += 3
-            elif _sense0 == "右行":
+            elif "hook" not in _ABLATE and _sense0 == "右行":
                 votes["右型走滑断层"] += 3
                 _v_data["右型走滑断层"] += 3
         _mle_sem = "断层泛称"
         if votes:
             _mx = max(votes.values())
-            if _mx >= 2:
+            if _mx >= _TH_MINV:
                 _win = [k for k, v in votes.items() if v == _mx]
                 if len(_win) == 1:
                     _mle_sem = _win[0]
@@ -1082,7 +1100,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         (c for c in _claim_codes
          if sum(_final_raw.get(c, {}).values())
          and _final_raw[c].get("逆断层", 0)
-         / sum(_final_raw[c].values()) >= 0.25),
+         / sum(_final_raw[c].values()) >= _TH_DOM),
         key=lambda c: _final_raw[c].get("逆断层", 0), default=None)
     _mle_sem_by_code = {}
     _gzeld_derived = {}  # GZELD 推导语义（_unreg 块内填充；映射表出站兜底引用）
@@ -1101,8 +1119,8 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         # 正逆共存=压张交替=复活样式 → 活动断层（可比性门槛：双向
         # 计数均 ≥3 且比值 ≥0.5——31 案 9:6=0.67 成立；01 案 34:3
         # =0.09 属逆断层主导+零星反例，不构成复活签名）
-        if (_n_rev0 >= 3 and _n_nor0 >= 3
-                and min(_n_rev0, _n_nor0) / max(_n_rev0, _n_nor0) >= 0.5):
+        if (_n_rev0 >= _TH_REACT_N and _n_nor0 >= _TH_REACT_N
+                and min(_n_rev0, _n_nor0) / max(_n_rev0, _n_nor0) >= _TH_REACT):
             _mle_sem_by_code[_code] = "活动断层"
             continue
         if _evid:
@@ -1110,7 +1128,7 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             # 决定性证据覆盖门槛（2026-10-03 用户裁定：01 码仅 11/131 段
             # 老盖新（8%）不足以判族义推覆体边界——族义结论要求决定性
             # 语义覆盖族内 ≥25% 段；01 落无族义，段级证据语义如实保留）
-            if _n0 / sum(_final_raw.get(_code, {}).values()) >= 0.25:
+            if _n0 / sum(_final_raw.get(_code, {}).values()) >= _TH_DOM:
                 _mle_sem_by_code[_code] = _sem0
     if _rev_claim:
         print(f"   逆断层唯一码: GZEEB={_rev_claim}"

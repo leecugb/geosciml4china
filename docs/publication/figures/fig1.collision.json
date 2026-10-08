@@ -1,0 +1,96 @@
+{
+  "pdf": "fig1_looseness_taxonomy.pdf",
+  "auditable": true,
+  "verdict": "REVIEW REQUIRED",
+  "page_count": 1,
+  "visible_text_box_count": 80,
+  "text_trace_count": 115,
+  "stroke_path_count": 32,
+  "filled_region_count": 63,
+  "image_region_count": 0,
+  "summary": {
+    "fail": 0,
+    "warn": 3,
+    "contained_fill_overlays": 51,
+    "contained_image_overlays": 0
+  },
+  "thresholds": {
+    "text_inset_pt": 0.6,
+    "min_overlap_ratio": 0.05,
+    "clipping_tolerance_pt": 0.5
+  },
+  "findings": [
+    {
+      "severity": "WARN",
+      "kind": "text-fill-edge",
+      "page": 1,
+      "message": "Text partially overlaps the edge of 1 filled region(s)",
+      "text": "Kurgan",
+      "text_bbox": [
+        241.7081298828125,
+        235.94784545898438,
+        259.12451171875,
+        241.34783935546875
+      ],
+      "other_text": null,
+      "other_bbox": [
+        246.9346466064453,
+        237.5887908935547,
+        262.49481201171875,
+        358.7142028808594
+      ],
+      "object_count": 1,
+      "object_indexes": [
+        49000
+      ]
+    },
+    {
+      "severity": "WARN",
+      "kind": "text-fill-edge",
+      "page": 1,
+      "message": "Text partially overlaps the edge of 1 filled region(s)",
+      "text": "Yingjisha",
+      "text_bbox": [
+        241.7081298828125,
+        243.71981811523438,
+        263.442138671875,
+        249.11981201171875
+      ],
+      "other_text": null,
+      "other_bbox": [
+        246.9346466064453,
+        237.5887908935547,
+        262.49481201171875,
+        358.7142028808594
+      ],
+      "object_count": 1,
+      "object_indexes": [
+        49000
+      ]
+    },
+    {
+      "severity": "WARN",
+      "kind": "text-fill-edge",
+      "page": 1,
+      "message": "Text partially overlaps the edge of 1 filled region(s)",
+      "text": "Aoyiyayilake",
+      "text_bbox": [
+        241.7081298828125,
+        251.49179077148438,
+        271.7686767578125,
+        256.89178466796875
+      ],
+      "other_text": null,
+      "other_bbox": [
+        246.9346466064453,
+        237.5887908935547,
+        262.49481201171875,
+        358.7142028808594
+      ],
+      "object_count": 1,
+      "object_indexes": [
+        49000
+      ]
+    }
+  ]
+}

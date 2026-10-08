@@ -1,0 +1,84 @@
+{
+ "jwsss": {
+  "th_dom=0.1875": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "th_dom=0.3125": {
+   "codes_flipped": [
+    "07"
+   ],
+   "details": {
+    "07": [
+     "推覆体边界",
+     "断层泛称"
+    ]
+   }
+  },
+  "react_ratio=0.375": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "react_ratio=0.625": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "react_n=2": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "react_n=4": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "min_votes=1.5": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "min_votes=2.5": {
+   "codes_flipped": [
+    "31"
+   ],
+   "details": {
+    "31": [
+     "活动断层",
+     "断层泛称"
+    ]
+   }
+  }
+ },
+ "jwss": {
+  "th_dom=0.1875": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "th_dom=0.3125": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "react_ratio=0.375": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "react_ratio=0.625": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "react_n=2": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "react_n=4": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "min_votes=1.5": {
+   "codes_flipped": [],
+   "details": {}
+  },
+  "min_votes=2.5": {
+   "codes_flipped": [],
+   "details": {}
+  }
+ }
+}

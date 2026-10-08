@@ -1,0 +1,153 @@
+{
+ "jwsss": {
+  "baseline_codes": {
+   "01": "断层泛称",
+   "04": "推测断层",
+   "05": "逆断层",
+   "07": "推覆体边界",
+   "16": "右型走滑断层",
+   "18": "左型走滑断层",
+   "28": "边界断裂",
+   "31": "活动断层",
+   "41": "断层泛称"
+  },
+  "prior": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "name": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "sig": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "kin": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "dip": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "aux": {
+   "codes_flipped": [
+    "31"
+   ],
+   "code_details": {
+    "31": [
+     "活动断层",
+     "断层泛称"
+    ]
+   },
+   "segs_flipped": 26,
+   "n_segs_total": 310
+  },
+  "cover": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "coinc": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "nappe": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  },
+  "hook": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 310
+  }
+ },
+ "jwss": {
+  "baseline_codes": {
+   "01": "断层泛称",
+   "02": "推测断层",
+   "03": "正断层",
+   "05": "逆断层",
+   "16": "左型走滑断层",
+   "35": "推覆体边界",
+   "37": "活动断层"
+  },
+  "prior": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "name": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "sig": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "kin": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "dip": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "aux": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "cover": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "coinc": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "nappe": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  },
+  "hook": {
+   "codes_flipped": [],
+   "code_details": {},
+   "segs_flipped": 0,
+   "n_segs_total": 289
+  }
+ }
+}
