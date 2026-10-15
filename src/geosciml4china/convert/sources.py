@@ -43,9 +43,14 @@ def _strip_tilde(value: Any) -> Optional[float]:
     return _float(text)
 
 
-def read_theme(name: str) -> gpd.GeoDataFrame:
+def read_theme(name: str, *, optional: bool = False) -> gpd.GeoDataFrame:
+    """L1 主题读取。optional=True 时文件缺席返回空表（2026-10-09 新疆115
+    泛化：fold/fault_aux 等 CONDITIONAL 域图幅合法缺席——空域≠接线漂移；
+    CORE 主题（polygons/boundaries/faults/attitude）保持缺席即炸）。"""
     path = config.GEOJSON_L1 / f"{name}.geojson"
     if not path.exists():
+        if optional:
+            return gpd.GeoDataFrame()
         raise FileNotFoundError(path)
     return gpd.read_file(path)
 
@@ -111,10 +116,12 @@ def read_aux_triplets() -> Dict[int, dict]:
     out: Dict[int, dict] = {}
     if not config.AUX_TRIPLETS_CSV.exists():
         return out
+    _n_rows = 0
     with open(config.AUX_TRIPLETS_CSV, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         bcol = "a1894" if "a1894" in (reader.fieldnames or []) else "b1851"
         for row in reader:
+            _n_rows += 1
             b_idx = _int(row.get(bcol))
             if b_idx is None:
                 continue
@@ -127,7 +134,12 @@ def read_aux_triplets() -> Dict[int, dict]:
             out[b_idx] = {"form": form, "verdict": (row.get("verdict") or "").strip(),
                           "fault_id": (row.get("fault_id") or "").strip(),
                           "a1281": (row.get("a1281") or "").strip()}
-    assert out, f"triplets table loaded empty from {config.AUX_TRIPLETS_CSV}"
+    # 2026-10-09 新疆115 泛化（I43C001003 斯卡杜）：本幅无断层辅助点时
+    # auxchain 合法产出零数据行表——空表≠接线漂移，放行空 dict（下游无
+    # 三联体可注记）；表有数据行而装载为空才炸（原教训保留）
+    assert out or _n_rows == 0, (
+        f"triplets table loaded empty from {config.AUX_TRIPLETS_CSV} "
+        f"({_n_rows} data rows present — wiring drift?)")
     return out
 
 

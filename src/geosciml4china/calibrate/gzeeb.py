@@ -456,6 +456,25 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         if _n_pairs:
             print(f"   走滑钩对（空间识别）: {_n_pairs} 对"
                   f" / 区间段 {len(hook_by_seg)} 段")
+    # 线层走滑钩接线（2026-10-15 F126/F120 own 掉泛称案）：LDZOFBB098 走滑
+    # 指示线判定 _line_aux_slip_<key>.csv——与 build movementSense 接线同构
+    # （点层已载段优先、缺段补入；钩群=旋向强置信度权威 10-15 裁定）。
+    # 点层钩对缺席幅（本幅 0 对）的走滑实体由此获得旋向票
+    _lslip_p = sh.root / f"_line_aux_slip_{sh.key}.csv"
+    if _lslip_p.exists():
+        _lsdf = pd.read_csv(_lslip_p, dtype=str)
+        _n_ls = 0
+        for _, _lr in _lsdf.iterrows():
+            try:
+                _sg2 = int(_lr["seg"])
+            except (TypeError, ValueError):
+                continue
+            if _sg2 not in hook_by_seg:
+                hook_by_seg[_sg2].append(
+                    {"sense": str(_lr["sense"]), "src": "line_aux"})
+                _n_ls += 1
+        if _n_ls:
+            print(f"   线层走滑钩接线: {_n_ls} 段补入（_line_aux_slip）")
 
     # 未注册码签名预计算（2026-10-01 用户指令「优化判别逻辑」）：码级聚合——
     # 全段无实测倾角（GZECE=0）+ **真覆盖段（fc≥50%）≥2** → 推测断层签名
@@ -507,8 +526,24 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     Q2_LONG_M = float(_priors.get("q2_long_m", 10000.0))  # 长距离强证据下限
     coinc = _dd(list)        # fault_id → [(seg_idx, overlap_m, pct)]
     _coinc_own, _coinc_tier, _long_fids = {}, {}, set()
+    _q_bound = None
     if quat_m is not None:
         _q_bound = quat_m.boundary
+        # 2026-10-09 新疆115 D 类（L46C004001 北山煤窑）：第四系面元 union
+        # 退化为 GeometryCollection 时 shapely .boundary 返回 None，原直取
+        # .distance 崩 AttributeError。降级：Q2 界线重合通道整段跳过并如实
+        # 登记（面元拓扑不静默修复，走缺陷修复闭环交裁定）
+        if _q_bound is None or _q_bound.is_empty:
+            _q_bound = None
+            pd.DataFrame([{
+                "sheet": sh.key,
+                "reason": "quat_union_boundary_none_or_empty",
+                "quat_geom_type": getattr(quat_m, "geom_type", "?"),
+            }]).to_csv(_out(f"_gzeeb_q2_degraded_{sh.key}.csv"),
+                       index=False, encoding="utf-8-sig")
+            print(f"   ⚠ 第四系 union 退化（boundary=None/empty）——Q2 重合"
+                  f"通道降级跳过，已登记 _gzeeb_q2_degraded_{sh.key}.csv")
+    if _q_bound is not None:
         _nq_geoms = [g for g, c in zip(_pgeoms, _pcodes)
                      if (_unit_age_rank(c) or 0) < _q_rank]  # 非 Q 侧与 Q 侧同参数（活动断层审计 2026-10-02）
         _nq_tree = STRtree(_nq_geoms) if _nq_geoms else None
@@ -656,18 +691,15 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         elif str(gzeld_sem_now).startswith("张性"):
             votes["正断层"] += 2
             _v_prior["正断层"] += 2
-        elif str(gzeld_sem_now).startswith("左行"):
-            # 2026-10-04 用户裁定「GZELD 作为判别走滑断层的重要依据」：
-            # 剪切运动学强档——旋向细化型 +3（与 Q 内强档同级），
-            # 走滑断层家族票 +2（GZELD 是判别走滑家族的重要依据，
-            # 旋向由 左行/右行 细化）
-            votes["左型走滑断层"] += 3
-            _v_prior["左型走滑断层"] += 3
-            votes["走滑断层"] += 2
-            _v_prior["走滑断层"] += 2
-        elif str(gzeld_sem_now).startswith("右行"):
-            votes["右型走滑断层"] += 3
-            _v_prior["右型走滑断层"] += 3
+        elif str(gzeld_sem_now).startswith("左行") or \
+                str(gzeld_sem_now).startswith("右行"):
+            # GZELD 运动学投票（2026-10-15 用户裁定修订 10-04 裁定）：
+            # **旋向细化票撤除**（左型/右型 +3）——钩群为旋向强置信度
+            # 权威（异侧互证），GZELD 相对不可信（F137 案：GZELD=104 左行
+            # × 钩群右行 180° 对立，不可信源污染段级 MLE）；**家族票保留**
+            # （+2 走滑断层——GZELD 左行/右行语义仍有效于"是否走滑"判定，
+            # 方向由钩群 z 算法票独立承载）。与 build 撤销 GZELD movementSense
+            # 回退同原则（10-14 裁定在 gzeeb 域的投影）
             votes["走滑断层"] += 2
             _v_prior["走滑断层"] += 2
         if "dip" not in _ABLATE and dip is not None and dip > 0:
@@ -847,9 +879,14 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         _hps = hook_by_seg.get(int(row.get("_src_id", idx)), [])
         for _hr in _hps:
             _sense = str(_hr["sense"])
-            _z = float(_hr["z"])
-            checks.append(f"钩旋向 z={_z:.0f}（{_sense}，符号 "
-                          f"{_hr['sym1']}/{_hr['sym2']}）")
+            if _hr.get("src") == "line_aux":
+                # 线层走滑指示线注入（{"sense","src"} 两键，无 z/符号列——
+                # 与 build movementSense 同构消费，只注旋向与来源）
+                checks.append(f"线层走滑指示线钩旋向（{_sense}）")
+            else:
+                _z = float(_hr["z"])
+                checks.append(f"钩旋向 z={_z:.0f}（{_sense}，符号 "
+                              f"{_hr['sym1']}/{_hr['sym2']}）")
             if exp.get("gzeld_kin") in ("左行", "右行"):
                 pass  # 钩旋向×运动学期望违反——后置核对（终态语义）
             elif "走滑" not in structural_type:

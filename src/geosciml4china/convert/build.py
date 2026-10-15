@@ -7,6 +7,7 @@ CLI: g4c build --sheet kurgan [--only gml|lite|pending] [--sample N]
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from typing import Any, Dict, List, Optional
 
@@ -108,6 +109,7 @@ def assemble_polygon_mfs(
     else:
         print(f"  面分布首接实测（未注册闸）: {dist}")
     out: List[MappedFeatureRec] = []
+    _gc_defects: List[dict] = []
     # 语义 id（2026-10-02 裁定）：mf.{norm}.{ord}——图元 FEATUREID 不入产品
     poly_ids = ids.polygon_mf_ids(gdf, raw2norm)
     ids.assert_no_norm_collisions(raw2norm.values())
@@ -124,16 +126,40 @@ def assemble_polygon_mfs(
         if norm is None:
             raise KeyError(f"QDUECC_eff {raw!r} not in color units (row {row['_src_id']})")
         unit = units[norm]
+        geom = row.geometry
+        if geom is not None and geom.geom_type == "GeometryCollection":
+            # 面元悬挂弧缺陷（2026-10-09 新疆115：K46C002004/K46C003003/
+            # L46C003001/L46C004001 各 1 例，面+悬挂线粘连成 GeometryCollection）
+            # ——取面元部分出站，非面元成员剔除登记（面元缺陷修复闭环：
+            # 不改源数据，登记交裁定）
+            _polys = [g for g in geom.geoms
+                      if g.geom_type in ("Polygon", "MultiPolygon")]
+            _dropped = [g.geom_type for g in geom.geoms
+                        if g.geom_type not in ("Polygon", "MultiPolygon")]
+            _gc_defects.append({
+                "src_id": str(row["_src_id"]), "src_file": str(row["_src_file"]),
+                "unit": str(raw), "dropped_members": "/".join(_dropped)})
+            if not _polys:
+                continue
+            from shapely.ops import unary_union as _uu
+            geom = _uu(_polys) if len(_polys) > 1 else _polys[0]
         out.append(
             MappedFeatureRec(
                 feature_id=poly_ids[i],
                 specification_uri=unit.uri,
                 specification_title=unit.name,
-                geometry=row.geometry.__geo_interface__,
+                geometry=geom.__geo_interface__,
                 map_code=str(raw),
                 src_file=str(row["_src_file"]),
             )
         )
+    if _gc_defects:
+        pd.DataFrame(_gc_defects).to_csv(
+            config.SHEET_ROOT / f"_polygon_geomcollection_defect_{config.SHEET_KEY}.csv",
+            index=False, encoding="utf-8-sig")
+        print(f"   面元 GeometryCollection 缺陷 {len(_gc_defects)} 例（取面元"
+              f"部分，悬挂成员剔除登记）→ "
+              f"_polygon_geomcollection_defect_{config.SHEET_KEY}.csv")
     return out
 
 
@@ -195,7 +221,11 @@ def assemble_contacts(sample: Optional[int] = None) -> List[ContactRec]:
         # 段级 sem_label/verdict 经 ContactRec 携带供溯源（不改产品语义）
         if not mapping.sheet_mapping_exists():
             _sl_eff = _clean_optional_str(row["sem_label"])
-            if _cb is not None:
+            # 结构规则语义豁免（2026-10-15 岩相接触案）：岩相接触=两侧同单元/
+            # 同组段间的段级挣得语义（verified）——优先于 codebook 码级
+            # MLE（43 码级=岩性过渡渐变界线，会把它盖成 igneous_phase_contact）；
+            # 与 gzbd L2/L3 豁免同构
+            if _sl_eff != "岩相接触" and _cb is not None:
                 _sem_cb = _cb_mod.sem_of(
                     _cb, "GZBD",
                     row.get("GZBD_eff") or row.get("GZBD"))
@@ -233,7 +263,7 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
     from . import codebook as _cb_mod
     _cb = _cb_mod.load()          # codebook（在场时=转换语义基础）
     gdf = sources.read_theme("faults")
-    aux_gdf = sources.read_theme("fault_aux")
+    aux_gdf = sources.read_theme("fault_aux", optional=True)
     assoc = sources.read_aux_assoc()
     pairs, pair_conflicts = sources.read_aux_pairs()   # 共享 b 隔离待裁定（09-26）
     triplets = sources.read_aux_triplets()             # 六类模式标签（09-26 定版）
@@ -328,6 +358,29 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
             for _sg in _segs:
                 slip_by_seg[_sg] = _sense
                 slip_span_by_seg[_sg] = _span
+    # 线层走滑钩接线（2026-10-14 F126 渲染缺钩案）：LDZOFBB098 走滑指示线
+    # 解析产物 _line_aux_slip_<key>.csv（逐钩 fault×seg×sense）——与点层钩对
+    # 同为直读运动学证据；点层已载段优先、缺段补入；双通道异判→冲突登记
+    # 留空不伪出站（准确性优先）
+    _ls_path = config.SHEET_ROOT / f"_line_aux_slip_{config.SHEET_KEY}.csv"
+    if _ls_path.exists():
+        _lsdf = pd.read_csv(_ls_path, dtype=str)
+        _ls_conf = 0
+        for _, _lr in _lsdf.iterrows():
+            try:
+                _sg2 = int(_lr["seg"])
+            except (TypeError, ValueError):
+                continue
+            _s2 = "sinistral" if str(_lr["sense"]) == "左行" else "dextral"
+            if _sg2 in slip_by_seg and slip_by_seg[_sg2] != _s2:
+                print(f"  ⚠ 走滑双通道冲突 seg{_sg2}: 点层"
+                      f"{slip_by_seg[_sg2]} vs 线层{_s2}——留空交裁定")
+                slip_by_seg[_sg2] = ""
+                _ls_conf += 1
+            else:
+                slip_by_seg[_sg2] = _s2
+        if _ls_conf:
+            print(f"  ⚠ 线层走滑接线: {_ls_conf} 段双通道冲突留空")
 
     out: List[FaultRec] = []
     for i, (_, row) in enumerate(gdf.iterrows()):
@@ -337,21 +390,11 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
         code = row["gzeeb_eff"]
         row_map = mapping.gzeeb_row(code)
         obs = row_map.get("obs") or mapping.evidence_observation(row["evidence_class"])
-        # movementSense 回退通道（2026-10-05 契约审计修复 P1-1）：钩对
-        # 旋向优先（区间语义）；无钩段回退 GZELD 运动学语义——codebook
-        # 在场时以 codebook 为准（2026-10-06 裁定；注册表/用户编辑/全局
-        # 先验链），缺席回退 L1 内化 gzeld_sem：
-        # 右行→dextral、左行→sinistral；未记录/不明→空（不伪出站）
+        # movementSense（2026-10-14 用户裁定「以钩约定为准，GZELD 码
+        # 不可信」）：钩通道（点层钩对+线层走滑指示线）为唯一权威源；
+        # GZELD 回退通道撤销（原 P1-1 契约审计通道）——GZELD 码不再
+        # 产出 movementSense，仅留属性记录
         _slip = slip_by_seg.get(seg_idx, "")
-        if not _slip:
-            _gzsem = str(row.get("gzeld_sem") or "")
-            if _cb is not None:
-                _gzsem = _cb_mod.sem_of(_cb, "GZELD", row.get("GZELD")) \
-                    or _gzsem
-            if _gzsem.startswith("右行"):
-                _slip = "dextral"
-            elif _gzsem.startswith("左行"):
-                _slip = "sinistral"
         # faultType 语义驱动（2026-10-04 用户裁定「类别编码值拥有最高
         # 优先级」）：全继承后 structural_type≡码义——规范性 faultType 槽
         # 直接消费段级标定语义；图幅级映射文件在场时（正典双幅
@@ -465,6 +508,19 @@ def assemble_attitudes(
     from . import codebook as _cb_mod
     _cb = _cb_mod.load()          # codebook（在场时=转换语义基础）
     gdf = sources.read_theme("attitude")
+    # 空测量点（2026-10-09 新疆115 K46C001004：313/613 点 GZBBGA/GZBBAC/
+    # GZBBAD 全空、symbol_no=0 的图面占位符；L1 已落「数据质量门」待裁定）
+    # ——无倾向测量不成 PlanarOrientation，不入产品（P-AUX-1700-1701 同例：
+    # L1 异常点不入产品），登记 _attitude_no_measurement_<key>.csv 交裁定
+    _ac_blank = [str(v or "").strip() == "" for v in gdf["GZBBAC"]]
+    if any(_ac_blank):
+        _nm = gdf[_ac_blank]
+        _nm.drop(columns=[_nm.geometry.name]).to_csv(
+            config.SHEET_ROOT / f"_attitude_no_measurement_{config.SHEET_KEY}.csv",
+            index=False, encoding="utf-8-sig")
+        print(f"   空测量产状点 {len(_nm)} 个不入产品（L1 数据质量门），"
+              f"登记 _attitude_no_measurement_{config.SHEET_KEY}.csv")
+        gdf = gdf[[not b for b in _ac_blank]]
     raw2norm = unit_mod.raw_to_norm_map()
     # 语义 id（2026-10-02 裁定）：fol.{host}.{宿主内序}
     fol_ids = ids.foliation_ids(gdf, raw2norm)
@@ -489,6 +545,13 @@ def assemble_attitudes(
         _av = _clean_optional_str(row.get("verdict"))
         note = (f"标定 verdict：{_av}（已登记交人工裁定、不改码）"
                 if _av and ("违反" in _av or "待裁定" in _av) else "")
+        # 区间倾角（2026-10-09 新疆115 L45C003004 '2-3' 记法 5 点）：区间=
+        # 测量本身——dip=下限，dip_hi=上限，emit 走 QuantityRange 双值；
+        # 不改码不取中值
+        _dip_raw = str(row["GZBBAD"] or "").strip()
+        _dip_m = re.fullmatch(r"(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)",
+                              _dip_raw)
+        _dip_lo = (_dip_m.group(1) if _dip_m else _dip_raw) or None
         out.append(
             AttitudeRec(
                 src_id=int(row["_src_id"]),
@@ -497,8 +560,9 @@ def assemble_attitudes(
                 azimuth=float(row["GZBBAC"]) % 360.0,  # 单位圆规范化
                 # （360≡0；奥依亚依拉克 1 点 GZBBAC=360 首遇，A09 约定 [0,360)；
                 # 库尔干/英吉沙无 360 值→恒等，逐字节一致保持）
-                dip=(float(row["GZBBAD"]) if str(row["GZBBAD"]).strip() != ""
+                dip=(float(_dip_lo) if _dip_lo is not None
                      else None),  # 空倾角（巴什库尔干 17 点）→None 如实缺省
+                dip_hi=(float(_dip_m.group(2)) if _dip_m else None),
                 foliation_term=row_map.get("term"),
                 foliation_label=row_map.get("term", ""),
                 overturned=(row_map.get("polarity") == "overturned"),
@@ -552,17 +616,21 @@ def assemble_specimens(units: Dict[str, model.UnitRec],
 
 
 def assemble_folds(sample: Optional[int] = None) -> List[model.FoldRec]:
-    gdf = sources.read_theme("fold")
+    gdf = sources.read_theme("fold", optional=True)
     out: List[model.FoldRec] = []
     for i, (_, row) in enumerate(gdf.iterrows()):
         if sample is not None and i >= sample:
             break
+        # 未注册 GZCE 码宽容（2026-10-09 新疆115 泛化：新幅褶皱码超出
+        # 库尔干词表登记域——nil/pending 契约出站，码义以 codebook GZCE
+        # 族为裁定账本，不崩管线）
+        _fp_row = mapping.load()["gzce_foldprofile"].get(row["GZCE"]) or {}
         out.append(
             model.FoldRec(
                 feature_id=str(i + 1),  # 语义 id（fold.N，2026-10-02 裁定）
                 name=row["GZCAB"],
                 gzce=row["GZCE"],
-                profile_term=mapping.load()["gzce_foldprofile"][row["GZCE"]]["term"],
+                profile_term=_fp_row.get("term", "pending"),
                 geometry=row.geometry.__geo_interface__,
             )
         )
