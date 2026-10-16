@@ -180,6 +180,32 @@ _TH_REACT_N = int(os.environ.get("G4C_TH_REACT_N", "3"))
 _TH_MINV = float(os.environ.get("G4C_TH_MINV", "2"))
 
 
+def _entity_hook_dir(seg2fid: dict, hook_by_seg: dict) -> dict:
+    """实体旋向表（2026-10-16 岩脉切断合并裁定通道，全幅通用）。
+
+    同实体**全部**钩段（点层钩对/线层走滑指示线，段级索引）的旋向**一致**
+    （unanimous）→ 实体获该旋向；混合旋向或非「左行/右行」取值→不出表
+    （保守边界——不冒进延展）。返回 {fault_id: 左行|右行}。
+
+    消费方（gzeeb 域）：
+    ① 本段无钩而实体有向 → 实体向票（与段级钩票同权 +3，checks 注记）；
+    ② 「走滑族缺旋向判别依据」登记豁免（实体延展覆盖）。
+    裁定案源：K46C001003 F101+F147+F151 被中性岩脉切断合并为一实体，
+    无钩段 #149 经姊妹段 unanimous 钩向右型延展消解缺向登记。
+    """
+    from collections import defaultdict as _dd
+    _tmp = _dd(set)
+    for _sg, _hrs in hook_by_seg.items():
+        _f = seg2fid.get(int(_sg))
+        if not _f:
+            continue
+        for _h in _hrs:
+            _s = str(_h.get("sense") or "")
+            if _s in ("左行", "右行"):
+                _tmp[_f].add(_s)
+    return {_f: next(iter(_s)) for _f, _s in _tmp.items() if len(_s) == 1}
+
+
 def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
     """执行 GZEEB 断层三维标定。out_dir 缺省=图幅 root。"""
     sh = get_sheet(sheet_key)
@@ -475,6 +501,14 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 _n_ls += 1
         if _n_ls:
             print(f"   线层走滑钩接线: {_n_ls} 段补入（_line_aux_slip）")
+    # 实体旋向表（2026-10-16 岩脉切断合并裁定配套通道，模块级助手
+    # _entity_hook_dir 实现）：同实体全部钩段旋向**一致**（unanimous）→
+    # 实体获旋向；非一致实体不出表（保守边界）。消费：①本段无钩而实体
+    # 有向 → 实体向票（与段级钩票同权 +3）；②「族语义缺旋向判别依据」
+    # 登记的豁免（实体延展覆盖）。全幅通用——段号索引+实体表，零图幅分支。
+    _hook_dir_fid = _entity_hook_dir(seg2fid, hook_by_seg)
+    if _hook_dir_fid:
+        print(f"   实体旋向表: {len(_hook_dir_fid)} 实体（ unanimous 钩向）")
 
     # 未注册码签名预计算（2026-10-01 用户指令「优化判别逻辑」）：码级聚合——
     # 全段无实测倾角（GZECE=0）+ **真覆盖段（fc≥50%）≥2** → 推测断层签名
@@ -786,6 +820,18 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
             elif "hook" not in _ABLATE and _sense0 == "右行":
                 votes["右型走滑断层"] += 3
                 _v_data["右型走滑断层"] += 3
+        elif "hook" not in _ABLATE:
+            # 实体旋向延展票（2026-10-16 裁定配套）：本段无钩而实体 unanimous
+            # 有向 → 实体向票（+3 同权）；checks 注记保证证据可审计
+            _ef0 = seg2fid.get(int(row.get("_src_id", idx)))
+            _es0 = _hook_dir_fid.get(_ef0)
+            if _es0 == "左行":
+                votes["左型走滑断层"] += 3
+                _v_data["左型走滑断层"] += 3
+            elif _es0 == "右行":
+                votes["右型走滑断层"] += 3
+                _v_data["右型走滑断层"] += 3
+            # 证据注记在走滑钩对互验段追加（checks 在投票段之后才初始化）
         _mle_sem = "断层泛称"
         if votes:
             _mx = max(votes.values())
@@ -891,6 +937,14 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 pass  # 钩旋向×运动学期望违反——后置核对（终态语义）
             elif "走滑" not in structural_type:
                 pass  # 非走滑语义携带钩对——后置核对（终态语义）
+        if not _hps:
+            # 实体旋向延展证据注记（投票段 checks 未初始化，此处补记——
+            # 2026-10-16 岩脉切断合并裁定配套，与投票段 +3 实体向票对应）
+            _ef9 = seg2fid.get(int(row.get("_src_id", idx)))
+            _es9 = _hook_dir_fid.get(_ef9)
+            if _es9 in ("左行", "右行"):
+                checks.append(f"实体旋向延展（{_es9}——姊妹段钩证据一致，"
+                              f"2026-10-16 裁定）")
         # ---- 三类自支持补强（2026-09-26 用户定：复活/推覆/活动判别依据不足补强） ----
         _fm = LineString([(c[0] * LON_M, c[1] * 111320.0) for c in g.coords])
         if structural_type == "推覆体边界":
@@ -1216,6 +1270,22 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         _cur = r.get("structural_type")
         if _cur == _ms0:
             continue
+        if _ms0 == "走滑断层" and _cur in ("左型走滑断层", "右型走滑断层"):
+            # 2026-10-16 用户裁定：走滑族 × 旋向细化型=**兼容**不构成矛盾
+            # （族义继承+方向由 own/movementSense 承载）——静默继承不登记，
+            # 与「族×无向=缺口登记」裁定为一体两面（见后置段）
+            r["structural_type"] = _ms0
+            _note = ("码义继承（走滑断层——走滑族×旋向细化兼容，"
+                     "2026-10-16 用户裁定）")
+            if r.get("checks"):
+                r["checks"] += f"；{_note}"
+            else:
+                r["checks"] = _note
+            if str(r.get("verdict")) in ("兜底（一般断层）", "标定（矛盾保留）"):
+                r["verdict"] = "consistent"
+                r["confidence"] = "0.6"
+            _n_inh += 1
+            continue
         if _ms0 != "断层泛称" and _cur not in ("断层泛称", "", None):
             # 具体码义下的段级例外让位——证据入册待裁定（泛称码让位不
             # 登记：一般断层兼容所有矛盾信息，2026-10-04 用户裁定）
@@ -1249,6 +1319,34 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         _n_inh += 1
     if _n_inh:
         print(f"   码义逻辑判断继承: {_n_inh} 段")
+    # 走滑族缺旋向判别依据登记（2026-10-16 用户裁定，与上文「族×旋向=
+    # 兼容」为一体两面）：终态语义=走滑断层（族级）而本段无走滑旋向证据
+    # （点层钩对/线层走滑指示线均无）→ 矛盾项登记；有向段不登记。
+    _n_nodir = 0
+    for r in rows:
+        if str(r.get("structural_type") or "") != "走滑断层":
+            continue
+        if str(r.get("verdict")) in ("裁定（覆盖库）", "制图误差（剔除）"):
+            continue
+        if hook_by_seg.get(int(r["idx"])):
+            continue  # 有旋向判别依据（钩票承载）
+        if seg2fid.get(int(r["idx"])) in _hook_dir_fid:
+            continue  # 实体旋向延展覆盖（姊妹段 unanimous 钩向，10-16 裁定）
+        _ev = ("终态语义=走滑断层（族级）而本段无走滑钩对/走滑指示线"
+               "旋向判别依据——旋向缺口登记（2026-10-16 用户裁定）")
+        _ck = next((c for c in conflicts
+                    if str(c.get("segs") or "") == str(r["idx"])), None)
+        if _ck is not None:
+            if "旋向缺口登记" not in str(_ck.get("evidence")):
+                _ck["evidence"] += f"；{_ev}"
+        else:
+            conflicts.append({
+                "fault_id": r["fault_id"], "segs": str(r["idx"]),
+                "issue": f"GZEEB={r['GZEEB']}（走滑断层）族语义缺旋向判别依据",
+                "evidence": _ev, "status": "pending_review"})
+        _n_nodir += 1
+    if _n_nodir:
+        print(f"   走滑族缺旋向判别依据: {_n_nodir} 段 → 冲突册 pending")
     # ---- 期望核对后置（2026-10-04 用户裁定：类别编码值拥有最高优先级——
     # 倾角域/aux 期望/钩旋向/新盖老等违反核对对**继承后终态语义**统一
     # 执行；一般断层（断层泛称）兼容所有矛盾信息：EXPECT[断层泛称]=∅，

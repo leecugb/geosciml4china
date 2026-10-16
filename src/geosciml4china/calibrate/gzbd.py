@@ -9,7 +9,9 @@
   B2. 间断通则互证标记 + 先验缺口候选单（别名桥接）；
   B3. 特殊码兜底（2026-09-29 用户对齐裁定）：标定域外特殊类型编码统一按
       一般地质界线兜底，_gzbd_special_fallback.csv 审计存档（不进先验级联）。
-      标定域 _CALIB_DOMAIN={01,02,04,10,11,16,24,43,60,81}——五通道：
+      **2026-10-11 用户裁定更新：摒弃注册兜底机制——域外码改标「未解析」
+      pending（无语义赋值），档案同址**
+      标定域 _CALIB_DOMAIN=码表动态推导（codes_meta|用户映射）——五通道：
       ①地质志单元对先验（unit_pair_rules 码级优先/名称回退）②43 岩性过渡
       渐变先验 ③60 脉动接触先验 ④16 推测界线先验（三检）⑤通用规则级联
       （第四系/侵入/西域组/同组段间/间断通则+段间通则自支持）；
@@ -148,6 +150,30 @@ def _era_suffix_of(code: str) -> str:
     return re.sub(r"[^A-Za-z0-9\-]+", "", str(code))
 
 
+def _refine_unconformity(gz, cname):
+    """不整合族级语义按码细化（2026-10-14 用户裁定「codebook 应对两种
+    不整合进行区分」）：04→角度不整合、24→平行不整合；其它码/语义原样
+    （非 04/24 码保持族级=发现通道语义）。"""
+    if cname == "不整合接触":
+        return {"04": "角度不整合", "24": "平行不整合"}.get(str(gz), cname)
+    return cname
+
+
+def _missing_stage_gap(ages: list[float]) -> bool:
+    """跨系缺失整统=显著沉积间断（2026-10-14 用户裁定，D1↔C2 中间缺失
+    C1 案）：两侧属相邻系（系带差=1）且中间至少缺失一个整统——即非
+    「下伏=系顶阶（3）∧ 上覆=系底阶（1）」的完美叠置。示例：D1↔C2 缺
+    C1+D2+D3 三统（真）；D3↔C1 零缺失（假，可整合）。"""
+    bands = sorted({int(a // 100.0) for a in ages})
+    if len(bands) < 2 or bands[-1] - bands[0] != 1:
+        return False
+    s_old = max(int(a) % 100 for a in ages
+                if int(a // 100.0) == bands[0])
+    s_young = min(int(a) % 100 for a in ages
+                  if int(a // 100.0) == bands[-1])
+    return not (s_old == 3 and s_young == 1)
+
+
 def _age_rank_of(unit) -> float | None:
     """单元时代级别兜底链：码解析 → 剥非 ASCII 前缀再解析（г/∑ 误录变体）
     → 名称字段时代词。"""
@@ -181,6 +207,18 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
 
     def _out(name):
         return str(_outdir / name)
+
+    def _norm_gzbd(v) -> str:
+        """GZBD 码归一：空→'00'；数值→两位零填；文本→原文（2026-10-09
+        新疆115 C 类 K46C001004：该幅 GZBD 直写中文语义码——字面即语义，
+        独立码族登记，不改码；用户裁定方案一）。"""
+        s = str(v or "").strip()
+        if not s:
+            return "00"
+        try:
+            return f"{int(float(s)):02d}"
+        except ValueError:
+            return s
 
     _os.environ.setdefault("JWD_SOURCE", "geojson")
 
@@ -314,12 +352,47 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     type_ov = overrides["overrides"]
     side_ov = overrides["side_overrides"]
     carto_err = overrides.get("cartographic_errors", {})
+    # 编图错误噪声段（2026-10-09 T3 裁定回路）：矛盾项经用户裁定为编图
+    # 错误/数据噪声——段不再走先验级联、不入冲突待裁，直接取码级裁定语义
+    noise_seg = overrides.get("noise_segments", {})
+    # 码级用户裁定语义预载（boundary_semantics_map 的 user_semantic 列）：
+    # 噪声段分支须取码级裁定语义（注册先验泛义可能不同，如 L45C003004）
+    _user_bsem_early = {}
+    _bm_p0 = sh.root / f"boundary_semantics_map_{sh.key}.csv"
+    if _bm_p0.exists():
+        import csv as _csv0
+        with open(_bm_p0, encoding="utf-8-sig") as _f0:
+            for _r0 in _csv0.DictReader(_f0):
+                _u0 = str(_r0.get("user_semantic") or "").strip()
+                if _u0:
+                    _user_bsem_early[str(_r0.get("GZBD") or "").strip()] = _u0
     codes_meta = json.loads(data_path("gzbd_codes.json").read_text(encoding="utf-8"))["codes"]
-    SPECIAL_CODES = {"81", "43", "60"}
+
+    # 码义解析器（2026-10-11 用户裁定泛化：判定条件比**码义**不比码值——
+    # 「编码≠侵入接触码且≠渐变界线码」等条件按码义判定，跨编码约定通用；
+    # 数值码查图幅用户裁定→注册表码义，文本码（C 类族）字面即语义）
+    def _code_sem_is(c, *keywords) -> bool:
+        s = str(c)
+        if s.isdigit():
+            m = _user_bsem_early.get(s) \
+                or str(codes_meta.get(s, {}).get("meaning") or "")
+        else:
+            m = s
+        return any(k in m for k in keywords)
+    # SPECIAL_CODES 常量已撤（2026-10-11 审计：43/60 语义触发分支先行拦截，
+    # 本拦截与常量死代码化——连带其 C 段注册置信通道一并移除）
     # 标定域（2026-09-29 用户对齐裁定）：域内码走五通道（地质志单元对先验/
     # 43 岩性过渡渐变/60 脉动接触/16 推测界线/通用规则级联）+10 断层标定+
     # 81 特殊码独立标定；域外码=其他特殊类型编码，统一一般地质界线兜底
-    _CALIB_DOMAIN = {"01", "02", "04", "10", "11", "16", "24", "43", "60", "81"}  # 16 推测界线自 2026-09-13 起经专项核定（见 B 段）
+    # 标定域（2026-09-29 用户对齐裁定）：域内码走五通道（地质志单元对先验/
+    # 43 岩性过渡渐变/60 脉动接触/16 推测界线/通用规则级联）+10 断层标定+
+    # 81 特殊码独立标定；域外码=其他特殊类型编码——2026-10-11 摒弃兜底后
+    # 标「未解析」pending 不再兜底。域集改为注册表驱动（数据件，不硬编码）
+    # 用户注册码进域（2026-10-14 61=脉动接触案）：码级用户裁定语义
+    # （boundary_semantics_map user_semantic 列）为权威序最高级——用户给码
+    # 赋义即入标定域（否则域外闸拦截、user_semantic 永不生效）
+    _CALIB_DOMAIN = set(codes_meta) | set(_user_bsem_early)
+    # 16 推测界线自 2026-09-13 起经专项核定（见 B 段）
     # 2026-09-13 用户对齐：第四系不含已半固结成岩的沉积层（西域组 Qp1X 算基岩）
     Q_EXCLUDE = set(priors.get("quaternary_exclude", ["Qp1X"]))
 
@@ -478,7 +551,10 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         lu = sorted({c for c, _ in left_all})
         ru = sorted({c for c, _ in right_all})
         sides_rows.append({
-            "idx": i, "gzbd": f"{int(row['GZBD']):02d}",
+            # 空码防御（2026-10-08 新疆115 泛化：部分图幅 GZBD 存在空值段
+            # ——空码按 00 记录，后续走特殊码兜底通道，不崩溃）+ 文本码
+            # 放行（2026-10-09 C 类：直写中文语义码原文保留）
+            "idx": i, "gzbd": _norm_gzbd(row['GZBD']),
             "left_codes": json.dumps(lu, ensure_ascii=False),
             "right_codes": json.dumps(ru, ensure_ascii=False),
             "left_names": json.dumps([code2name.get(c, c) for c in lu], ensure_ascii=False),
@@ -491,6 +567,223 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
 
     # ---------- B. 先验标定 ----------
     verdicts = []
+    # G1 断层重合证据前置（2026-10-10 用户裁定：取消 GZBD=10 路由码——断层
+    # 接触不再按码直给，改由界线与 LDZOFBA003 实测断层线 100m 带重合占比
+    # 在级联中判定）：缓冲只算一次（A 类修复原位），全段预算供级联消费。
+    # oracle 口径（2026-10-11 用户裁定）：**仅实测断层（FBA003）作证**——
+    # 解译断层（LYGREBA001）/深部断层（LZLPGDJ002）不入围（从严：界线-断层
+    # 重合证据只接受实测层，解译/深部层的界线重合段照常落候选/不足交裁定）
+    from shapely.ops import unary_union as _uu_fault
+    import geopandas as _gpd_f
+    _fault_u_m = None
+    _fp = sh.root / "geojson" / "L0" / "LDZOFBA003.WL.geojson"
+    if _fp.exists():
+        _fg = _gpd_f.read_file(_fp)
+        _fgeoms = [g for g in _fg.geometry
+                   if g is not None and not g.is_empty]
+        if _fgeoms:
+            _fault_u_m = _uu_fault([
+                LineString(np.array(g.coords) * [LON_M, LAT_M])
+                for g in _fgeoms])
+    _fault_buf_m = (_fault_u_m.buffer(100.0)
+                    if _fault_u_m is not None else None)
+
+    def _coincidence(geom):
+        """界线与 FBA003 断层线重合占比（米制 100m 缓冲）；无数据→None。"""
+        if _fault_buf_m is None or geom is None or geom.is_empty:
+            return None
+        _cm = np.array(geom.coords)
+        if len(_cm) < 2:
+            return None
+        _seg = LineString(_cm * [LON_M, LAT_M])
+        _tot = _seg.length
+        if _tot < 1e-9:
+            return None
+        return _seg.intersection(_fault_buf_m).length / _tot
+
+    _coinc_all = {}
+    if _fault_buf_m is not None:
+        for _ci0 in range(len(bounds)):
+            _coinc_all[_ci0] = _coincidence(bounds.geometry.values[_ci0])
+
+    # 冰雪重合证据（2026-10-10 用户裁定：81 撤路由——冰雪区界线由界线与
+    # LDLYAAE002 水系面层冰川面元（GB=73020）轮廓的 100m 带重合判定；
+    # CONDITIONAL 层，缺席幅→未覆盖登记）。注意用面元**轮廓**缓冲（界线
+    # 是冰川边线），不用填充面域（防穿越冰川内部的伪重合）
+    from shapely.geometry import Polygon as _Polygon, MultiPolygon as _MultiPolygon
+
+    def _scale_m(g):
+        """面元几何米制化（np 缩放各环顶点）。"""
+        if g.geom_type == "Polygon":
+            return _Polygon(np.array(g.exterior.coords) * [LON_M, LAT_M],
+                            [np.array(r.coords) * [LON_M, LAT_M]
+                             for r in g.interiors])
+        if g.geom_type == "MultiPolygon":
+            return _MultiPolygon([_scale_m(p) for p in g.geoms])
+        return g
+
+    _ice_bound_buf = None
+    _ip = sh.root / "geojson" / "L0" / "LDLYAAE002.WP.geojson"
+    if _ip.exists():
+        import geopandas as _gpd_i
+        _ig = _gpd_i.read_file(_ip)
+        # 面元悬挂弧缺陷提取（2026-10-16 用户裁定修复，I44C001001 案——
+        # 面+悬挂线粘连成 GeometryCollection，与 build.py GC 处理器同构）：
+        # 只取 Polygon/MultiPolygon 成员入 union，非面成员剔除登记
+        # （面元缺陷修复闭环：不改源数据，登记交裁定）
+        _ice_polys = []
+        _ice_dropped = []
+        for _gi, _row_i in _ig.iterrows():
+            _g = _row_i.geometry
+            if _g is None or _g.is_empty:
+                continue
+            if _g.geom_type in ("Polygon", "MultiPolygon"):
+                _ice_polys.append(_g)
+            elif _g.geom_type == "GeometryCollection":
+                _mp = [m for m in _g.geoms
+                       if m.geom_type in ("Polygon", "MultiPolygon")]
+                _md = sorted({m.geom_type for m in _g.geoms}
+                             - {"Polygon", "MultiPolygon"})
+                if _md:
+                    _ice_dropped.append({
+                        "src_id": str(_row_i.get("_src_id", _gi)),
+                        "dropped_members": "/".join(_md),
+                        "kept_members": "/".join(sorted({m.geom_type for m in _mp})) or "无",
+                    })
+                _ice_polys.extend(_mp)
+            else:
+                _ice_dropped.append({
+                    "src_id": str(_row_i.get("_src_id", _gi)),
+                    "dropped_members": _g.geom_type, "kept_members": "无"})
+        if _ice_dropped:
+            pd.DataFrame(_ice_dropped).to_csv(
+                _out(f"_gzbd_ice_dropped_{sh.key}.csv"),
+                index=False, encoding="utf-8-sig")
+            print(f"   冰川面元悬挂成员剔除 {len(_ice_dropped)} 例（取面元部分，"
+                  f"登记 _gzbd_ice_dropped_{sh.key}.csv）")
+        if _ice_polys:
+            _ice_u = _uu_fault([_scale_m(g) for g in _ice_polys])
+            # 2026-10-16 守卫（I44C001001 舰队重跑崩溃案修复）：冰川 union 退化
+            # （GeometryCollection/空）时 .boundary 返回 None——与 gzeeb Q2 守卫
+            # 同构：通道降级跳过并如实登记（面元拓扑不静默修复，交裁定）
+            _ice_bnd = getattr(_ice_u, "boundary", None)
+            if _ice_bnd is not None and not _ice_bnd.is_empty:
+                _ice_bound_buf = _ice_bnd.buffer(100.0)
+            else:
+                pd.DataFrame([{
+                    "sheet": sh.key,
+                    "reason": "ice_union_boundary_none_or_empty",
+                    "ice_geom_type": getattr(_ice_u, "geom_type", "?"),
+                }]).to_csv(_out(f"_gzbd_ice_degraded_{sh.key}.csv"),
+                           index=False, encoding="utf-8-sig")
+                print(f"   ⚠ 冰川 union 退化（boundary=None/empty）——冰雪重合"
+                      f"通道降级跳过，已登记 _gzbd_ice_degraded_{sh.key}.csv")
+
+    def _coinc_ice_of(geom):
+        """界线与 LDLYAAE002 冰川轮廓重合占比（米制）；无数据→None。"""
+        if _ice_bound_buf is None or geom is None or geom.is_empty:
+            return None
+        _cm = np.array(geom.coords)
+        if len(_cm) < 2:
+            return None
+        _seg = LineString(_cm * [LON_M, LAT_M])
+        _tot = _seg.length
+        if _tot < 1e-9:
+            return None
+        return _seg.intersection(_ice_bound_buf).length / _tot
+
+    _coinc_ice = {}
+    if _ice_bound_buf is not None:
+        for _ci0 in range(len(bounds)):
+            _coinc_ice[_ci0] = _coinc_ice_of(bounds.geometry.values[_ci0])
+
+    # ---- 共享助手（2026-10-16 审计优化抽取：消岩相规则 × 段间通则、
+    # 16 三检 × 整合反向判别的物理拷贝——防单侧修补漂移）----
+    def _adjacent_seg_tri(sl, sr):
+        """组内段对相邻性三态判定（段间通则/岩相规则同源实现）：
+        同组异号段号 → True=相邻 / False=跨段 / None=不可判（相对×绝对
+        混比、其它负数对）。中段存在性普查口径两消费方一致。"""
+        if not (sl and sr and sl[0] == sr[0] and sl[1] != sr[1]):
+            return None
+        a, b = sl[1], sr[1]
+        if a > 0 and b > 0:
+            return abs(a - b) == 1
+        if a < 0 and b < 0:
+            ra, rb = sorted((a, b))  # 新编码：下=-3 中=-2 上=-1
+            if (ra, rb) in ((-2, -1), (-3, -2)):
+                return True  # 下|中 / 中|上 恒相邻
+            if (ra, rb) == (-3, -1):
+                # 下|上：组内中段存在性普查决定（三段式组 下|上 隔中段=
+                # 跨段；两组式无中段=相邻）
+                _grp = sl[0]
+                _has_mid = any(str(code2name.get(c, c)) in
+                               (f"{_grp}中段", f"{_grp}中岩段")
+                               for c in code2name)
+                return not _has_mid
+        return None
+
+    def _cov_frac8(geom):
+        """Q/冰雪覆盖度 8 点采样（16 三检与整合反向判别共享）。
+        覆盖证据缺省（q_u/ice_u 双 None）→ None（不误读为基岩出露）。"""
+        if geom is None or geom.is_empty:
+            return None
+        if q_u is None and ice_u is None:
+            return None
+        _h = sum(1 for t in np.linspace(0.08, 0.92, 8)
+                 if (q_u is not None and q_u.intersects(
+                     geom.interpolate(float(t), normalized=True)))
+                 or (ice_u is not None and ice_u.intersects(
+                     geom.interpolate(float(t), normalized=True))))
+        return _h / 8
+
+    # 16 连接性端点表（2026-10-16 P2 优化：原 O(B²) iterrows 三重纯 Python
+    # 循环 → 端点数组 numpy 向量化（米制）；语义逐点保留——同端点对命中
+    # 仍按次追加（含单点折线双计原状）。惰性构建——无 16 段幅零成本。
+    _ep_cache = None
+
+    def _conn_types16(idx, geom):
+        """16 连接性：两端 ≤10m 可达界线（非 16/81/10）的码列表。"""
+        nonlocal _ep_cache
+        if _ep_cache is None:
+            _ji, _xy, _gz = [], [], []
+            for _j, _row2 in bounds.iterrows():
+                _g2 = _row2.geometry
+                if _g2 is None or _g2.is_empty:
+                    continue
+                _c2 = list(_g2.coords)
+                _gzv = str(_row2.get("GZBD", ""))
+                for _p2 in (_c2[0], _c2[-1]):
+                    _ji.append(int(_j))
+                    _xy.append((_p2[0] * LON_M, _p2[1] * LAT_M))
+                    _gz.append(_gzv)
+            _ep_cache = (np.asarray(_ji), np.asarray(_xy, dtype=float), _gz)
+        _ji, _xy, _gzs = _ep_cache
+        _out = []
+        _bc = list(geom.coords)
+        for _pt in (_bc[0], _bc[-1]):
+            _qx, _qy = _pt[0] * LON_M, _pt[1] * LAT_M
+            _d = np.hypot(_xy[:, 0] - _qx, _xy[:, 1] - _qy)
+            for _k in np.nonzero(_d <= 10.0)[0]:
+                if int(_ji[_k]) == idx:
+                    continue
+                _gzc = _norm_gzbd(_gzs[_k])
+                if _gzc not in ("16", "81", "10"):
+                    _out.append(_gzc)
+        return _out
+
+    def _liths(us):
+        """岩性集合（43/60 判定与发现通道共用）：属性字段优先（QDUEAQ
+        槽），希腊字母前缀兜底——2026-10-11 由 43 分支内提升为共享。"""
+        s = {u["lith"] for u in us if u.get("lith")}
+        if s:
+            return s
+        out = set()
+        for u in us:
+            c = re.sub(r"[→↓↑]", "", u["code"])
+            m = re.match(r"([Ͱ-Ͽἀ-῿]+)(.*)$", c)
+            if m:
+                out.add(m.group(1))
+        return out
     for _, rec in sides.iterrows():
         gz = rec["gzbd"]
         idx = int(rec["idx"])
@@ -512,6 +805,67 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                              "rule_contact": "", "rule_conf": "", "expected": "",
                              "rule_younger": "", "young_side": ""})
             continue
+        # 重合规则族（2026-10-10 用户裁定：10/81 双路由撤销——断层接触/
+        # 冰雪区界线均由界线与本体层实测重合证据在级联中判定；核验+发现
+        # 双向）。**本码规则优先**（gz=10 先评断层、gz=81 先评冰雪），跨码
+        # 高重合仅在无本码规则时登记候选——双 oracle 命中段（冰川沿断层谷
+        # 走的 81 段）归本码判定，不被跨码候选劫持
+        _pct10 = _coinc_all.get(idx)
+        _pct81 = _coinc_ice.get(idx)
+        if gz == "10" or _code_sem_is(gz, "断层"):
+            if _pct10 is None:
+                verdicts.append({**base, "verdict": "未覆盖",
+                                 "rule_pair": "(断层重合规则:本幅无FBA003数据)",
+                                 "rule_contact": "", "rule_conf": "",
+                                 "expected": "", "rule_younger": "",
+                                 "young_side": ""})
+            elif _pct10 >= 0.9:
+                verdicts.append({**base, "verdict": "标定通过",
+                                 "rule_pair": f"(断层重合规则:重合{_pct10:.0%})",
+                                 "rule_contact": "断层接触（断裂界线）",
+                                 "rule_conf": "verified", "expected": "10",
+                                 "rule_younger": "", "young_side": ""})
+            else:
+                verdicts.append({**base, "verdict": "重合不足（断层界线）",
+                                 "rule_pair": f"(断层重合规则:重合仅{_pct10:.0%})",
+                                 "rule_contact": "断层接触（断裂界线）",
+                                 "rule_conf": "conflict", "expected": "10",
+                                 "rule_younger": "", "young_side": ""})
+            continue
+        if gz == "81" or _code_sem_is(gz, "冰雪"):
+            if _pct81 is None:
+                verdicts.append({**base, "verdict": "未覆盖",
+                                 "rule_pair": "(冰雪重合规则:本幅无LDLYAAE002数据)",
+                                 "rule_contact": "", "rule_conf": "",
+                                 "expected": "", "rule_younger": "",
+                                 "young_side": ""})
+            elif _pct81 >= 0.9:
+                verdicts.append({**base, "verdict": "标定通过",
+                                 "rule_pair": f"(冰雪重合规则:重合{_pct81:.0%})",
+                                 "rule_contact": "冰雪区界线",
+                                 "rule_conf": "verified", "expected": "81",
+                                 "rule_younger": "", "young_side": ""})
+            else:
+                verdicts.append({**base, "verdict": "重合不足（冰雪界线）",
+                                 "rule_pair": f"(冰雪重合规则:重合仅{_pct81:.0%})",
+                                 "rule_contact": "冰雪区界线",
+                                 "rule_conf": "conflict", "expected": "81",
+                                 "rule_younger": "", "young_side": ""})
+            continue
+        if _pct10 is not None and _pct10 >= 0.9:
+            verdicts.append({**base, "verdict": "分歧",
+                             "rule_pair": f"(断层重合规则:重合{_pct10:.0%})",
+                             "rule_contact": "断层接触（断裂界线）",
+                             "rule_conf": "verified", "expected": "10",
+                             "rule_younger": "", "young_side": ""})
+            continue
+        if _pct81 is not None and _pct81 >= 0.9:
+            verdicts.append({**base, "verdict": "分歧",
+                             "rule_pair": f"(冰雪重合规则:重合{_pct81:.0%})",
+                             "rule_contact": "冰雪区界线",
+                             "rule_conf": "verified", "expected": "81",
+                             "rule_younger": "", "young_side": ""})
+            continue
         if gz not in _CALIB_DOMAIN:
             # 特殊码兜底（2026-09-29 用户对齐裁定）：其他特殊类型编码无法使用
             # 地质语义标定逻辑处理时，统一按一般地质界线兜底，审计报告存档。
@@ -522,7 +876,41 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                              "rule_conf": "code_read", "expected": "",
                              "rule_younger": "", "young_side": ""})
             continue
-        if gz == "43":
+
+        # 岩相接触规则（2026-10-15 用户裁定定版，两条）：
+        # ① 两侧地质单元一致（同段，如 C1q3↔C1q3 1060 案）∧ 编码≠整合接触
+        # ② 组内**连续**段间（相邻段，如 C1q2↔C1q3 1056 案）∧ 编码≠整合接触
+        # → 岩相接触（渲染样式参照岩性渐变接触）。相邻判定与段间通则同源
+        # （绝对段号差1/新编码 下|中、中|上/下|上仅两组式无中段）——
+        # 跨段（隔中段）不属本规则（段间通则跨段=断层域）。
+        # 防误伤限定：无专属规则（断层/冰雪/第四系/侵入/推测各行其分支，
+        # 10/81/14 已在上游拦截）∧ 非纯岩浆岩（岩浆岩同单元仍走 43/60
+        # 判定域，26 段渐变通过不动）。置于 43/60 语义分支之前——
+        # 组内结构关系规则优先于岩浆岩判定域
+        def _adjacent_group_pair(lu_units, ru_units):
+            """组内相邻段判定（与段间通则共享 _adjacent_seg_tri 实现）。"""
+            if len(lu_units) != 1 or len(ru_units) != 1:
+                return False
+            return _adjacent_seg_tri(_unit_seg(lu_units[0]),
+                                     _unit_seg(ru_units[0])) is True
+
+        _same_units = (bool(lu_units) and bool(ru_units)
+                       and {clean_code(u["code"]) for u in lu_units}
+                       == {clean_code(u["code"]) for u in ru_units})
+        if ((_same_units or _adjacent_group_pair(lu_units, ru_units))
+                and gz != "01" and not _code_sem_is(gz, "整合")
+                and not _code_sem_is(gz, "断层", "冰雪", "第四系", "侵入", "推测")
+                and not all(u["layer"] in ("侵入", "火山")
+                            for u in lu_units + ru_units)):
+            verdicts.append({**base, "verdict": "标定通过",
+                             "rule_pair": "(岩相接触:两侧单元一致或组内连续段间"
+                                          "+码非整合+无专属规则)",
+                             "rule_contact": "岩相接触",
+                             "rule_conf": "verified",
+                             "expected": "岩相",
+                             "rule_younger": "", "young_side": ""})
+            continue
+        if _code_sem_is(gz, "渐变"):  # 泛化触发（10-11）：码义含"渐变"即入 43 判定
             # 岩性过渡渐变（2026-09-24 用户核定）：岩浆岩间的一种接触界线，
             # 两侧岩浆岩时代、岩性要求一致——逐侧校验；违反者登记分歧交
             # 裁定（永不自动改码）。
@@ -531,98 +919,128 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             # 类型码→QDUECD 名称词）直读先行，希腊字母前缀仅在其双缺时
             # 兜底——г/∑ 误录变体不再走旁路；时代后缀=剥非 ASCII 前缀
             # 的拉丁段（比较空间一致性，取代旧希腊后缀混比）。
-            _mags = {"L": [u for u in lu_units if u["layer"] in ("侵入", "火山")],
-                     "R": [u for u in ru_units if u["layer"] in ("侵入", "火山")]}
-
-            def _liths(us):
-                s = {u["lith"] for u in us if u.get("lith")}
-                if s:
-                    return s
-                out = set()
-                for u in us:
-                    c = re.sub(r"[→↓↑]", "", u["code"])
-                    m = re.match(r"([Ͱ-Ͽἀ-῿]+)(.*)$", c)
-                    if m:
-                        out.add(m.group(1))
-                return out
-            _ok43 = True
-            if not _mags["L"] or not _mags["R"]:
-                _ok43 = False
-            elif _liths(_mags["L"]) != _liths(_mags["R"]):
-                _ok43 = False  # 岩性不一致
-            elif {_era_suffix_of(u["code"]) for u in _mags["L"]} != \
-                    {_era_suffix_of(u["code"]) for u in _mags["R"]}:
-                _ok43 = False  # 时代不一致
+            # 岩性过渡渐变界线判定逻辑（2026-10-11 用户定版）：**两侧均为岩浆
+            # 岩（层类判定，排他——任一侧含非岩浆岩单元即不符）+ 时代码一致 +
+            # 岩性码一致 + 界线编码≠侵入接触编码（码义比较，泛化）→ 正向判定
+            # 为岩浆岩间渐变界线**——判定挣得（verified），非注册兜底；未通过
+            # 者不赋家族标签，登记分歧交裁定（永不自动改码）。
+            # 约束史：2026-09-24 用户核定（英吉沙 3 段违反抓获在案）
+            _why43 = []
+            if not (lu_units and ru_units
+                    and all(u["layer"] in ("侵入", "火山")
+                            for u in lu_units + ru_units)):
+                _why43.append("两侧非纯岩浆岩")
+            else:
+                if _liths(lu_units) != _liths(ru_units):
+                    _why43.append("岩性不一致")
+                if {_era_suffix_of(u["code"]) for u in lu_units} != \
+                        {_era_suffix_of(u["code"]) for u in ru_units}:
+                    _why43.append("时代不一致")
+            _ok43 = not _why43
             verdicts.append({**base,
-                             "verdict": "特殊码（独立标定）" if _ok43 else
-                             "分歧未裁定（43约束：两侧岩浆岩时代岩性须一致）",
-                             "rule_pair": "", "rule_contact": "", "rule_conf": "",
-                             "expected": "", "rule_younger": "", "young_side": ""})
-            continue
-        if gz == "60":
-            # 脉动接触（2026-09-24 用户核定）：岩浆岩间的一种接触界线，
-            # 两侧岩浆岩要求时代一致（岩性不要求一致——不同岩性侵入体同代
-            # 脉动注入）；违反者登记分歧交裁定（永不自动改码）
-            # 2026-10-05 属性字段优先（同 43）：60 不要求岩性，时代比较
-            # 统一走剥前缀拉丁后缀（希腊后缀混比退役）
-            _mags60 = {"L": [u for u in lu_units if u["layer"] in ("侵入", "火山")],
-                       "R": [u for u in ru_units if u["layer"] in ("侵入", "火山")]}
-            _ok60 = True
-            if not _mags60["L"] or not _mags60["R"]:
-                _ok60 = False
-            elif {_era_suffix_of(u["code"]) for u in _mags60["L"]} != \
-                    {_era_suffix_of(u["code"]) for u in _mags60["R"]}:
-                _ok60 = False  # 时代不一致
-            verdicts.append({**base,
-                             "verdict": "特殊码（独立标定）" if _ok60 else
-                             "分歧未裁定（60约束：两侧岩浆岩时代须一致）",
-                             "rule_pair": "", "rule_contact": "", "rule_conf": "",
-                             "expected": "", "rule_younger": "", "young_side": ""})
-            continue
-        if gz in SPECIAL_CODES:
-            verdicts.append({**base, "verdict": "特殊码（独立标定）", "rule_pair": "",
-                             "rule_contact": "", "rule_conf": "", "expected": "",
+                             "verdict": "标定通过" if _ok43 else "渐变判定未通过",
+                             "rule_pair": "(岩性渐变判定:两侧岩浆岩+同代+同岩性)"
+                                          if _ok43 else
+                                          f"(43判定未通过:{'+'.join(_why43)})",
+                             "rule_contact": "岩性过渡渐变界线",
+                             "rule_conf": "verified" if _ok43 else "conflict",
+                             "expected": "43",
                              "rule_younger": "", "young_side": ""})
             continue
-        if gz == "16":
-            # 推测地质界线核定（2026-09-13 用户批准，仿推测断层标定）：
+        # 岩性渐变发现通道（2026-10-11 用户定 43 判定逻辑配套）：码义非渐变/
+        # 脉动/侵入/推测的码段（比码义不比码值——泛化），若两侧**纯**岩浆岩
+        # （排他——含第四系/沉积单元者不候选，防 Q 覆盖碎片假命中）且时代、
+        # 岩性一致 → 候选 43 登记（发现编图错误；编码为侵入接触义者有其专属
+        # 规则、不候选——编码与侵入接触义不同是渐变判定的构成条件）
+        if not _code_sem_is(gz, "渐变", "脉动", "侵入", "推测"):
+            if all(u["layer"] in ("侵入", "火山") for u in lu_units + ru_units) \
+                    and lu_units and ru_units:
+                _l_ok = _liths(lu_units) == _liths(ru_units)
+                _e_ok = ({_era_suffix_of(u["code"]) for u in lu_units}
+                         == {_era_suffix_of(u["code"]) for u in ru_units})
+                if _l_ok and _e_ok:
+                    verdicts.append({**base, "verdict": "分歧",
+                                     "rule_pair": "(岩性渐变判定:两侧岩浆岩+同代+同岩性)",
+                                     "rule_contact": "岩性过渡渐变界线",
+                                     "rule_conf": "verified", "expected": "43",
+                                     "rule_younger": "", "young_side": ""})
+                    continue
+        if _code_sem_is(gz, "脉动"):  # 泛化触发（10-11）：码义含"脉动"即入 60 判定
+            # 脉动接触判定逻辑（2026-10-11 用户定版）：**两侧均为岩浆岩（层类
+            # 判定，排他）+ 时代码一致 + 岩性码不一致 + 界线编码≠侵入接触编码
+            # 且≠渐变界线编码（码义比较，泛化）→ 正向判定为脉动接触**——判定
+            # 挣得（verified），非注册兜底；未通过者不赋家族标签，登记分歧交
+            # 裁定（永不自动改码）。约束史：2026-09-24 用户核定（库尔干 2/2、
+            # 英吉沙 22/25+3 违反在案）；本次升级为判定逻辑——岩性一致者
+            # （同代同岩性）不符合脉动定义，属 43 渐变判定域
+            _why60 = []
+            if not (lu_units and ru_units
+                    and all(u["layer"] in ("侵入", "火山")
+                            for u in lu_units + ru_units)):
+                _why60.append("两侧非纯岩浆岩")
+            else:
+                if {_era_suffix_of(u["code"]) for u in lu_units} != \
+                        {_era_suffix_of(u["code"]) for u in ru_units}:
+                    _why60.append("时代不一致")
+                if _liths(lu_units) == _liths(ru_units):
+                    _why60.append("岩性一致（脉动须异岩性，同岩性属 43 渐变域）")
+            _ok60 = not _why60
+            verdicts.append({**base,
+                             "verdict": "标定通过" if _ok60 else "脉动判定未通过",
+                             "rule_pair": "(脉动判定:两侧岩浆岩+同代+异岩性)"
+                                          if _ok60 else
+                                          f"(60判定未通过:{'+'.join(_why60)})",
+                             "rule_contact": "脉动接触界线",
+                             "rule_conf": "verified" if _ok60 else "conflict",
+                             "expected": "60",
+                             "rule_younger": "", "young_side": ""})
+            continue
+        # 脉动接触发现通道（2026-10-11 用户定 60 判定逻辑配套）：码义非渐变/
+        # 脉动/侵入/推测的码段（比码义不比码值——泛化），两侧纯岩浆岩 +
+        # 时代一致 + 岩性不一致 → 候选 60 登记（发现编图错误；与 43 发现通道
+        # 按岩性同/异互斥分流）
+        if not _code_sem_is(gz, "渐变", "脉动", "侵入", "推测"):
+            if all(u["layer"] in ("侵入", "火山") for u in lu_units + ru_units) \
+                    and lu_units and ru_units:
+                _l_neq = _liths(lu_units) != _liths(ru_units)
+                _e_eq = ({_era_suffix_of(u["code"]) for u in lu_units}
+                         == {_era_suffix_of(u["code"]) for u in ru_units})
+                if _l_neq and _e_eq:
+                    verdicts.append({**base, "verdict": "分歧",
+                                     "rule_pair": "(脉动判定:两侧岩浆岩+同代+异岩性)",
+                                     "rule_contact": "脉动接触界线",
+                                     "rule_conf": "verified", "expected": "60",
+                                     "rule_younger": "", "young_side": ""})
+                    continue
+        if gz == "16" or _code_sem_is(gz, "推测"):  # 泛化触发（10-11）
+            # 推测地质界线核定（2026-09-13 用户批准，仿推测断层标定；
+            # 2026-10-11 用户裁定强化：16 不能靠兜底逻辑、要通过判定逻辑——
+            # 三检是唯一语义来源，未通过段不再挂「推测地质界线」家族标签；
+            # 覆盖证据缺省（无第四系且无冰雪面元）是判定的诚实"无法判定"
+            # 输出而非误读矛盾——登记未覆盖）：
             # ① 覆盖度 ≥80%（松散Q剔Qp1X/冰雪）——"推测"前提；
             #    <40% 基岩出露 → 与"推测"矛盾；
             # ② 连接性：两端 ≤10m 连接同一接触类型的实测界线段（非16/81/10）——
             #    确认"覆盖区延伸段"角色；
             # ③ 三条全过=核定通过；部分覆盖/连接不足=存疑交人工
             geom = bounds.geometry.values[idx]
-            hit = 0
-            NPT = 8
-            for t in np.linspace(0.08, 0.92, NPT):
-                q = geom.interpolate(float(t), normalized=True)
-                if (q_u is not None and q_u.intersects(q)) or \
-                   (ice_u is not None and ice_u.intersects(q)):
-                    hit += 1
-            frac16 = hit / NPT
-            conns = []
-            bcoords = list(geom.coords)
-            for w in (0, 1):
-                pt = bcoords[0] if w == 0 else bcoords[-1]
-                for j, row2 in bounds.iterrows():
-                    if j == idx or row2.geometry is None:
-                        continue
-                    c2 = list(row2.geometry.coords)
-                    for p2 in (c2[0], c2[-1]):
-                        if math.hypot((pt[0] - p2[0]) * LON_M,
-                                      (pt[1] - p2[1]) * LAT_M) <= 10.0:
-                            gzc = f"{int(row2['GZBD']):02d}"
-                            if gzc not in ("16", "81", "10"):
-                                conns.append(gzc)
+            frac16 = _cov_frac8(geom)
+            conns = _conn_types16(idx, geom)
             same_type = len(set(conns)) == 1 and bool(conns)
-            if frac16 < 0.4:
+            if q_u is None and ice_u is None:
+                # 覆盖证据缺省：三检不可运行——判定的诚实输出是"无法判定"，
+                # 登记未覆盖（原先 frac16=0 误落"矛盾"，把无数据读成基岩出露）
+                v16 = "未覆盖（覆盖证据缺省）"
+            elif frac16 < 0.4:
                 v16 = "矛盾（推测界线）"
             elif frac16 >= 0.8 and same_type:
                 v16 = "核定通过（推测界线）"
             else:
                 v16 = "存疑（推测界线）"
             verdicts.append({**base, "verdict": v16,
-                             "rule_pair": f"覆盖{frac16:.0%}/连接{conns or '无'}",
+                             "rule_pair": f"覆盖{frac16:.0%}/连接{conns or '无'}"
+                                         if v16 != "未覆盖（覆盖证据缺省）"
+                                         else "覆盖证据缺省（本幅无第四系/冰雪面元）",
                              "rule_contact": "推测地质界线", "rule_conf": "calibrated",
                              "expected": "16", "rule_younger": "", "young_side": ""})
             continue
@@ -676,7 +1094,8 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             verdict = "多规则分歧" if multi else ("标定通过" if gz in exp else "分歧")
             verdicts.append({**base, "verdict": verdict,
                              "rule_pair": f"{rule['pair'][0]}|{rule['pair'][1]}",
-                             "rule_contact": ";".join(sorted({r["contact"] for _, _, r, _ in hits})),
+                             "rule_contact": _refine_unconformity(
+                                 gz, ";".join(sorted({r["contact"] for _, _, r, _ in hits}))),
                              "rule_conf": rule["confidence"],
                              "expected": "/".join(sorted(exp)) if not multi else
                                          "||".join("/".join(s) for s in sorted(exp_sets)),
@@ -690,39 +1109,20 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         # （路乐河组二段/X组下上段）；相对×绝对混比不可判→不冒通则。
         # 裁定条（码级/名称命中）优先于本通则；多单元侧（拼接三角点）不适用。
         if len(lu_units) == 1 and len(ru_units) == 1:
-            sl, sr = _unit_seg(lu_units[0]), _unit_seg(ru_units[0])
-            if sl and sr and sl[0] == sr[0] and sl[1] != sr[1]:
-                a, b = sl[1], sr[1]
-                if a > 0 and b > 0:
-                    adjacent = abs(a - b) == 1  # 绝对段号
-                elif a < 0 and b < 0:
-                    ra, rb = sorted((a, b))  # 新编码：下=-3 中=-2 上=-1
-                    if (ra, rb) in ((-2, -1), (-3, -2)):
-                        adjacent = True  # 下|中 / 中|上 恒相邻
-                    elif (ra, rb) == (-3, -1):
-                        # 下|上：组内中段存在性普查决定（2026-09-29 审计：
-                        # 三段式组 下|上 隔中段=跨段；两组式无中段=相邻）
-                        _grp = sl[0]
-                        _has_mid = any(str(code2name.get(c, c)) in
-                                       (f"{_grp}中段", f"{_grp}中岩段")
-                                       for c in code2name)
-                        adjacent = not _has_mid
-                    else:
-                        adjacent = None
-                else:
-                    adjacent = None  # 相对×绝对混比不可判——不冒通则
-                if adjacent is not None:
-                    exp = {"01"} if adjacent else {"10"}
-                    verdicts.append({**base,
-                                     "verdict": "标定通过" if gz in exp else "分歧",
-                                     "rule_pair": "(段间通则-相邻段)" if adjacent
-                                                 else "(段间通则-跨段仅断层)",
-                                     "rule_contact": "整合接触" if adjacent else "断层接触",
-                                     "rule_conf": "self_supporting",
-                                     "expected": "/".join(sorted(exp)),
-                                     "rule_younger": "", "young_side": ""})
-                    continue
-                # adjacent is None（相对×绝对混比不可判）→ 落下方通用级联
+            _adj_t = _adjacent_seg_tri(_unit_seg(lu_units[0]),
+                                       _unit_seg(ru_units[0]))
+            if _adj_t is not None:
+                exp = {"01"} if _adj_t else {"10"}
+                verdicts.append({**base,
+                                 "verdict": "标定通过" if gz in exp else "分歧",
+                                 "rule_pair": "(段间通则-相邻段)" if _adj_t
+                                             else "(段间通则-跨段仅断层)",
+                                 "rule_contact": "整合接触" if _adj_t else "断层接触",
+                                 "rule_conf": "self_supporting",
+                                 "expected": "/".join(sorted(exp)),
+                                 "rule_younger": "", "young_side": ""})
+                continue
+                # _adj_t is None（相对×绝对混比不可判）→ 落下方通用级联
         all_layers = {u["layer"] for u in lu_units + ru_units}
         # 第四系判定：剔除半固结成岩沉积层（Qp1X 西域组等，算基岩）
         # （2026-10-04 QDUECD 兜底链：г/∑ 误录前缀码的时代从剥前缀后缀/
@@ -765,15 +1165,64 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             # 同一地层组的上段、下段之间应为整合接触(01)
             # （组名相同且段名不同；断层 GZBD=10 不参与本标定）
             exp, cname, rpair = {"01"}, "整合接触", "(同组段间通用规则)"
-        elif ages and (max(ages) - min(ages)) >= 200:
-            # 间断通则（2026-09-26 用户指令，contact/56 案例 J3kz|C2ak 驱动）：
+        elif ages and ((max(ages) - min(ages)) >= 200
+                       or max(a // 100.0 for a in ages)
+                       - min(a // 100.0 for a in ages) >= 2
+                       or _missing_stage_gap(ages)):
+            # 间断通则（2026-09-26 用户指令，contact/56 案例 J3kz|C2ak 驱动；
+            # 2026-10-09 用户优化：J1b↔P2a 案例——两侧单元跨系缺带（系带差
+            # ≥2，如 J(900)↔P(700) 缺整个三叠系）时数值差 199<200 曾漏判
+            # 落入"未覆盖"。补系带差≥2 条件：跨带必然沉积间断，至少排除
+            # 整合接触关系）：
             # 两侧均为地层单元（非第四系、非侵入——已在上游分支处理）且年龄
-            # 间断 ≥200（明显沉积间断）→ 不整合接触（04 角度不整合兜底，
-            # 24 平行不整合兼容）；01 实测界线命中者登记"分歧"交裁定
-            # （发现编图错误通道）。阈值证据：04 码 25%分位 101/中位 398、
-            # 01 码 95%分位 101，≥200 全幅仅 8 段。
-            exp, cname, rpair = {"04", "24"}, "不整合接触", "(间断通则)"
+            # 间断 ≥200（明显沉积间断）或跨系缺带 ≥2 或跨系缺失整统
+            # （2026-10-14 用户裁定：D1↔C2 中间缺 C1=显著间断）→ 不整合接触
+            # （04 角度不整合兜底，24 平行不整合兼容）；01 实测界线命中者
+            # 登记"分歧"交裁定（发现编图错误通道）。阈值证据：04 码 25%分位
+            # 101/中位 398、01 码 95%分位 101，≥200 全幅仅 8 段。
+            exp, cname, rpair = {"04", "24"}, \
+                _refine_unconformity(gz, "不整合接触"), "(间断通则)"
         else:
+            # 整合接触反向判别（2026-10-11 用户裁定·七项排除全规格）：
+            # **无断层接触证据 ∧ 无推测地质界线证据 ∧ 无水体、冰雪区证据 ∧
+            # 无第四系松散沉积物证据 ∧ 无年代间断 ∧ 无岩浆岩 ∧ 无不整合接触
+            # 先验 → 判定整合接触**（verified 挣得，不再未覆盖兜底）。
+            # 级联位置学：走到末端即「第四系规则未命中（无 Q 证据）∧间断通则
+            # 未命中（无年代间断）∧单元对规则未命中（无不整合先验）」；断层/
+            # 冰川水体/岩浆岩/覆盖四项显式核验。非 01 码满足全部排除 → 候选
+            # 01 登记（发现编图错误通道）
+            _no_fault = _pct10 is None or _pct10 < 0.9
+            _no_ice = _pct81 is None or _pct81 < 0.9
+            _igneous_free = ("侵入" not in all_layers and "火山" not in all_layers)
+            # 无推测界线证据：16 三检同款覆盖度采样（_cov_frac8 共享）——
+            # Q/冰雪覆盖 <80% 才算"无推测证据"（覆盖证据缺省视为无证据，不误读）
+            _cov = _cov_frac8(bounds.geometry.values[idx])
+            _no_infer = _cov is None or _cov < 0.8
+            if _no_fault and _no_ice and _igneous_free and _no_infer:
+                _ev_rev = ("无断层重合" if _pct10 is None
+                           else f"断层重合{_pct10:.0%}<90%") \
+                          + ("；无冰川水体重合" if _pct81 is None
+                             else f"；冰川水体重合{_pct81:.0%}<90%") \
+                          + ("；覆盖证据缺省" if _cov is None
+                             else f"；覆盖{_cov:.0%}<80%") \
+                          + ("；年龄秩不可测" if not ages
+                             else f"；年龄差{max(ages) - min(ages):.0f}") \
+                          + "；无岩浆岩；无Q；无不整合先验"
+                if gz == "01":
+                    verdicts.append({**base, "verdict": "标定通过",
+                                     "rule_pair": f"(整合反向判别:{_ev_rev})",
+                                     "rule_contact": "整合接触",
+                                     # 弱置信度（用户裁定 10-11）：排除法=
+                                     # 无反证之默认，非正向证据
+                                     "rule_conf": "inferred", "expected": "01",
+                                     "rule_younger": "", "young_side": ""})
+                else:
+                    verdicts.append({**base, "verdict": "分歧",
+                                     "rule_pair": f"(整合反向判别:{_ev_rev})",
+                                     "rule_contact": "整合接触",
+                                     "rule_conf": "inferred", "expected": "01",
+                                     "rule_younger": "", "young_side": ""})
+                continue
             verdicts.append({**base, "verdict": "未覆盖", "rule_pair": "",
                              "rule_contact": "", "rule_conf": "", "expected": "",
                              "rule_younger": "", "young_side": ""})
@@ -801,14 +1250,20 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                 base = {**base, "rule_younger": "", "young_side": "left" if _lmax > _rmax else "right"}
         verdicts.append({**base, "verdict": "标定通过" if gz in exp else "分歧",
                          "rule_pair": rpair, "rule_contact": cname,
-                         "rule_conf": "generic", "expected": "/".join(sorted(exp)),
+                         # 2026-10-11 用户裁定置信分级：不整合接触判据=强置信度
+                         # （间断通则/西域组规则产出正向间断证据→verified）；
+                         # 整合接触反向判别=弱置信度（排除法默认→inferred，
+                         # 见级联末端分支）
+                         "rule_conf": ("verified" if rpair in ("(间断通则)", "(西域组通用规则)")
+                                       else "generic"),
+                         "expected": "/".join(sorted(exp)),
                          "rule_younger": base.get("rule_younger", ""),
                          "young_side": base.get("young_side", "")})
 
     rep = pd.DataFrame(verdicts)
     rep[rep["gzbd"] != "10"].to_csv(_out("_gzbd_calibration_report.csv"),
                                     index=False, encoding="utf-8-sig")
-    print("B. 先验标定完成（GZBD=10 由断层标定除外）：")
+    print("B. 先验标定完成（断层接触=重合规则级联判定，2026-10-10 起）：")
     print(rep[rep["gzbd"] != "10"]["verdict"].value_counts().to_string())
 
     # ---------- B2. 间断通则互证标记 + 先验缺口候选单（2026-09-26 强化） ----------
@@ -918,39 +1373,39 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
           f"（其中别名候选 {_alias_n} 段）")
 
 
-    # G1（2026-09-29 泛化优化）：断层标定证据由断言改为计算——gzbd=10 行与
-    # FBA003 实测断层线重合占比（米制 100m 缓冲）。旧「重合≥90%（n/n）」为
-    # 行计数非验证；现逐行实测，不足 90% 者证据注记「重合不足（复核）」。
-    from shapely.ops import unary_union as _uu_fault
-    import geopandas as _gpd_f
-    _fault_u_m = None
-    _fp = sh.root / "geojson" / "L0" / "LDZOFBA003.WL.geojson"
-    if _fp.exists():
-        _fg = _gpd_f.read_file(_fp)
-        _fgeoms = [g for g in _fg.geometry
-                   if g is not None and not g.is_empty]
-        if _fgeoms:
-            _fault_u_m = _uu_fault([
-                LineString(np.array(g.coords) * [LON_M, LAT_M])
-                for g in _fgeoms])
-
-    def _coincidence(geom):
-        """界线与 FBA003 断层线重合占比（米制 100m 缓冲）；无数据→None。"""
-        if _fault_u_m is None or geom is None or geom.is_empty:
-            return None
-        _cm = np.array(geom.coords)
-        if len(_cm) < 2:
-            return None
-        _seg = LineString(_cm * [LON_M, LAT_M])
-        _tot = _seg.length
-        if _tot < 1e-9:
-            return None
-        return _seg.intersection(_fault_u_m.buffer(100.0)).length / _tot
+    # G1 统计（2026-10-10 用户裁定版）：断层/冰雪接触均改由级联内重合规则
+    # 判定（计算已前移至 B 段级联之前）——此处仅汇总
+    _n10 = int((rep["gzbd"] == "10").sum())
+    _c10 = [_coinc_all.get(int(r["idx"])) for _, r in rep.iterrows()
+            if r["gzbd"] == "10"]
+    _n10_pass = sum(1 for c in _c10 if c is not None and c >= 0.9)
+    _n10_low = sum(1 for c in _c10 if c is not None and c < 0.9)
+    _n10_unv = sum(1 for c in _c10 if c is None)
+    _n_cand = sum(1 for _, r in rep.iterrows()
+                  if r["gzbd"] not in ("10", "81")
+                  and (c := _coinc_all.get(int(r["idx"]))) is not None
+                  and c >= 0.9)
+    _n81 = int((rep["gzbd"] == "81").sum())
+    _c81 = [_coinc_ice.get(int(r["idx"])) for _, r in rep.iterrows()
+            if r["gzbd"] == "81"]
+    _n81_pass = sum(1 for c in _c81 if c is not None and c >= 0.9)
+    _n81_low = sum(1 for c in _c81 if c is not None and c < 0.9)
+    _n81_unv = sum(1 for c in _c81 if c is None)
+    _n_cand81 = sum(1 for _, r in rep.iterrows()
+                    if r["gzbd"] not in ("10", "81")
+                    and (c := _coinc_ice.get(int(r["idx"]))) is not None
+                    and c >= 0.9)
+    print(f"   断层重合规则：码10 {_n10} 段（重合≥90% {_n10_pass}，"
+          f"不足 {_n10_low}，无数据 {_n10_unv}）；"
+          f"非10码高重合候选 {_n_cand} 段（登记分歧待裁定）")
+    print(f"   冰雪重合规则：码81 {_n81} 段（重合≥90% {_n81_pass}，"
+          f"不足 {_n81_low}，无数据 {_n81_unv}）；"
+          f"非81码高重合候选 {_n_cand81} 段（登记分歧待裁定）")
 
     # G3（2026-09-29 泛化优化）：码义一致性声明——硬编码分支语义 × 幅级词表
     # 注册对照，偏移/未注册者入审计档案（分支结构不变，三审前置把关机制化）
-    _BRANCH_EXPECT = {"10": "skip_fault", "81": "skip_nongeologic",
-                      "43": "igneous_phase_contact", "60": "igneous_phase_contact",
+    # 2026-10-10：10/81 路由双撤（均改重合证据级联），_BRANCH_EXPECT 同步移除
+    _BRANCH_EXPECT = {"43": "igneous_phase_contact", "60": "igneous_phase_contact",
                       "16": "contact"}
     _sem_checks = []
     for _vp in (sh.root / "data" / "geosciml_vocab_mapping.json",
@@ -964,7 +1419,7 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                 _term = _vr.get("term")
                 _bad = ((_c in ("43", "60") and _st == "decided"
                          and _term not in (None, "igneous_phase_contact"))
-                        or (_c in ("10", "81") and _st not in ("absent", _exp_st)))
+                        or (_c == "81" and _st not in ("absent", _exp_st)))
                 _sem_checks.append({
                     "code": _c, "registry": f"{_st}" + (f":{_term}" if _term else ""),
                     "branch_assumption": _exp_st,
@@ -975,13 +1430,6 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         pd.DataFrame(_sem_checks).to_csv(
             _out("_gzbd_code_semantics_check.csv"), index=False,
             encoding="utf-8-sig")
-    _n10 = int((rep["gzbd"] == "10").sum())
-    _coinc10 = [_coincidence(bounds.geometry.values[int(r["idx"])])
-                for _, r in rep.iterrows() if r["gzbd"] == "10"]
-    _n10_pass = sum(1 for c in _coinc10 if c is not None and c >= 0.9)
-    _n10_unv = sum(1 for c in _coinc10 if c is None)
-    _coinc_map = {int(r["idx"]): _coincidence(bounds.geometry.values[int(r["idx"])])
-                  for _, r in rep.iterrows() if r["gzbd"] == "10"}
 
     # ---------- C0. 段序新老原则执行（2026-09-29 用户裁定：上段新，下段老；
 # 一段老，二/三段新）——同组段级单元对的年轻侧=段号大者侧（绝对/相对同式：
@@ -1016,7 +1464,8 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     interp = []
     for _, r in rep.iterrows():
         gz, idx = r["gzbd"], int(r["idx"])
-        base_sem = codes_meta.get(gz, {}).get("meaning", "?")
+        base_sem = (codes_meta.get(gz, {}).get("meaning")
+                    or (gz if not gz.isdigit() else "?"))
         out = {"idx": idx, "GZBD原码": gz, "原码语义": base_sem,
                "先验年轻侧": r["young_side"], "点线裁定侧": side_ov.get(str(idx), "")}
         if r["verdict"] == "制图误差（剔除）":
@@ -1027,56 +1476,123 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             out.update(标定语义=codes_meta.get(new, {}).get("meaning", new),
                        GZBD_eff=new, 状态="用户裁定改码",
                        证据=f"原码 {gz}→{new}（gzbd_overrides.json）", 置信度="user")
-        elif gz == "10":
-            _pct = _coinc_map.get(idx)
-            if _pct is None:
-                _ev = f"与 LDZOFBA003 重合未验证（本幅无 FBA003 数据；{_n10_unv} 段同）"
-            elif _pct >= 0.9:
-                _ev = f"与 LDZOFBA003 重合 {_pct:.0%}（{_n10_pass}/{_n10} 段 ≥90% 实测）"
-            else:
-                _ev = f"与 LDZOFBA003 重合仅 {_pct:.0%}（<90% 复核）"
-            out.update(标定语义="断层接触（断裂界线）", GZBD_eff="10", 状态="断层标定",
-                       证据=_ev, 置信度="verified")
+        elif str(idx) in noise_seg:
+            # 编图错误噪声段（2026-10-09 T3 裁定回路）：直接取码级裁定语义
+            # （user_semantic）；2026-10-11 摒弃注册兜底——无用户裁定语义者
+            # 不再回退注册表码义/码面直读，置空待裁定（语义缺席即裁定对象）
+            _ns_sem = _user_bsem_early.get(gz) or ""
+            out.update(标定语义=_ns_sem, GZBD_eff=gz, 状态="裁定噪声（编图错误）",
+                       证据=f"编图错误噪声裁定：{noise_seg[str(idx)]}",
+                       置信度="user")
+        elif str(r.get("rule_pair") or "").startswith(("(断层重合规则", "(冰雪重合规则")):
+            # 重合规则出站（2026-10-10 用户裁定：10/81 双路由撤销，界线与
+            # 本体层（FBA003 断层线 / LDLYAAE002 冰川面轮廓）实测重合判定；
+            # 核验/发现双向；10-11 提前于文本码分支——文本码「断层接触」
+            # 等同样吃重合核验证据，标签保字面）
+            _rc = str(r["rule_contact"])          # 断层接触（断裂界线）/ 冰雪区界线
+            _exp = str(r["expected"])             # 10 / 81
+            _orc = "LDZOFBA003 实测断层线" if _exp == "10" else "LDLYAAE002 冰川面元"
+            # 泛化（10-11）：文本码幅 GZBD_eff 保原文（码即语义），标签取字面；
+            # 数值码幅走国标码与规范标签
+            _rc_eff = _rc if gz.isdigit() else gz
+            _gz_eff = _exp if gz.isdigit() else gz
+            if r["verdict"] == "标定通过":
+                out.update(标定语义=_rc_eff, GZBD_eff=_gz_eff,
+                           状态="标定通过",
+                           证据=f"界线与{_orc}重合核验通过（{r['rule_pair']}）",
+                           置信度="verified")
+            elif r["verdict"] == "分歧":
+                _cand_lbl = (f"{_rc_eff}（先验建议→{_exp}）" if gz.isdigit()
+                             else f"候选{_rc}（重合实测）")
+                out.update(标定语义=_cand_lbl, GZBD_eff=gz,
+                           状态="分歧未裁定",
+                           证据=f"界线与{_orc}高重合而图面码={gz}（非 {_exp}）——"
+                                f"候选{_rc}登记（{r['rule_pair']}）",
+                           置信度="conflict")
+            elif r["verdict"].startswith("重合不足"):
+                out.update(标定语义=f"{_rc_eff.split('（')[0]}存疑（重合不足）",
+                           GZBD_eff=gz, 状态="分歧未裁定",
+                           证据=f"码 {_exp} 声明{_rc}但与{_orc}重合不足"
+                                f"（{r['rule_pair']}）——交裁定",
+                           置信度="conflict")
+            else:  # 未覆盖：本幅无本体层数据
+                out.update(标定语义="", GZBD_eff=gz,
+                           状态="未覆盖（先验缺口）",
+                           证据=f"重合证据缺省（{r['rule_pair']}）——无语义赋值（摒弃兜底）",
+                           置信度="uncovered")
+        elif not gz.isdigit():
+            # 文本码（2026-10-09 新疆115 C 类 K46C001004·用户裁定方案一）：
+            # GZBD 字段直写中文语义——字面即语义，独立码族登记；不改码、
+            # 不经 MLE/先验级联，置信按 verified×single（图面自声明单源）
+            out.update(标定语义=gz, GZBD_eff=gz, 状态="字面语义（文本码）",
+                       证据="GZBD 字段直写中文语义（字面即语义注册）",
+                       置信度="verified")
         elif r["verdict"] == "特殊码兜底":
-            out.update(标定语义="一般地质界线", GZBD_eff=gz, 状态="特殊码兜底（一般地质界线）",
-                       证据=f"码 {gz} 不在 GZBD 标定域（2026-09-29 用户对齐裁定：统一一般地质界线兜底）",
-                       置信度="code_read")
-        elif r["verdict"] == "特殊码（独立标定）":
-            out.update(标定语义=base_sem, GZBD_eff=gz, 状态=r["verdict"],
-                       证据="码表（不参与地层接触先验）",
-                       置信度=codes_meta[gz]["confidence"])
+            # 2026-10-11 用户裁定：摒弃注册兜底——域外码不再赋「一般地质界线」
+            # 默认语义，标「未解析」进 pending（语义缺席即裁定对象）
+            out.update(标定语义="", GZBD_eff=gz, 状态="未解析（码域外）",
+                       证据=f"码 {gz} 不在 GZBD 标定域——无语义赋值（2026-10-11 摒弃兜底后）",
+                       置信度="uncovered")
         elif r["verdict"] == "核定通过（推测界线）":
             out.update(标定语义="推测地质界线（覆盖区延伸段）", GZBD_eff="16",
                        状态="标定通过", 证据=f"三检：{r['rule_pair']}",
                        置信度="calibrated")
-        elif r["verdict"] in ("存疑（推测界线）", "矛盾（推测界线）"):
-            out.update(标定语义=f"推测地质界线（{r['verdict'][:2]}）",
+        elif r["verdict"] == "存疑（推测界线）":
+            # 2026-10-11 用户裁定：16 不能靠兜底逻辑——三检未通过段不赋
+            # 推测家族标签（标签即语义断言），只记存疑事实交裁定
+            out.update(标定语义="界线性质存疑（推测核定不足）",
                        GZBD_eff=gz, 状态="分歧未裁定",
-                       证据=f"推测界线核定：{r['rule_pair']}", 置信度="conflict")
+                       证据=f"推测界线三检未通过（{r['rule_pair']}）——"
+                            f"不赋推测语义，交裁定", 置信度="conflict")
+        elif r["verdict"] == "矛盾（推测界线）":
+            out.update(标定语义="非推测界线嫌疑（基岩出露与推测矛盾）",
+                       GZBD_eff=gz, 状态="分歧未裁定",
+                       证据=f"推测界线三检矛盾（{r['rule_pair']}）——"
+                            f"不赋推测语义，交裁定", 置信度="conflict")
+        elif r["verdict"] == "未覆盖（覆盖证据缺省）":
+            # 覆盖证据缺省：判定不可运行——注册表定义性标签展示，
+            # 缺口如实登记（不伪装判定）；摒弃兜底后无语义赋值
+            out.update(标定语义="", GZBD_eff=gz,
+                       状态="未覆盖（先验缺口）",
+                       证据="覆盖证据缺省（本幅无第四系/冰雪面元，三检不可运行）",
+                       置信度="uncovered")
         elif r["verdict"] == "标定通过":
             src = "志书单元对规则" if str(r["rule_conf"]).startswith("memoir") else "通用规则"
-            # 间断通则（2026-09-26 用户指令）是佐证级规则：标定语义保留码表
-            # 细分名（04=角度不整合界线等），通则仅作证据，不降级码义粒度
-            sem = (base_sem if str(r["rule_pair"]) == "(间断通则)"
-                   else (str(r["rule_contact"]) or base_sem))
+            # 2026-10-11 摒弃注册兜底：标定语义一律取规则出站语义
+            # （rule_contact），不再回退注册表码义（原间断通则保留码表细分名
+            # 的通道同时撤销——细分名属注册义）
+            sem = str(r["rule_contact"] or "")
             out.update(标定语义=sem, GZBD_eff=gz,
                        状态="标定通过", 证据=f"{src}：{r['rule_pair']}",
                        置信度=str(r["rule_conf"]))
+        elif r["verdict"] == "渐变判定未通过":
+            # 2026-10-11 用户裁定（同 16 逻辑）：判定未通过段不赋家族标签
+            out.update(标定语义="岩性渐变嫌疑未通过（两侧时代/岩性不一致或非岩浆岩）",
+                       GZBD_eff=gz, 状态="分歧未裁定",
+                       证据=f"43 判定逻辑未通过{r['rule_pair']}——不赋渐变语义，交裁定",
+                       置信度="conflict")
+        elif r["verdict"] == "脉动判定未通过":
+            # 2026-10-11 用户裁定（同 16/43 逻辑）：判定未通过段不赋家族标签
+            out.update(标定语义="脉动接触嫌疑未通过（时代不一致/非岩浆岩/岩性一致）",
+                       GZBD_eff=gz, 状态="分歧未裁定",
+                       证据=f"60 判定逻辑未通过{r['rule_pair']}——不赋脉动语义，交裁定",
+                       置信度="conflict")
         elif r["verdict"] in ("分歧", "多规则分歧"):
             out.update(标定语义=f"{r['rule_contact']}（先验建议→{r['expected']}）",
                        GZBD_eff=gz, 状态="分歧未裁定",
                        证据=f"{r['rule_pair']} 期望 {r['expected']}", 置信度="conflict")
         elif str(r["verdict"]).startswith("分歧未裁定（"):
-            # 岩性过渡渐变约束违反（2026-09-24 用户核定：两侧岩浆岩时代岩性须一致）
-            out.update(标定语义=base_sem, GZBD_eff=gz, 状态="分歧未裁定",
+            # 岩性过渡渐变约束违反（2026-09-24 用户核定：两侧岩浆岩时代岩性须一致）；
+            # 摒弃兜底后违反段不赋注册义
+            out.update(标定语义="", GZBD_eff=gz, 状态="分歧未裁定",
                        证据=str(r["verdict"]), 置信度="conflict")
         else:
-            # 未覆盖归因：缺口单元 vs 规则组合缺失
+            # 未覆盖归因：缺口单元 vs 规则组合缺失；摒弃兜底后无语义赋值
             codes_l = re.findall(r"([A-Za-zΑ-ω0-9↓→.-]+)\(", str(r["left"]))
             codes_r = re.findall(r"([A-Za-zΑ-ω0-9↓→.-]+)\(", str(r["right"]))
             gap_hit = [c for c in codes_l + codes_r if c in GAPS]
             cause = f"志书缺口单元: {'/'.join(gap_hit)}" if gap_hit else "单元对组合未收录"
-            out.update(标定语义=base_sem, GZBD_eff=gz, 状态="未覆盖（先验缺口）",
+            out.update(标定语义="", GZBD_eff=gz, 状态="未覆盖（先验缺口）",
                        证据=cause, 置信度="uncovered")
         interp.append(out)
 
@@ -1104,10 +1620,17 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         if st == "断层标定":
             return evaluate("verified", "multi_root", 1.0,
                             reasons=("码表注册语义 × LDZOFBA003 重合≥90% 图面证据",))
-        if st == "特殊码兜底（一般地质界线）":
-            return evaluate("code_read", "single", 1.0,
-                            reasons=("特殊码兜底（2026-09-29 用户对齐裁定；"
-                                     "码义待裁定）",))
+        if st == "未解析（码域外）":
+            return evaluate("code_read", "single", 1.0, evaluated=False,
+                            reasons=("域外码未解析（2026-10-11 摒弃注册兜底"
+                                     "——无语义赋值，pending 待裁定）",))
+        if st == "字面语义（文本码）":
+            return evaluate("verified", "single", 1.0,
+                            reasons=("文本码字面即语义（2026-10-09 用户裁定"
+                                     "方案一；图面自声明单源）",))
+        if st == "裁定噪声（编图错误）":
+            return evaluate("adjudicated", adjudicated=True,
+                            reasons=("编图错误噪声裁定（T3 用户回路）",))
         if st == "特殊码（独立标定）":
             return evaluate(_GZBD_S.get(conf, "verified"), "multi_root", 1.0,
                             reasons=("码表独立标定（不参与地层接触先验）",))
@@ -1149,7 +1672,7 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     from ..data import data_path as _dp
 
     _GENERIC_LBL = {"实测地质", "地质", "", "None", "nan"}  # canon 口径兜底类
-    _ROUTED_LBL = {"10": "断层接触（断裂界线）", "81": "冰雪区界线"}
+    _ROUTED_LBL = {}  # 路由码已全部撤销（2026-10-10：10 断层重合规则、81 冰雪重合规则）
     _reg_codes = {}
     try:
         _reg_codes = (json.load(open(_dp("gzbd_codes.json"), encoding="utf-8"))
@@ -1157,7 +1680,16 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     except Exception:
         pass
 
-    _SYN_FOLD = {"推测地质界线": "推测界线"}  # 同义折叠（SEM_NORM 补集）
+    _SYN_FOLD = {"推测地质界线": "推测界线",  # 同义折叠（SEM_NORM 补集）
+                 # 判定未通过/存疑类标签→折叠入通用桶弃权（2026-10-11 用户裁定：
+                 # 界线码义经逻辑标定挣得——判定失败标签不赋语义、不参与码级
+                 # MLE 票仓竞争，仅在段级登记待裁定）
+                 "界线性质存疑（推测核定不足）": "实测地质",
+                 "非推测界线嫌疑（基岩出露与推测矛盾）": "实测地质",
+                 "断层接触存疑（重合不足）": "实测地质",
+                 "冰雪区界线存疑（重合不足）": "实测地质",
+                 "岩性渐变嫌疑未通过（两侧时代/岩性不一致或非岩浆岩）": "实测地质",
+                 "脉动接触嫌疑未通过（时代不一致/非岩浆岩/岩性一致）": "实测地质"}
 
     def _base_lbl(_raw):
         """展示级标签：去「（先验建议…）」后缀取基签，再走 SEM_NORM 归一。"""
@@ -1197,6 +1729,10 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             continue
         _lbl_dist.setdefault(_c0, {})
         _b0 = _canon(_r.get("标定语义"))
+        if _b0 == "岩相接触":
+            continue  # 结构规则语义不进码义票仓（2026-10-15 岩相接触案：
+            # 两侧同单元/同组段间的结构判定是段级挣得，非码义证据——
+            # 否则 43 码义被 104 段岩相翻转、26 段岩浆岩渐变遭 L3 覆盖）
         _lbl_dist[_c0][_b0] = _lbl_dist[_c0].get(_b0, 0) + 1
         _disp.setdefault(_c0, {}).setdefault(_b0, {})
         _d0 = _base_lbl(_r.get("标定语义"))
@@ -1218,9 +1754,14 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             _code_sem[_c0] = (_ROUTED_LBL[_c0], "路由码")
         elif _c0 in _user_bsem:
             _code_sem[_c0] = (_user_bsem[_c0], "用户修改")
-        elif _reg_adj and _reg_lbl:
-            _code_sem[_c0] = (_reg_lbl, "用户裁定(注册)")
+        elif not _c0.isdigit():
+            # 文本码族（用户裁定方案一）：码即语义，不经 MLE
+            _code_sem[_c0] = (_c0, "字面语义")
         else:
+            # 2026-10-11 用户裁定：界线码义经逻辑标定挣得——**MLE 段级证据
+            # 优先于注册表裁定固化**（未必 16=推测界线、43=渐变界线：码义是
+            # 标定输出而非注册固定项）；注册表降为 MLE 之下的次兜底（证据
+            # 缺席时的定义性参照，national_label 列仍全量保留注册义）
             _spec = {k: v for k, v in _dd.items()
                      if k not in _GENERIC_LBL and "或" not in k}
             if _spec:
@@ -1228,8 +1769,10 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                 if _nt / _n0 >= 0.25:
                     _code_sem[_c0] = (_disp_of(_c0, _top), "MLE精化")
                     continue
-            _code_sem[_c0] = (_reg_lbl or "实测地质界线",
-                              "注册先验" if _reg_lbl else "兜底")
+            # 2026-10-11 用户裁定：界线判别**完全依赖判别逻辑，摒弃注册兜底
+            # 机制**——注册表不再提供码义赋值（含裁定固化/注册先验/泛称兜底）；
+            # 判定无产出者=未解析（pending），注册义仅存 national_label 参照列
+            _code_sem[_c0] = ("", "未解析")
 
     # L3 全继承（覆盖库例外：用户裁定改码/分歧未裁定/制图误差剔除）
     _b_conflicts = []
@@ -1238,6 +1781,9 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         _r["原标定语义"] = _r.get("标定语义")  # own_label 留档（L1/L2 分层可读）
         if str(_r.get("状态")) in ("用户裁定改码", "分歧未裁定", "制图误差（剔除）"):
             continue
+        if _canon(str(_r.get("标定语义") or "")) == "岩相接触":
+            continue  # 结构规则挣得语义豁免码义继承（2026-10-15：岩相接触
+            # 是段级结构判定产物，不随码级 MLE 语义被覆盖）
         _raw0 = str(_r.get("标定语义") or "")
         if "（先验建议" in _raw0:
             continue  # 建议型标签=本域分歧登记机制，保持原样
@@ -1306,6 +1852,8 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             _conf0 = "裁定固化"
         elif _src0 == "用户修改":
             _conf0 = "用户修改"
+        elif _src0 == "未解析":
+            _conf0 = "未解析（无判定证据）"
         else:
             _share = _nt0 / _n0 if _n0 else 0.0
             _conf0 = (f"强证({_n0}段·{_share * 100:.0f}%)"
@@ -1329,12 +1877,13 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
 
     out_df = pd.DataFrame(interp)
     out_df.to_csv(_out("_gzbd_semantic_interpretation.csv"), index=False, encoding="utf-8-sig")
-    # 特殊码兜底登记（审计报告存档，2026-09-29 用户对齐裁定）
-    _fb = out_df[out_df["状态"] == "特殊码兜底（一般地质界线）"]
+    # 域外码未解析登记（审计存档；2026-10-11 摒弃注册兜底——原特殊码兜底
+    # 档案同址，pending.py 裁定单消费）
+    _fb = out_df[out_df["状态"] == "未解析（码域外）"]
     _fb.to_csv(_out("_gzbd_special_fallback.csv"), index=False,
                encoding="utf-8-sig")
     if len(_fb):
-        print(f"    特殊码兜底登记（审计存档）：{len(_fb)} 段 → "
+        print(f"    域外码未解析登记（审计存档）：{len(_fb)} 段 → "
               f"_gzbd_special_fallback.csv")
     print("C. 语义解释完成：")
     print(out_df["状态"].value_counts().to_string())

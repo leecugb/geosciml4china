@@ -40,6 +40,7 @@ from ..sheets import get_sheet
 
 def calibrate_entities(sheet_key: str, out_dir=None,
                        triplets_csv: str | None = None,
+                       slip_csv: str | None = None,
                        triplet_attitude_csv: str | None = None) -> dict:
     """执行断层归组，返回统计。out_dir 缺省=图幅 root。"""
     sh = get_sheet(sheet_key)
@@ -49,6 +50,7 @@ def calibrate_entities(sheet_key: str, out_dir=None,
     _outdir.mkdir(parents=True, exist_ok=True)
     _triplets_csv = triplets_csv
     _attitude_csv = triplet_attitude_csv
+    _slip_csv = slip_csv
     # 实体表文件名按图幅剖面（entities_csv 各幅不同：库尔干 fault_entities.csv /
     # 新幅 fault_entities_<key>.csv——materialize 依此装载）
     _ent_csv = get_profile(sh.key).entities_csv or "fault_entities.csv"
@@ -690,9 +692,30 @@ def calibrate_entities(sheet_key: str, out_dir=None,
             _vmap = _adf.groupby("fault_id")["verdict"].first().to_dict()
     _ent["aux_verdict"] = [_vmap.get(f, "") for f in _ent["fault_id"]]
     _ent["n_triplets"] = [_nmap.get(f, 0) for f in _ent["fault_id"]]
+    # 走滑写回（2026-10-14 LDZOFBB098 并入解析范围）：_line_aux_slip CSV
+    # 按 fault_id 聚合 slip_sense（一致→判定；混合→冲突登记不冒进）与
+    # n_slip_hooks——线层走滑指示线支持断层性质解析的产物通道
+    _slip_p = sh.root / _slip_csv if _slip_csv else None
+    _smap, _shmap, _sconf = {}, {}, 0
+    if _slip_p and _slip_p.exists():
+        _sdf = pd.read_csv(_slip_p, dtype=str)
+        if "fault" in _sdf.columns and "sense" in _sdf.columns:
+            for f, g in _sdf.groupby("fault"):
+                _shmap[f] = len(g)
+                _ss = g["sense"].unique()
+                if len(_ss) == 1:
+                    _smap[f] = _ss[0]
+                else:
+                    _smap[f] = "冲突（" + "/".join(
+                        f"{s}×{int((g['sense'] == s).sum())}" for s in _ss) + "）"
+                    _sconf += 1
+    _ent["slip_sense"] = [_smap.get(f, "") for f in _ent["fault_id"]]
+    _ent["n_slip_hooks"] = [_shmap.get(f, 0) for f in _ent["fault_id"]]
     _ent.to_csv(_out(_ent_csv), index=False, encoding="utf-8-sig")
     _nv = _ent.loc[_ent["aux_verdict"] != "", "fault_id"].nunique()
-    print(f"aux 写回: {_nv} 实体有 verdict / {int(_ent['n_triplets'].astype(int).sum())} 三联体")
+    _ns = _ent.loc[_ent["slip_sense"] != "", "fault_id"].nunique()
+    print(f"aux 写回: {_nv} 实体有 verdict / {int(_ent['n_triplets'].astype(int).sum())} 三联体"
+          + (f"；走滑写回: {_ns} 实体（冲突 {_sconf}）" if _slip_p and _slip_p.exists() else ""))
 
     return {
         "entities": len(entities),
@@ -709,10 +732,20 @@ def main() -> int:
     ap.add_argument("--out", default=None, help="输出目录（缺省=图幅 root）")
     ap.add_argument("--triplets", default=None, help="三联体明细表文件名（写回 n_triplets）")
     ap.add_argument("--triplet-attitude", default=None, help="实体三联体判别表文件名（写回 aux_verdict）")
+    ap.add_argument("--slip", default=None, help="线层走滑判定表文件名（写回 slip_sense/n_slip_hooks）")
     args = ap.parse_args()
+    # 2026-10-16 守卫：standalone 缺参时静默跳过 aux/走滑写回是正典装配链
+    # 陷阱（K46C001003 两度重演）——缺省回退图幅 profile/约定文件名；
+    # 文件缺席由 calibrate_entities 内部 exists 守卫消化（零破坏）
+    _sh0 = get_sheet(args.sheet)
+    _trips0 = (args.triplets or _sh0.aux_triplets_csv
+               or f"_fault_triplets_{_sh0.key}.csv")
     stats = calibrate_entities(args.sheet, out_dir=args.out,
-                               triplets_csv=args.triplets,
-                               triplet_attitude_csv=args.triplet_attitude)
+                               triplets_csv=_trips0,
+                               triplet_attitude_csv=args.triplet_attitude
+                               or _trips0,
+                               slip_csv=args.slip
+                               or f"_line_aux_slip_{_sh0.key}.csv")
     print("归组完成:", stats)
     return 0
 
