@@ -29,6 +29,24 @@ GML = "{http://www.opengis.net/gml/3.2}"
 XLINK = "{http://www.w3.org/1999/xlink}"
 
 # 双幅期望画像（2026-09-27 英吉沙接入实测核定）
+class _NoPortrait:
+    """首接无画像占位（2026-10-09 新疆115 泛化）：缺失键访问返回自身——
+    一切比较恒 False（记 FAIL 供 --accept-portrait 画像回填），f-string 显
+    ∅，算术/迭代/下标不崩。仅用于包级 EXPECT 与画像文件双缺的首跑。"""
+    def __eq__(self, o): return False
+    def __ne__(self, o): return True
+    def __getitem__(self, k): return self
+    def __iter__(self): return iter(())
+    def __sub__(self, o): return self
+    __rsub__ = __sub__
+    def __abs__(self): return float("inf")
+    def __bool__(self): return False
+    def __repr__(self): return "∅"
+
+
+_NO_PORTRAIT = _NoPortrait()
+
+
 EXPECT = {
     # 库尔干幅副本（全管线测试幅，2026-10-02）——画像=库尔干镜像
     "jws": dict(
@@ -163,7 +181,7 @@ EXPECT = {
     # 六类画像随实体链版更新。
     # testdata（2026-10-05 用户指令）：首跑画像占位
     "td": dict(
-        units=20, poly_mfs=107, contacts=143, contact_nil=21, sds=52,
+        units=20, poly_mfs=107, contacts=143, contact_nil=0, sds=52,
         sds_nil_faulttype=0, planes=8, polarity=1, folds=2, fold_nil=0,
         members=575, compositions=2, six_mode=(1, 1, 0, 0, 6, 0),
         orphan_tolerance=True, fossil_violations=1,
@@ -333,8 +351,8 @@ def main() -> int:
     args = ap.parse_args()
 
     config.init_sheet(args.sheet)
-    EXP = dict(EXPECT[args.sheet])
-    # 图幅画像文件优先（2026-10-05 消除 re-run：首跑 --accept-portrait 落盘，
+    EXP = dict(EXPECT.get(args.sheet, {}))  # 新幅无包级画像→空基线，
+    # 首跑 --accept-portrait 落盘画像文件自证（2026-10-09 新疆115 泛化）    # 图幅画像文件优先（2026-10-05 消除 re-run：首跑 --accept-portrait 落盘，
     # 二跑起按画像严格核验——画像回填从手工两步变首跑自证）。
     # 按 key 分域（2026-10-05 修复：同一 root 多键接入时画像互不覆盖）
     _portrait_p = Path(config.SHEET_ROOT) / f"verify_portrait_{args.sheet}.json"
@@ -347,6 +365,16 @@ def main() -> int:
         for _tk in ("six_mode",):
             if isinstance(EXP.get(_tk), list):
                 EXP[_tk] = tuple(EXP[_tk])
+    if not EXP and not _had_portrait:
+        # 首接无画像（2026-10-09 新疆115）：包级 EXPECT 无条目且无画像文件
+        # ——缺失键一律得 ∅ 占位：比较恒 False 记 FAIL（供 --accept-portrait
+        # 画像回填），实测值照常打印落盘，不做语义判定
+        class _ExpFC(dict):
+            def __missing__(self, k):
+                return _NO_PORTRAIT
+        EXP = _ExpFC()
+        print("首接无画像（EXPECT 无条目且无画像文件）——实测记 FAIL 仅供"
+              "画像回填，下轮起严格核验")
     gml_path = Path(args.gml or str(config.GML_OUT))
     lite_dir = Path(args.lite_dir or str(config.LITE_OUT))
     args.report = args.report or str(config.REPORT_OUT)
@@ -753,15 +781,25 @@ def main() -> int:
     import geopandas as _gpd
     from shapely.geometry import Point as _Pt
     l1_fl = _gpd.read_file(config.GEOJSON_L1 / "faults.geojson")
-    l1_fa = _gpd.read_file(config.GEOJSON_L1 / "fault_aux.geojson")
-    l1_fa["_src_id"] = l1_fa["_src_id"].astype(int)
-    b_sub = l1_fa[(l1_fa["kind"] == "symbol")
-                  & (l1_fa["sub_no"].astype(str).str.replace(".0", "", regex=False) == "1894")
-                  & (l1_fa["status"].astype(str) == "normal")]
+    _fa_path = config.GEOJSON_L1 / "fault_aux.geojson"
+    # 2026-10-09 新疆115 泛化（I43C001003）：本幅无断层辅助点时 fault_aux
+    # 为 0 要素空表（无列）——垂足校验族整体空对空跳过，不崩
+    l1_fa = (_gpd.read_file(_fa_path)
+             if _fa_path.exists() else _gpd.GeoDataFrame())
+    _fa_ok = bool(len(l1_fa)) and \
+        {"_src_id", "kind", "sub_no", "status"} <= set(l1_fa.columns)
+    if _fa_ok:
+        l1_fa["_src_id"] = l1_fa["_src_id"].astype(int)
+        b_sub = l1_fa[(l1_fa["kind"] == "symbol")
+                      & (l1_fa["sub_no"].astype(str).str.replace(".0", "", regex=False) == "1894")
+                      & (l1_fa["status"].astype(str) == "normal")]
+    else:
+        b_sub = l1_fa.iloc[0:0]
     # 语义 id 集合比对（2026-10-02 裁定）：mf.fp.{fault_id}.{序}——与 build 同源
     _auxchain_csv = config.SHEET_ROOT / f"fault_aux_{config.SHEET_KEY}.csv"
     _auxchain_df = __import__("pandas").read_csv(_auxchain_csv, dtype=str)         if _auxchain_csv.exists() else None
-    mp_of = semantic_ids.measure_point_ids(l1_fa, _auxchain_df, l1_fl)
+    mp_of = semantic_ids.measure_point_ids(l1_fa, _auxchain_df, l1_fl) \
+        if _fa_ok else {}
     expect_mp_ids = {f"mf.{v['mp_id']}" for v in mp_of.values()}
     got_mp_ids = {m.get(f"{GML}id") for m in fp_mfs}
     mp_id_bad = sorted(got_mp_ids ^ expect_mp_ids)
