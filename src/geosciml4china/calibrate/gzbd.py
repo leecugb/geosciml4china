@@ -234,6 +234,40 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     # ---------- 数据加载 ----------
     bounds = load_source_layer(str(sh.root), "LDZOFBA002.WL", graphic=False)
 
+    # 图形通道票（2026-10-16 路线1：线型→接触语义接线）——界线线型经
+    # pymapgis 2.4.0 全线可读（@22 u16）；注册表 line_style_semantics_
+    # <key>.json {"linetype_semantics": {"16": "岩性过渡渐变界线", ...}}——
+    # xj115 挖掘 ≥85% 纯度族入册（16→43 96%/17→04 87%/38→10 94%/4→10 89%/
+    # 10→10 87%/110/148→10 100%），per-sheet 可改可清；默认空=零行为。
+    # 图面绘制样式=制图员对接触类型的图面断言，作数据通道票 +2（消融键
+    # style）；专属语义分支（重合/岩相/43/60/16 三检）上游已 continue，
+    # 本票只参与通用级联票池。
+    _lt_map = {}
+    for _lp in (sh.root / "data" / f"line_style_semantics_{sh.key}.json",
+                sh.root / f"line_style_semantics_{sh.key}.json"):
+        if _lp.exists():
+            try:
+                _lt_map = (json.loads(_lp.read_text(encoding="utf-8"))
+                           .get("linetype_semantics", {}))
+            except Exception:
+                _lt_map = {}
+            break
+    _ABLATE = frozenset(x.strip() for x in
+                        os.environ.get("G4C_ABLATE", "").split(",")
+                        if x.strip())
+    _lt_by_src = {}
+    if _lt_map:
+        try:
+            _bg = load_source_layer(str(sh.root), "LDZOFBA002.WL",
+                                    graphic=True)
+            if "linetype" in _bg.columns and "_src_id" in _bg.columns:
+                _lt_by_src = {int(a): int(b) for a, b in
+                              zip(_bg["_src_id"], _bg["linetype"])}
+                print(f"   线型图形通道: 注册 {len(_lt_map)} 型 / "
+                      f"幅内 {len(_lt_by_src)} 界线带型")
+        except Exception as _e:
+            print(f"   ⚠ 图形参数装载失败（{_e}）——线型票通道跳过")
+
     code2name, code2layer = {}, {}
     polys = []
     for fname, tag in (("LDZOFBB001.WP", "沉积"), ("LDZOFBB003.WP", "侵入"),
@@ -1182,6 +1216,19 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
             # 101/中位 398、01 码 95%分位 101，≥200 全幅仅 8 段。
             exp, cname, rpair = {"04", "24"}, \
                 _refine_unconformity(gz, "不整合接触"), "(间断通则)"
+        elif "style" not in _ABLATE and                 _lt_map.get(str(_lt_by_src.get(idx, ""))):
+            # 线型图形语义分支（2026-10-16 路线1）：制图样式的接触类型
+            # 断言——xj115 挖掘 ≥85% 纯度注册（line_style_semantics_<key>.
+            # json）；级联末位正规则（地质先验全部不命中才轮到图面样式
+            # 断言）——期望码/语义双出口，核验+发现双向（gz∈exp 标定通过
+            # /否则分歧登记，证据=线型注册语义）
+            _lt0 = _lt_by_src.get(idx)
+            _sem0 = _lt_map.get(str(_lt0))
+            _CT2GZ0 = dict(CT2GZBD)
+            _CT2GZ0.setdefault("岩性过渡渐变界线", {"43"})
+            exp = set(_CT2GZ0.get(_sem0, set()))
+            cname = _sem0
+            rpair = f"(线型图形语义:{_lt0}→{'/'.join(sorted(exp))})"
         else:
             # 整合接触反向判别（2026-10-11 用户裁定·七项排除全规格）：
             # **无断层接触证据 ∧ 无推测地质界线证据 ∧ 无水体、冰雪区证据 ∧
