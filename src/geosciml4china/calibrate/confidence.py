@@ -33,10 +33,10 @@ CONFIDENCE_SCHEMA = "geosciml4china/codebook-confidence/v1"
 def _settle(df: pd.DataFrame, col: str, pending_kw=(), fallback_kw=()):
     """返回 (established, pending, fallback) 计数。pending/fallback 互斥优先。"""
     s = df[col].astype(str)
-    pend = s.apply(lambda v: any(k in v for k in pending_kw)) if pending_kw \
-        else pd.Series(False, index=df.index)
-    fall = s.apply(lambda v: any(k in v for k in fallback_kw)) if fallback_kw \
-        else pd.Series(False, index=df.index)
+    pend = (s.apply(lambda v: any(k in v for k in pending_kw)).astype(bool)
+            if pending_kw else pd.Series(False, index=df.index, dtype=bool))
+    fall = (s.apply(lambda v: any(k in v for k in fallback_kw)).astype(bool)
+            if fallback_kw else pd.Series(False, index=df.index, dtype=bool))
     est = ~(pend | fall)
     return int(est.sum()), int(pend.sum()), int(fall.sum())
 
@@ -74,7 +74,11 @@ def _band_counts(df: pd.DataFrame) -> dict:
 
 def _domain_csv(root: Path, verdict_col: str, pending_kw=(), fallback_kw=(),
                 extra: dict | None = None) -> dict | None:
-    df = pd.read_csv(root, dtype=str)
+    try:
+        df = pd.read_csv(root, dtype=str)
+    except pd.errors.EmptyDataError:
+        # 空域件容忍（2026-10-08 新疆115 泛化：无该域产出的幅返回 None）
+        return None
     est, pend, fall = _settle(df, verdict_col, pending_kw, fallback_kw)
     out = {
         "total": int(len(df)),
@@ -235,8 +239,13 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
     p = root / f"_fossil_calibration_{sheet_key}.csv"
     if p.exists():
         domains["fossils"] = _domain_csv(p, "verdict", pending_kw=("违反",))
-        _dff = pd.read_csv(p, dtype=str)
-        sub = _dff[_dff["verdict"].astype(str).str.contains("违反", regex=True)]
+        try:
+            _dff = pd.read_csv(p, dtype=str)
+        except pd.errors.EmptyDataError:
+            _dff = pd.DataFrame()
+        sub = (_dff[_dff["verdict"].astype(str).str.contains("违反", regex=True)]
+               if len(_dff) and "verdict" in _dff.columns
+               else _dff.iloc[0:0])
         if len(sub):
             conflicts["fossils"] = [
                 {"idx": int(r["idx"]), "category": str(r.get("category") or ""),
@@ -269,7 +278,65 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         an = root / f"_fault_aux_anomalies_{sheet_key}.csv"
         if an.exists():
             domains["aux_points"]["anomaly_register"] = an.name
-    # 辅助点判别裁决在三联体件（_fault_triplets_<key>.csv）——
+            # 编图噪声/系统性编图偏差登记（2026-10-11 用户裁定：距离约束判
+            # 定的脱线点记入置信度文件——两级分类逐条转录）
+            try:
+                _adf2 = pd.read_csv(an, dtype=str)
+                if "status" in _adf2.columns:
+                    for _cls, _key, _note in (
+                            ("editing_noise", "editing_noise",
+                             "编图噪声（孤立脱线点，超 500m 测量带上限）——"
+                             "允许极少数存在"),
+                            ("systematic_deviation", "systematic_deviation",
+                             "系统性编图偏差（码群主体离散脱线，不属断层辅助"
+                             "点/性质点）")):
+                        _nz = _adf2[_adf2["status"] == _cls]
+                        if len(_nz):
+                            domains["aux_points"][_key] = {
+                                "total": int(len(_nz)),
+                                "note": _note + "——已出辅助点池",
+                                "items": _nz.to_dict("records"),
+                            }
+            except Exception:
+                pass
+        # 五类合法集核验登记（2026-10-11 用户裁定：超出五类的辅助点=未遵循
+        # 国标、超出解析能力——记入置信度文件交裁定）
+        ns = root / f"_fault_aux_nonstandard_{sheet_key}.csv"
+        if ns.exists():
+            try:
+                _ndf = pd.read_csv(ns, dtype=str)
+                if len(_ndf):
+                    domains.setdefault("aux_points", {})["nonstandard_five_class"] = {
+                        "total": int(len(_ndf)),
+                        "note": "超出五类合法集（上盘运动方向/倾向指示/走滑钩·左行"
+                                "/走滑钩·右行/倾角注记）——未遵循国标、超出解析能力",
+                        "items": _ndf.to_dict("records"),
+                    }
+            except Exception:
+                pass
+        # 不解析登记（2026-10-13 用户裁定 K46C002002 1539/238 孤点案）：
+        # 孤立点不做解析、codebook 语义留空值、存置信度文件——逐条转录
+        # 符号码排除册中 role=no_parse 的裁定条目
+        _rp = root / "data" / f"fault_aux_code_semantics_{sheet_key}.json"
+        if _rp.exists():
+            try:
+                _reg = json.loads(_rp.read_text(encoding="utf-8"))
+                _reg = _reg.get("codes", _reg)
+                _np = [{"code": str(c), "points": e.get("points", []),
+                        "reason": e.get("reason", ""),
+                        "adjudicator": e.get("adjudicator", ""),
+                        "date": e.get("date", "")}
+                       for c, e in _reg.items()
+                       if isinstance(e, dict) and e.get("role") == "no_parse"]
+                if _np:
+                    domains.setdefault("aux_points", {})["no_parse"] = {
+                        "total": len(_np),
+                        "note": "不解析（裁定）：孤立点不做解析、codebook 语义留"
+                                "空值——点留池计量，不赋任何角色语义",
+                        "items": _np,
+                    }
+            except Exception:
+                pass
     # 聚合其模式/裁决分布（逆断层产状点/正断层产状点/存疑）
     tp = root / f"_fault_triplets_{sheet_key}.csv"
     if tp.exists():
@@ -308,16 +375,20 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
         _cbs = (cb or {}).get("codes", {}).get("GZBD") or {}
 
         def _norm_sem(v):
-            s = str(v or "")
+            # NaN 防空（dtype=str 读空单元格仍可能产出 nan）：空语义归 ""
+            s = "" if pd.isna(v) else str(v)
             s = s.split("（")[0].strip()
             return {"角度不整合界线": "角度不整合",
                     "平行不整合界线": "平行不整合"}.get(s, s)
-        _match = _dev = _contra = 0
+        _match = _dev = _contra = _unc = 0
         _dev_segs = []
         for _, r in _dfb.iterrows():
             _seg = _norm_sem(r.get("标定语义"))
-            _cod = _semof({"codes": {"GZBD": _cbs}}, "GZBD",
-                          r.get("GZBD_eff") or r.get("GZBD原码"))
+            # 对称归一（2026-10-16 A3）：codebook 侧同过 _norm_sem——此前
+            # 仅段侧归一，注释变体对（断层接触 vs 断层接触（断裂界线））
+            # 被误计为偏差（y1 626 偏差中 593 条为此类），虚高偏差数
+            _cod = _norm_sem(_semof({"codes": {"GZBD": _cbs}}, "GZBD",
+                                    r.get("GZBD_eff") or r.get("GZBD原码")))
             _st = str(r.get("状态") or "")
             if _st == "分歧未裁定":
                 _contra += 1
@@ -325,7 +396,9 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
                                   "segment_semantic": _seg,
                                   "codebook_semantic": _cod,
                                   "class": "contradiction"})
-            elif _seg and _cod and _seg != _cod:
+            elif not _seg or not _cod:
+                _unc += 1    # 语义未建立（未覆盖/码未解析）——不称匹配
+            elif _seg != _cod:
                 _dev += 1
                 _dev_segs.append({"idx": int(r["idx"]),
                                   "segment_semantic": _seg,
@@ -337,6 +410,7 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
             "total": int(len(_dfb)),
             "match": _match, "deviation": _dev,
             "contradiction": _contra,   # 分歧未裁定=超阈保留观测
+            "uncovered": _unc,          # 语义未建立（未覆盖/码未解析）
             "segments": _dev_segs,
         }
 
@@ -424,6 +498,9 @@ def build_confidence(sheet_key: str, out_dir=None) -> dict:
 def summary(conf: dict) -> str:
     lines = [f"codebook_confidence {conf['sheet']}（{conf['codebook_confidence']}）"]
     for dom, d in conf["domains"].items():
+        if d is None:
+            lines.append(f"  {dom}: 空域（无产出件）")
+            continue
         cov = d.get("coverage_pct")
         lines.append(f"  {dom}: total={d.get('total')}"
                      + (f" 覆盖率={cov}%" if cov is not None else "")

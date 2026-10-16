@@ -158,13 +158,19 @@ def test_codebook_quality_and_provenance(cf_root):
 
 
 def test_measurement_error_terms(cf_root):
-    """测量误差项（2026-10-08 用户建模裁定）：ε₁ 界线（codebook 理论 vs
-    段级实测语义偏差）+ ε₂ 断层（kin 一致性 + aux 证据冲突）。"""
+    """语义差异指标 ε₁ 界线（codebook 理论 vs 段级实测语义偏差）：
+    对称归一（2026-10-16 A3）——注释变体对不算偏差、语义未建立归
+    uncovered；+ ε₂ 断层（kin 一致性 + aux 证据冲突）。"""
     conf = build_confidence("cfu")
     me = conf["measurement_error"]
     b = me["boundary_deviation"]
     assert b["contradiction"] == 1          # 分歧未裁定（idx 2）= 超阈保留
-    assert b["match"] >= 1 and b["deviation"] >= 1
+    # A3 对称归一：idx3 段侧「断层接触」× codebook 侧「断层接触（断裂
+    # 界线）」= 注释变体对 → 匹配（旧口径误计偏差）；idx4 标定语义为空 →
+    # uncovered（不称匹配）。合计 3+0+1+1=5。
+    assert b["match"] == 3
+    assert b["deviation"] == 0
+    assert b["uncovered"] == 1
     segs = {s["idx"]: s for s in b["segments"]}
     assert segs[2]["class"] == "contradiction"
     f = me["fault_kinematic_deviation"]
