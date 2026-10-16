@@ -1,9 +1,20 @@
 # -*- coding: utf-8 -*-
 """断层辅助点实体链判别（geosciml4china.calibrate 第 1.5 域，2026-09-29 泛化优化）。
 
+**总纲（2026-10-11 用户裁定）**：准确性优先——可以保留疑问，不能冒进错误
+解析。本域一切判别遵循：证据不足/角色歧义/证据冲突/oracle 缺省 → 降级
+疑问态（存疑/无法解析）并登记，疑问的解除只有补证据或用户裁定两路。
+
 **实体基础原则（用户裁定）**：辅助点归属判别建立在断层实体基础上——b/a 归属、
 弧长、三联体均以实体链（而非单段）为上下文：跨段三元组恢复成组、fault_id 取
 实体号（F%03d）、实体级 aux 汇总随之可写回。
+
+**距离成员资格原则（2026-10-11 用户裁定）**：断层辅助点/性质点的识别是解析
+断层性质的关键——辅助点/性质点**必须位于断层一定距离范围内**；分布过于离
+散偏离断层的点**不应归为断层辅助点/性质点**。落地：编图噪声距离闸——距归
+属断层链 >500m（钩线带顶=国标样式最大合法测量距离）者无测量角色，归编图
+错误项（editing_noise）出池并记入置信度文件；符号码排除册（码级裁定，如
+L45C003004-1630 飞来峰/构造窗位置标记案）与之互补。
 
 判别链（全部裁定在案）：
   · b/a 归属：实体链折线上最近点（米制）→ 弧长 s、垂直距、侧别（<20m 噪声→None）
@@ -21,6 +32,7 @@ CLI: python -m geosciml4china.calibrate.auxchain --sheet <key> [--out DIR]
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import re
 import sys
@@ -29,6 +41,8 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import LineString, MultiLineString, Point
+from shapely.ops import nearest_points as _np_pts
+from shapely.ops import substring as _substring
 from shapely.ops import transform as _st, unary_union
 
 # pymapgis 完整地质栈导入守卫（2026-10-04 CI 泛化：PyPI mapgis2shp 仅含
@@ -44,6 +58,7 @@ except ModuleNotFoundError:  # PyPI-minimal 环境
     pair_dip_annotations = get_profile = None
 
 from ..sheets import get_sheet
+from .auxconv import CONVENTIONS as _AUX_CONV, earn_aux_codes
 from .registry import load_gzeeb_semantics, reverse_codes
 
 SIDE_NOISE_M = 20.0      # 侧别噪声阈值（点垂直距<20m 侧别不可判）
@@ -53,9 +68,11 @@ B_BAND_LO_FRAC = 0.61    # b(1894) 带下限（2026-09-30 用户裁定，b1722 �
                          # 初始 -60%（失真中位口径）；发现 A 度量归真后中位数
                          # 225.5→276.2，b1722（109.4m）被顶出 1.1m——同日裁定
                          # 「b1722 不能出带」兑现为 -61%（107.7m，真值口径）
-A_BAND_LO_FRAC = 0.35    # a(1281) 带下限 -35%（2026-09-30 用户裁定，a1849 案：
-                         # 68.8m 段内垂直足、侧别有效，下限侧首个合法化案例；
-                         # 取 -35%（62.5m）兼容发现 A 修复后真值 79.6m 双口径同带籍）
+A_BAND_LO_FRAC = 0.40    # a(1281) 带下限 -40%（2026-10-13 用户裁定，
+                         # K46C001003-a1747 案：71.5m 贴线 tick 合法——
+                         # 「1747应参与组合，下调带下限使得其入带」；
+                         # 旧值 -35%（2026-09-30 a1849 案 62.5m）下调后
+                         # 库尔干 59 组三联体逐字节回归验证在案）
 B_BAND_HI_FRAC = 0.4     # b(1894) 带上限 +40%（2026-09-30 用户裁定，b1745 案：
                          # 夹缝点——F052 80.3m 太近带外、F129 291.3m 擦边带外；
                          # 取 +40%（315.7m）兼容发现 A 修复后真值 305.3m 双口径同带籍）
@@ -83,6 +100,21 @@ def _band_limits(sub_no: str, med: float) -> tuple[float, float]:
     if str(sub_no) == "1281":
         return (med * (1 - A_BAND_LO_FRAC), med * (1 + A_BAND_HI_FRAC))
     return (med * (1 - B_BAND_LO_FRAC), med * (1 + B_BAND_HI_FRAC))
+
+
+def _dip_az_of(sn_str: str, ang, prof, conv_map):
+    """按码换算倾向方位（2026-10-12 变体约定泛化）：箭头变体码用其
+    注册/挣得约定 (sense, base)——θ=(base−φ)%360（CCW）或 (base+φ)%360
+    （CW）；正典 b 码及缺省走 P-AUX-REMAP 裁定公式
+    dip_az=(360−φ+offset)%360（offset=prof.b_dip_offset_deg）。"""
+    if ang is None:
+        return None
+    c = conv_map.get(sn_str)
+    if c is not None:
+        sense, base = c
+        return round((base - ang) % 360.0 if sense == "CCW"
+                     else (base + ang) % 360.0, 1)
+    return round((360.0 - ang + float(prof.b_dip_offset_deg)) % 360.0, 1)
 
 
 def _chain_of(seg_geoms: list, seg_idx: list[int]) -> LineString | None:
@@ -244,6 +276,40 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     outdir.mkdir(parents=True, exist_ok=True)
 
     wt = gpd.read_file(sh.root / "geojson" / "L0" / "LDZOFBB099.WT.geojson")
+    # 线层合成点注入（2026-10-13 用户裁定链：线对中心/杆中点合成 a/b 点融入
+    # 点层同权判别——K46C001003 案）。合成表由线层配对生成器产出
+    # （_line_aux_synth_<key>.csv）；_src_id 接续原生位置序号保 wt.iloc 兼容；
+    # b 的 angle 按 dip_az 反演回填（与 _dip_az_of 公式互逆）；
+    # FEATUREID=LINE_SYNTH_* 溯源，构件明细见合成表 components 列
+    _ls = sh.root / f"_line_aux_synth_{sh.key}.csv"
+    if _ls.exists():
+        _sdf = pd.read_csv(_ls)
+        _n0 = len(wt)
+        _syn_rows = []
+        for _k, _sr in _sdf.iterrows():
+            _is_b = str(_sr["role"]) == "b"
+            _dip = _sr.get("dip_az")
+            _ang = ((360.0 - float(_dip) + float(prof.b_dip_offset_deg)) % 360.0
+                    if _is_b and pd.notna(_dip) and str(_dip).strip() else 0.0)
+            _syn_rows.append({
+                "_src_id": _n0 + _k,
+                "symbol_no": 1894 if _is_b else 1281,
+                "point_type": 1, "angle": _ang,
+                "height": 1.5 if _is_b else 1.2, "width": 1.5 if _is_b else 1.2,
+                "spacing": None, "CHFCEC": prof.aux_filter, "CHFCED": "",
+                "CHFCAC": "", "FEATUREID": f"LINE_SYNTH_{int(_sr['synth_id'])}",
+                "ID": "", "_src_file": "LDZOFBB098.WL",
+                "geometry": Point(float(_sr["lon"]), float(_sr["lat"])),
+            })
+        if _syn_rows:
+            wt = pd.concat(
+                [wt, gpd.GeoDataFrame(_syn_rows, crs=wt.crs,
+                                      geometry="geometry")],
+                ignore_index=True)
+            print(f"线层合成点注入: {len(_syn_rows)} 点"
+                  f"（a {sum(1 for r in _syn_rows if r['symbol_no'] == 1281)} / "
+                  f"b {sum(1 for r in _syn_rows if r['symbol_no'] == 1894)}，"
+                  f"src=line_pair，构件表 {_ls.name}）")
     fl = gpd.read_file(sh.root / "geojson" / "L1" / "faults.geojson").sort_values("_src_id")
     fl = fl.reset_index(drop=True)
     ent_csv = sh.root / (prof.entities_csv or "fault_entities.csv")
@@ -267,6 +333,52 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         return Point(pt.x * LON_M, pt.y * LAT_M)
 
     aux_cat = wt[wt["CHFCEC"].astype(str) == prof.aux_filter]
+    # 符号码排除注册册（2026-10-11 用户裁定 L45C003004-1630 案）：某符号码
+    # 经裁定不属断层辅助要素（如飞来峰/构造窗位置标记——脱线远距点）时，
+    # 注册册 role=exclude 整码排除出辅助点池，不误消费、不改源数据
+    _code_reg = {}
+    for _rp in (sh.root / "data" / f"fault_aux_code_semantics_{sh.key}.json",
+                sh.root / f"fault_aux_code_semantics_{sh.key}.json"):
+        if _rp.exists():
+            _code_reg = json.loads(_rp.read_text(encoding="utf-8"))
+            _code_reg = _code_reg.get("codes", _code_reg)  # 解 codes 包装
+            break
+    _excl = {str(c) for c, e in _code_reg.items()
+             if isinstance(e, dict) and e.get("role") == "exclude"}
+    # 正向注册（2026-10-12 用户裁定 1519 案）：role=tick_variant 且
+    # family=1281 的符号码=双短线变体——归一为 a 码 1281 消费
+    # （sub_no_raw 保原码溯源；其旋转约定 E-CCW 经全舰队 ⊥ 实测挣得，
+    # a 侧判别只消费 side/dist、dip_az 不参与，无需角度变换——
+    # 约定不跨幅继承，逐幅注册册生效）
+    _tick_var = {str(c) for c, e in _code_reg.items()
+                 if isinstance(e, dict) and e.get("role") == "tick_variant"
+                 and str(e.get("family")) == "1281"}
+    if _tick_var:
+        print(f"   双短线变体注册：{sorted(_tick_var)} 归一为 1281 入 a 池")
+    # 用户册箭头变体注册（role=arrow_variant, family=1894；约定缺省 N-CCW）
+    _arrow_var = {str(c): str(e.get("rotation_convention", "N-CCW"))
+                  for c, e in _code_reg.items()
+                  if isinstance(e, dict) and e.get("role") == "arrow_variant"
+                  and str(e.get("family")) == "1894"}
+    if _arrow_var:
+        print(f"   倾向箭头变体注册：{sorted(_arrow_var)} 归一为 1894 入 b 池")
+    _conv_map = {c: _AUX_CONV.get(cv, ("CCW", 0.0))
+                 for c, cv in _arrow_var.items()}
+    # 不解析册（2026-10-13 用户裁定 K46C002002 1539/238 孤点案）：孤立点不做
+    # 解析、codebook 语义留空值——点留池（距离/侧别照常计量），五类闸不再
+    # 报警（已裁定态，区别于 exclude 出池/noise 编图错误）
+    _no_parse = {str(c) for c, e in _code_reg.items()
+                 if isinstance(e, dict) and e.get("role") == "no_parse"}
+    # 已裁定注册码全集（任何角色）——歧义闸同族扫描与五类合法集核验的
+    # 共同豁免集：裁定落地即语义已定，不重复立案（2026-10-13）
+    _adjud = {int(c) for c in _code_reg if str(c).lstrip("-").isdigit()}
+    if _no_parse:
+        print(f"   不解析册：{sorted(_no_parse)} 语义置空留池（裁定）")
+    if _excl:
+        _n0 = len(aux_cat)
+        aux_cat = aux_cat[~aux_cat["symbol_no"].astype(str).isin(_excl)]
+        print(f"   符号码排除注册：{sorted(_excl)} 整码出辅助点池"
+              f"（{_n0 - len(aux_cat)} 点排除，{len(aux_cat)} 点留存）")
     # 异常册装载（2026-10-02 泛化修复——jws 全管线测试暴露）：图幅裁定
     # confirmed_error 点（1700/1701 弃对剔除等）不参与判别/配对/钩识别
     _anom_ids = set()
@@ -296,43 +408,211 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     if _anom_ids:
         print(f"异常册排除: {len(_anom_ids)} 点（confirmed_error 裁定）")
 
+    # 重复数字化剔除（2026-10-12 用户裁定规则化）：同码同坐标（1e-9°≈0.1mm
+    # 级全等）的重复采集点仅留首现（_src_id 最小），其余出池+审查册登记；
+    # 文本点键含注记内容防误伤（同位异文不剔）。确定性规则、逐 run 重算
+    # 幂等，与噪声距离闸同构；K46C002002 F003 区 b1708≡1716 /
+    # a1709≡1717 / a1710≡1718 三对同位重复案
+    _dup_notes = []
+    _seen = {}
+    for _, _r in aux_cat.iterrows():
+        if _r.geometry is None:
+            continue
+        _ix = int(_r["_src_id"])
+        _sn0 = int(_r["symbol_no"])
+        _key = (_sn0, round(float(_r.geometry.x), 9),
+                round(float(_r.geometry.y), 9),
+                str(_r.get("CHFCED") or "") if _sn0 == 0 else "")
+        if _key in _seen:
+            _dup_notes.append(
+                {"aux_idx": _ix, "sub_no": _sn0,
+                 "note": f"重复数字化剔除：与 #{_seen[_key]} 同码同坐标"
+                         f"（保留首现，2026-10-12 规则）"})
+        else:
+            _seen[_key] = _ix
+    if _dup_notes:
+        _dup_ids = {n["aux_idx"] for n in _dup_notes}
+        aux_cat = aux_cat[~aux_cat["_src_id"].astype(int).isin(_dup_ids)]
+        print(f"重复数字化剔除: {len(_dup_notes)} 点（同码同坐标留首现）")
+
+    # 变体码约定扫描自动挣得（2026-10-12 用户裁定链产品化，通道 B）：
+    # 池中未解析符号码经 8 约定扫描+几何一致性判定挣得 tick/arrow 身份
+    # （inferred 级，机挣册 fault_aux_code_earned_<key>.json 登记）；
+    # 红线——正典码在场禁变体化（防 1283/1281 歧义闸旁路）、约定不跨幅
+    # 继承、用户册条目跳过不挣、证据不足存疑留池
+    _tick_e, _arrow_e, _conv_e = earn_aux_codes(
+        sh, aux_cat, chains_m, _pm, _code_reg, prof)
+    _tick_var |= _tick_e
+    _arrow_var.update(_arrow_e)
+    _conv_map.update(_conv_e)
+
+    # 字形兜底分类（2026-10-16 字形几何通道，glyphcls 模块）：未注册且
+    # 未被行为挣得（通道 B）的符号码，经 SLIB 字形结构分类归一 a/b 池
+    # （double_tick→1281 族 / strike_dip→1894 族，旋转约定缺省 N-CCW
+    # 同 arrow_var 缺省）——证据优先级：用户册 > 行为挣得 > 字形结构；
+    # sub_no_raw 保原码溯源。注册 glyph_semantics_<key>.json 的 "lib"
+    # 指向符号库（缺省幅根 SLIB/Subgraph.lib）；幅无库整通道跳过（退化
+    # 现行符号码注册表，同 lineaux 缺席语义）。非产状类（closed_marker
+    # /single_stroke/complex）不入池，打印备查。
+    _gcfg = {}
+    for _gp in (sh.root / "data" / f"glyph_semantics_{sh.key}.json",
+                sh.root / f"glyph_semantics_{sh.key}.json"):
+        if _gp.exists():
+            try:
+                _gcfg = json.loads(_gp.read_text(encoding="utf-8"))
+            except Exception:
+                _gcfg = {}
+            break
+    _glp = Path(_gcfg["lib"]) if _gcfg.get("lib")         else sh.root / "SLIB" / "Subgraph.lib"
+    if (_gcfg.get("lib") or _glp.exists()) and _glp.exists():
+        try:
+            from .glyphcls import load_glyph_classes
+            from pymapgis.slib import SubgraphLib
+            _lib = SubgraphLib(str(_glp))
+            _unk = sorted({str(s) for s in aux_cat["symbol_no"].unique()}
+                          - {str(prof.b_symbol_raw), "1281"}
+                          - set(_code_reg) - set(_tick_var)
+                          - set(_arrow_var))
+            if _unk:
+                _cls = load_glyph_classes(_lib, _unk)
+                _gt = {c for c, cl in _cls.items() if cl == "double_tick"}
+                _ga = {c for c, cl in _cls.items() if cl == "strike_dip"}
+                _tick_var |= _gt
+                for c in _ga:
+                    _arrow_var[c] = "N-CCW"
+                    _conv_map.setdefault(c, _AUX_CONV.get("N-CCW",
+                                                          ("CCW", 0.0)))
+                if _gt or _ga:
+                    print(f"   字形兜底分类: {sorted(_gt)} →a 池 / "
+                          f"{sorted(_ga)} →b 池（SLIB 结构证据）")
+                _gother = {c: cl for c, cl in _cls.items()
+                           if cl not in ("double_tick", "strike_dip")}
+                if _gother:
+                    print(f"   字形识别非产状类 {len(_gother)} 码（不入池备查）: "
+                          f"{sorted(_gother.items())[:5]}")
+        except Exception as _e:
+            print(f"   ⚠ 字形兜底分类跳过（{_e}）")
+
+    # 点级段锁定册（2026-10-12 用户裁定 K46C002002-a1710 案）：双股汇聚带
+    # 实体链最近距离可能被邻股误吸（1710 对 seg137 26.8m 贴线带外，对本属股
+    # seg153 139.7m 带内）——seg_lock 点：距离/侧别按锁定段计量（侧别约定与
+    # _arc_side 同源：链切向×点向），弧位经锁定段垂足投回实体链。点级裁定
+    # 数据件，不改源数据
+    _pt_ovr = {}
+    _pair_ovr = {}
+    _op = sh.root / "data" / f"fault_aux_point_overrides_{sh.key}.json"
+    if _op.exists():
+        _od = json.loads(_op.read_text(encoding="utf-8"))
+        _pt_ovr = _od.get("points", {})
+        _pair_ovr = _od.get("pairs", {})
+        if _pt_ovr:
+            print(f"   点级段锁定册：{sorted(_pt_ovr)} 按锁定段计量")
+        if _pair_ovr:
+            print(f"   组合锁定册：{sorted(_pair_ovr)} 裁定组合")
+    _seg2fid = {int(_er["seg_idx"]): str(_er["fault_id"])
+                for _, _er in ent.iterrows()}
+
+    def _seg_measure(_sg, pt, pt_m):
+        """段级计量（seg_lock 册/汇聚带带籍恢复共用）：距离按指定段、侧别
+        与 _arc_side 同约定（链切向×点向，防链反向段侧别翻转）、弧位经
+        段垂足投回实体链。段不属任何实体 → None。"""
+        fid = _seg2fid.get(int(_sg))
+        if fid is None:
+            return None
+        _segm = fl_m.iloc[int(_sg)]
+        dm = float(_segm.distance(pt_m))
+        _fp = _segm.interpolate(_segm.project(pt_m))
+        ch = chains[fid]
+        _fpd = Point(_fp.x / LON_M, _fp.y / LAT_M)
+        s_, _, _ = _arc_side(ch, _fpd, LON_M, LAT_M)
+        _d0 = ch.project(_fpd)
+        _e = 1e-9
+        _p1 = ch.interpolate(min(ch.length, _d0 + _e))
+        _p2 = ch.interpolate(max(0.0, _d0 - _e))
+        _tx = (_p1.x - _p2.x) * LON_M
+        _ty = (_p1.y - _p2.y) * LAT_M
+        _px = (pt.x - _fpd.x) * LON_M
+        _py = (pt.y - _fpd.y) * LAT_M
+        dperp = math.hypot(_px, _py)
+        side = None if dperp < SIDE_NOISE_M else (
+            1 if _tx * _py - _ty * _px > 0 else -1)
+        return dm, fid, s_, side, dperp
+
+    review = list(_dup_notes)  # 审查册（含重复剔除登记；行循环段锁定登记
+    # 亦用——提前至行循环前，2026-10-12）
     rows = []
     for _, r in aux_cat.iterrows():
         idx = int(r["_src_id"])
         sn = int(r["symbol_no"])
         pt = r.geometry
-        best = None
         pt_m = _pm(pt)
-        for fid, ch in chains_m.items():
-            dm = ch.distance(pt_m)
-            if best is None or dm < best[0]:
-                best = (dm, fid)
-        dm, fid = best
-        ch = chains[fid]
-        s_, side, dperp = _arc_side(ch, pt, LON_M, LAT_M)
-        # b 最近段（build 键接/互验用）——fl_m/pt_m 均为米制（Finding A
-        # 修复），GeoSeries 仅 CRS 元数据未更新致告警；距离计算正确，
-        # 局部静默该元数据告警（2026-10-05 泛化提速清理）
-        import warnings as _w
-        with _w.catch_warnings():
-            _w.simplefilter("ignore")
-            _seg = int(fl_m.distance(pt_m).idxmin())
+        _ovr = _pt_ovr.get(str(idx))
+        _m = None
+        if _ovr is not None and _ovr.get("seg_lock") is not None:
+            _m = _seg_measure(int(_ovr["seg_lock"]), pt, pt_m)
+        if _m is not None:
+            # 段级锁定（裁定）：距离/侧别按锁定段，弧位经锁定段垂足投回链
+            dm, fid, s_, side, dperp = _m
+            _seg = int(_ovr["seg_lock"])
+            _mth = "seg_lock"
+            review.append({"aux_idx": idx, "sub_no": sn,
+                           "note": f"段级锁定（裁定）：锁定 seg{_seg}，距离 "
+                                   f"{dm:.1f}m 按锁定段计量（实体链最近 "
+                                   f"{float(chains_m[fid].distance(pt_m)):.1f}m"
+                                   f" 邻股误吸解除）"})
+        else:
+            best = None
+            for fid, ch in chains_m.items():
+                dm = ch.distance(pt_m)
+                if best is None or dm < best[0]:
+                    best = (dm, fid)
+            dm, fid = best
+            ch = chains[fid]
+            s_, side, dperp = _arc_side(ch, pt, LON_M, LAT_M)
+            # b 最近段（build 键接/互验用）——fl_m/pt_m 均为米制（Finding A
+            # 修复），GeoSeries 仅 CRS 元数据未更新致告警；距离计算正确，
+            # 局部静默该元数据告警（2026-10-05 泛化提速清理）
+            import warnings as _w
+            with _w.catch_warnings():
+                _w.simplefilter("ignore")
+                _seg = int(fl_m.distance(pt_m).idxmin())
+            _mth = "chain_nearest"
         _ang = float(r["angle"]) if str(r["angle"]).strip() else None
         rows.append({
             "aux_idx": idx, "kind": "symbol",
-            "sub_no": (1894 if sn == int(prof.b_symbol_raw) else sn),
+            "sub_no": (1894 if (sn == int(prof.b_symbol_raw)
+                                or str(sn) in _arrow_var)
+                       else (1281 if str(sn) in _tick_var else sn)),
             "angle": _ang, "dip": None, "fault_id": fid, "seg_idx": _seg,
-            # b 符号归一 1894（build 平面装配键；英吉沙 1851 正典化同构）
+            # b 符号归一 1894（build 平面装配键；英吉沙 1851 正典化同构）；
+            # 双短线变体注册码归一 1281（同构，2026-10-12 用户裁定）
             "sub_no_raw": sn,
             "dist_m": round(dm, 1), "arc_s": round(s_, 0),
             "side": side, "dperp_m": round(dperp, 1),
-            "method": "chain_nearest", "in_band": None,
+            "method": _mth, "in_band": None,
             "n_chains_band": None,  # 带内链数（归属歧义，裁定 2026-09-29）
             # 倾向方位（P-AUX-REMAP 裁定公式按幅：dip_az=(360−angle+offset)%360；
-            # offset=剖面 b_dip_offset_deg——库尔干 0（⊥ 验证在案）、英吉沙 180）
-            "dip_az": (round((360.0 - _ang + float(prof.b_dip_offset_deg)) % 360.0, 1)
-                       if _ang is not None else None),
+            # offset=剖面 b_dip_offset_deg——库尔干 0（⊥ 验证在案）、英吉沙 180）；
+            # 箭头变体码按其注册/挣得约定换算（_conv_map，2026-10-12）
+            "dip_az": _dip_az_of(str(sn), _ang, prof, _conv_map),
         })
+    if not rows:
+        # 空辅助点幅优雅退出（2026-10-08 新疆115 泛化：部分图幅无断层
+        # 辅助点类别——无 points 可判别；写空工件（带表头）供下游消费，
+        # 不崩溃不中断）
+        print(f"辅助点实体链判别: 0 点（{prof.aux_filter} 类目空）——跳过")
+        _cols = ["aux_idx", "kind", "sub_no", "angle", "dip", "fault_id",
+                 "seg_idx", "sub_no_raw", "dist_m", "arc_s", "side",
+                 "dperp_m", "method", "in_band", "n_chains_band", "dip_az"]
+        pd.DataFrame(columns=_cols).to_csv(
+            outdir / f"fault_aux_{sh.key}.csv", index=False,
+            encoding="utf-8-sig")
+        pd.DataFrame(columns=["fault_id", "src", "a1281", "a1894",
+                              "sides_1281", "side_1894", "span_m",
+                              "verdict", "form", "gzeeb_check"]).to_csv(
+            outdir / f"_fault_triplets_{sh.key}.csv", index=False,
+            encoding="utf-8-sig")
+        return {"n_aux": 0, "n_triplets": 0, "n_pairs": 0}
     assoc = pd.DataFrame(rows).sort_values("aux_idx")
 
     band, _med_of = {}, {}
@@ -344,6 +624,56 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         band[sn] = _band_limits(sn, med)
         _med_of[sn] = med
         print(f"距离带 {sn}: 中位 {med:.1f}m 带 [{band[sn][0]:.0f},{band[sn][1]:.0f}]")
+    # 汇聚带带籍恢复（2026-10-13 用户裁定规则）：点对最近段带外、但对同
+    # 实体其它段带内 → 判为该段所属（K46C002002-a1710 案规则化：seg137
+    # 26.8m 带外 / seg153 139.7m 带内）。守卫：仅 a/b 类（带籍定义域）；
+    # 仅同实体段（实体归属不变——实体基础原则不动，只正段级计量）；
+    # 唯一带内段才恢复（多候选存疑登记不恢复）；seg_lock 用户册点优先
+    _n_rec = _n_rec_amb = 0
+    for _idx in assoc[assoc["kind"] == "symbol"].index:
+        _sn = str(int(assoc.at[_idx, "sub_no"]))
+        if _sn not in band or str(assoc.at[_idx, "method"]) == "seg_lock":
+            continue
+        _lo, _hi = band[_sn]
+        _d0 = assoc.at[_idx, "dist_m"]
+        if _d0 is None or str(_d0).strip() in ("", "nan"):
+            continue
+        _d0 = float(_d0)
+        if _lo <= _d0 <= _hi:
+            continue
+        _fid = str(assoc.at[_idx, "fault_id"])
+        _aid = int(assoc.at[_idx, "aux_idx"])
+        _pt = wt.iloc[_aid].geometry
+        _pt_m = _pm(_pt)
+        _cands = []
+        for _sg in [int(x) for x in ent[ent["fault_id"] == _fid]["seg_idx"]]:
+            if _sg == int(assoc.at[_idx, "seg_idx"]):
+                continue
+            _m = _seg_measure(_sg, _pt, _pt_m)
+            if _m is not None and _lo <= _m[0] <= _hi:
+                _cands.append((_sg,) + _m)
+        if len(_cands) == 1:
+            _old_seg = int(assoc.at[_idx, "seg_idx"])
+            _sg, _dm, _fid2, _s2, _sd, _dp = _cands[0]
+            assoc.at[_idx, "dist_m"] = round(_dm, 1)
+            assoc.at[_idx, "arc_s"] = round(_s2, 0)
+            assoc.at[_idx, "side"] = _sd
+            assoc.at[_idx, "dperp_m"] = round(_dp, 1)
+            assoc.at[_idx, "seg_idx"] = _sg
+            assoc.at[_idx, "method"] = "seg_recover"
+            review.append({"aux_idx": _aid, "sub_no": int(_sn),
+                           "note": f"汇聚带带籍恢复（2026-10-13 规则）：对 "
+                                   f"seg{_old_seg} 带外 {_d0:.1f}m，对 seg{_sg} "
+                                   f"带内 {_dm:.1f}m——判为该段所属"})
+            _n_rec += 1
+        elif len(_cands) > 1:
+            _n_rec_amb += 1
+            review.append({"aux_idx": _aid, "sub_no": int(_sn),
+                           "note": f"带籍恢复存疑：同实体多段带内候选 "
+                                   f"{[c[0] for c in _cands]}——不恢复，保留疑问"})
+    if _n_rec or _n_rec_amb:
+        print(f"汇聚带带籍恢复: {_n_rec} 点（规则化）"
+              f"{' / 多候选存疑 ' + str(_n_rec_amb) + ' 点' if _n_rec_amb else ''}")
     assoc["dist_band_ok"] = [
         "" if (str(sn) not in band or (r_.dist_m is not None and
                                        band[str(sn)][0] <= float(r_.dist_m) <= band[str(sn)][1]))
@@ -384,7 +714,6 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                 _n_ambig_b += 1
     print(f"a 归属歧义（≥2 链带内）: {_n_ambig} 点 / b: {_n_ambig_b} 点（置信度降低）")
 
-    review = []  # 审查册提前初始化（中位数优先/配对隔离共用，2026-10-02）
     # 中位数最近优先（2026-10-02 用户裁定「接受中位数最近≠纯最近规则」）：
     # 带内多链归属时，取距离最接近类中位数的链（ID201 冻结原则「候选竞争
     # 接近平均距离优先，非单纯最近段」恢复）；纯最近链仅当中位数最近时保持。
@@ -531,9 +860,14 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     # 巴什库尔干均无→跳过，倾角留空）
     _aux_text = aux_cat[(aux_cat["symbol_no"].astype(int) == 0)
                         & (aux_cat["CHFCED"].astype(str).str.strip() != "")]
-    _fault_txt_cls = ("断层注释" if (wt["CHFCEC"].astype(str) == "断层注释").any()
-                      else "")
-    _fault_txt = wt[wt["CHFCEC"].astype(str) == _fault_txt_cls]         if _fault_txt_cls else wt.iloc[0:0]
+    # 断层类注记类目泛化（2026-10-13 K46C001003 案：「断层倾角」vs「断层注释」
+    # 类目词幅际变体——类目词字面主义与码值字面主义同戒）：凡含「断层」且
+    # 含 注释/倾角/注记 的类目皆入断层注记池（symbol_no=0 且 CHFCED 非空）
+    _fault_cls_mask = (wt["CHFCEC"].astype(str).str.contains("断层")
+                       & wt["CHFCEC"].astype(str).str.contains("注释|倾角|注记"))
+    _fault_txt = wt[_fault_cls_mask
+                    & (wt["symbol_no"].astype(int) == 0)
+                    & (wt["CHFCED"].astype(str).str.strip() != "")]
     if len(_aux_text) or len(_fault_txt):
         num_cat = pd.concat([_fault_txt, _aux_text])
         print(f"倾角注释池: 断层类 {len(_fault_txt)} + 辅助点类 {len(_aux_text)}"
@@ -543,6 +877,53 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                     if (wt["CHFCEC"].astype(str) == "产状注释").any() else "")
         num_cat = wt[wt["CHFCEC"].astype(str) == _num_cls]             if _num_cls else wt.iloc[0:0]
     pairs_rows, anomalies = [], []
+    # 编图噪声距离闸（2026-10-11 用户裁定「加入距离约束，排除此类编图噪声，
+    # 归入编图错误项，记入置信度文件」——L45C003004-1630 案机制化）：
+    # 辅助点距归属断层链超绝对上限 500m（钩线带顶=国标样式最大合法测量距
+    # 离）者无测量角色→编图错误项：整排出判别/配对/钩池（距离确定性闸，
+    # 无自引用振荡风险）+异常册登记 status=editing_noise（非 confirmed_error，
+    # 不触发次轮自排除——闸本身每轮确定性生效）；与孤儿闸（2×中位相对闸）
+    # 互补：孤儿闸管带内码，本闸管绝对脱线
+    AUX_NOISE_DIST_M = 500.0
+    _dn = pd.to_numeric(assoc["dist_m"], errors="coerce")
+    _noise_idx = [i for i in assoc.index
+                  if _dn.loc[i] is not None and not pd.isna(_dn.loc[i])
+                  and float(_dn.loc[i]) > AUX_NOISE_DIST_M]
+    if _noise_idx:
+        # 两级分类（2026-10-11 用户裁定细化）：允许极少数孤立点作为**编图
+        # 噪声**存在；分布过于离散偏离断层的点群=**系统性编图偏差**——
+        # 判据：某符号码的脱线点占其总点数 ≥50%（该码用法规整性偏离）
+        _tot_code = assoc["sub_no"].astype(str).value_counts().to_dict()
+        _det_code = {}
+        for _i in _noise_idx:
+            _det_code.setdefault(str(assoc.at[_i, "sub_no"]), []).append(_i)
+        _cls_of = {}
+        for _sn, _rows in _det_code.items():
+            _cls_of[_sn] = ("systematic_deviation"
+                            if len(_rows) / max(1, _tot_code.get(_sn, 1)) >= 0.5
+                            else "editing_noise")
+        _noise_aux = []
+        _n_sys = 0
+        for _i in _noise_idx:
+            _ai = int(assoc.at[_i, "aux_idx"])
+            _sn = str(assoc.at[_i, "sub_no"])
+            _cls = _cls_of[_sn]
+            _n_sys += (_cls == "systematic_deviation")
+            _noise_aux.append(_ai)
+            anomalies.append({
+                "aux_idx": _ai, "kind": str(assoc.at[_i, "kind"]),
+                "reason": (f"系统性编图偏差：{_sn} 码点群主体脱线"
+                           if _cls == "systematic_deviation" else
+                           f"编图噪声：孤立脱线点") +
+                          f"（距归属断层 {float(assoc.at[_i, 'dist_m']):.0f}m "
+                          f"超 {AUX_NOISE_DIST_M:.0f}m 绝对测量带上限，"
+                          f"不属断层辅助点/性质点——距离约束规则）",
+                "status": _cls})
+        assoc = assoc.drop(index=_noise_idx)
+        aux_cat = aux_cat[~aux_cat.index.isin(_noise_aux)]
+        print(f"编图噪声距离闸：{len(_noise_idx)} 点超 {AUX_NOISE_DIST_M:.0f}m → "
+              f"编图噪声 {len(_noise_idx) - _n_sys} / 系统性编图偏差 {_n_sys}"
+              f"（出池+异常册+置信度文件）")
     if len(num_cat):
         b_pts = {}
         for _, r in assoc[assoc["sub_no"] == 1894].iterrows():
@@ -726,6 +1107,38 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                  & (assoc["status_note"].astype(str) != "orphan")]
     asub = assoc[(assoc["sub_no"] == 1281)
                  & (assoc["status_note"].astype(str) != "orphan")]
+    # 角色歧义闸（2026-10-11 用户裁定「冗余类似语义辅助点共存→判定无法解析、
+    # 保留疑问、不冒进解析」）：池内存在与 a 码（1281）尺寸同族（高宽差 ≤30%）
+    # 的其它符号码时——a 角色归属歧义（如 1283/1281 并存案），本幅产状测量
+    # 点语义**判定无法解析**：全部三联体降级存疑「角色歧义（无法解析）」、
+    # 登记审查册；冗余码经图例/裁定排除后歧义消除照常解析（L45C003004 经
+    # 1283=编图系统错误排除后即此态）
+    _ROLE_AMBIG = ""
+    _a_hw = [wt.iloc[int(r["aux_idx"])] for _, r in asub.iterrows()]
+    if _a_hw:
+        _ah = sorted(g.height for g in _a_hw)[len(_a_hw) // 2]
+        _aw = sorted(g.width for g in _a_hw)[len(_a_hw) // 2]
+        _redundant = []
+        # 仅符号点参与（sub_no=0 文本注记非 tick 候选，不入同族检测）；
+        # 已裁定注册码（no_parse/not_hook/fault_breccia_marker 等非 a 角色）
+        # 语义已定、非 a 竞争者——豁免同族扫描（2026-10-13 K46C001003-1827
+        # 断层角砾岩案：裁定落地即歧义解除，与 1283 排除案同构）
+        for _sn in sorted({int(x) for x in assoc["sub_no"] if int(x) not in (0, 1281, 1894)}
+                          - _adjud):
+            _rows = [wt.iloc[int(r["aux_idx"])] for _, r in
+                     assoc[assoc["sub_no"] == _sn].iterrows()]
+            if not _rows:
+                continue
+            _h = sorted(g.height for g in _rows)[len(_rows) // 2]
+            _w = sorted(g.width for g in _rows)[len(_rows) // 2]
+            if _ah and _aw and abs(_h - _ah) / _ah <= 0.3 \
+                    and abs(_w - _aw) / _aw <= 0.3:
+                _redundant.append(_sn)
+        if _redundant:
+            _ROLE_AMBIG = (f"角色歧义（无法解析）：{_redundant} 与 1281 同族冗余"
+                           f"——保留疑问不冒进解析（2026-10-11 用户裁定）")
+            review.append({"aux_idx": 0, "sub_no": 0, "note": _ROLE_AMBIG})
+            print(f"   ⚠ {_ROLE_AMBIG}")
     seg_gzeeb = {i: str(fl.iloc[i].get("GZEEB") or "").zfill(2) for i in range(len(fl))}
     trip_rows = []  # review 已提前初始化（中位数优先块）
     for fid, grp in bsub.groupby("fault_id"):
@@ -790,7 +1203,9 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             dab = min(math.hypot((wt.iloc[int(a.aux_idx)].geometry.x - gpt.x) * LON_M,
                                  (wt.iloc[int(a.aux_idx)].geometry.y - gpt.y) * LAT_M)
                       for a in arms)
-            if dab < MIN_AB_M:
+            if _ROLE_AMBIG:
+                v = "存疑（角色歧义：无法解析）"
+            elif dab < MIN_AB_M:
                 v = "存疑（a-b 间距过近，几何退化）"
             elif b["side"] is None or any(a.side is None for a in arms):
                 v = "存疑（点近线，侧别不可判）"
@@ -873,7 +1288,9 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             dab = min(math.hypot((wt.iloc[int(a_.aux_idx)].geometry.x - gpt.x) * LON_M,
                                  (wt.iloc[int(a_.aux_idx)].geometry.y - gpt.y) * LAT_M)
                       for a_ in arms)
-            if dab < MIN_AB_M:
+            if _ROLE_AMBIG:
+                v = "存疑（角色歧义：无法解析）"
+            elif dab < MIN_AB_M:
                 v = "存疑（a-b 间距过近，几何退化）"
             elif b["side"] is None or any(a_.side is None for a_ in arms):
                 v = "存疑（点近线，侧别不可判）"
@@ -930,8 +1347,9 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     _outband_a_ids = set(asub[asub["dist_band_ok"].astype(str) == "out"]
                          ["aux_idx"].astype(int))
     _reatt = 0
-    for _, _ar in asub[asub["aux_idx"].astype(int)
-                       .isin(set(_iso_a["aux_idx"].astype(int)) | _outband_a_ids)].iterrows():
+    for _, _ar in ([] if _ROLE_AMBIG else
+                   asub[asub["aux_idx"].astype(int)
+                        .isin(set(_iso_a["aux_idx"].astype(int)) | _outband_a_ids)].iterrows()):
         _aid = int(_ar["aux_idx"])
         # 重归属资格（2026-09-29 用户裁定+分析补充）：低置信度孤立 a——
         # n_chains_band≥2（归属歧义降信）或当前归属带外（归属本不合法，
@@ -1028,7 +1446,7 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     _iso_a_ids = {int(x.aux_idx) for x in asub.itertuples(index=False)
                   if int(x.aux_idx) not in _members}
     _reatt_b = 0
-    for _, _br in bsub.iterrows():
+    for _, _br in ([] if _ROLE_AMBIG else bsub.iterrows()):  # 歧义闸：孤立 b 重归属关闭
         _bid = int(_br["aux_idx"])
         _outband_b = str(_br["dist_band_ok"]) == "out"
         if _bid in _members:
@@ -1165,7 +1583,10 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                 _sb = int(_t["side_1894"])
                 _sa = {int(assoc[assoc["aux_idx"] == x]["side"].iloc[0])
                        for x in _ids}
-                _t["verdict"] = ("正断层产状点" if _sb in _sa else "逆断层产状点")
+                if _ROLE_AMBIG:
+                    _t["verdict"] = "存疑（角色歧义：无法解析）"  # 歧义闸覆盖改写
+                else:
+                    _t["verdict"] = ("正断层产状点" if _sb in _sa else "逆断层产状点")
                 _arcs = [float(assoc[assoc["aux_idx"] == x]["arc_s"].iloc[0])
                          for x in _ids]
                 _arcs.append(float(assoc[assoc["aux_idx"] == int(_t["a1894"])]
@@ -1190,7 +1611,7 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         for _x in str(_t["a1281"]).split("/"):
             _members.add(int(_x))
     _n_aa = 0
-    for _fid, _agrp in asub.groupby("fault_id"):
+    for _fid, _agrp in ([] if _ROLE_AMBIG else asub.groupby("fault_id")):  # 歧义闸：a-a 兜底关闭
         _free_a = [x for x in _agrp.itertuples(index=False)
                    if int(x.aux_idx) not in _members
                    and str(x.dist_band_ok) != "out" and x.side is not None]
@@ -1395,6 +1816,20 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             _a0, _ = chain_arc_position(_ch, _c0[0], _c0[1], LON_M, LAT_M)
             _a1, _ = chain_arc_position(_ch, _c1[0], _c1[1], LON_M, LAT_M)
             _seg_arc[(_fid, _sg)] = (min(_a0, _a1), max(_a0, _a1))
+    # 图形×旋转主通道（2026-10-16 用户裁定：点对实际运动方向=解析点的
+    # 图形×旋转角——背离仅默认）：_gcfg["rotations"]={符号码: {conv,base}}；
+    # 世界方向 wd=(base∓angle)%360 投影宿主切向得 m_along，按 10-14 钩式
+    # （左行⇔m_along=−σ）得 glyph 旋向；与 z（背离默认）冲突→登记
+    # _fault_hooks_conflicts_<key>.csv（反偏移绘图待裁）
+    _rot_cfg = {}
+    if isinstance(_gcfg.get("rotations"), dict):
+        _rot_cfg = {str(c): v for c, v in _gcfg["rotations"].items()}
+    from shapely.geometry import Point as shapely_Point
+    _ang_of = dict(zip(aux_cat["_src_id"].astype(int),
+                       pd.to_numeric(aux_cat["angle"], errors="coerce")))
+    _xy_of = {int(r_["_src_id"]): (r_.geometry.x, r_.geometry.y)
+              for _, r_ in aux_cat.iterrows()}
+    _hook_conf = []
     _hook_rows = []
     for _fid, _sub in _assign.items():
         _prs = identify_strike_slip_hooks(chains[_fid], _sub, LON_M, LAT_M)
@@ -1403,15 +1838,53 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             _lo, _hi = _pr["foot_arc_m"]
             _segs = [int(_sg) for (_f, _sg), (_s0, _s1) in _seg_arc.items()
                      if _f == _fid and _s1 > _lo and _s0 < _hi]
+            _gsense = ""
+            for _id0, _sym0 in ((_i1, _sym_of.get(_i1, "")),
+                                (_i2, _sym_of.get(_i2, ""))):
+                _rc = _rot_cfg.get(str(_sym0))
+                if not _rc or _id0 not in _ang_of or _id0 not in _xy_of:
+                    continue
+                _ang0 = _ang_of[_id0]
+                if not (_ang0 == _ang0):
+                    continue
+                _base = float(_rc.get("base", 0.0))
+                _wd = (_base - _ang0) % 360.0 if                     str(_rc.get("conv", "CCW")) == "CCW" else                     (_base + _ang0) % 360.0
+                # 宿主切向（2026-10-16 再审计修复：原度制链 interpolate(±10.0)
+                # 单位错乱——10 度≈900km 长弦非局部切向；改 chains_m 米制链，
+                # 垂足投影 + ±10m 局部切向）
+                _ch0m = chains_m[_fid]
+                _x0, _y0 = _xy_of[_id0]
+                _ftm = _ch0m.project(shapely_Point(_x0 * LON_M, _y0 * LAT_M))
+                _pA = _ch0m.interpolate(max(0.0, _ftm - 10.0))
+                _pB = _ch0m.interpolate(min(_ch0m.length, _ftm + 10.0))
+                _S0 = math.degrees(math.atan2(
+                    _pB.x - _pA.x, _pB.y - _pA.y)) % 360
+                _m0 = 1 if math.cos(math.radians(_wd - _S0)) > 0 else -1
+                # 侧别：米制叉积（点米制化）
+                _svx = math.sin(math.radians(_S0))
+                _svy = math.cos(math.radians(_S0))
+                _s0 = 1 if (_svx * (_y0 * LAT_M - _pA.y)
+                            - _svy * (_x0 * LON_M - _pA.x)) > 0 else -1
+                _gsense = "左行" if _m0 == -_s0 else "右行"
+                break
             _hook_rows.append({
                 "fault_id": _fid, "id1": _i1, "id2": _i2,
                 "sym1": _sym_of.get(_i1, ""), "sym2": _sym_of.get(_i2, ""),
                 "z": round(_pr["z"], 0), "sense": _pr["sense"],
+                "glyph_sense": _gsense,
                 "dist1_m": _pr["dist_m"][0], "dist2_m": _pr["dist_m"][1],
                 "foot_sep_m": _pr["foot_sep_m"],
                 "foot_arc1_m": _lo, "foot_arc2_m": _hi,
                 "segs": ",".join(map(str, _segs)),
             })
+            if _gsense and _gsense != _pr["sense"]:
+                _hook_conf.append({
+                    "fault_id": _fid, "id1": _i1, "id2": _i2,
+                    "sym1": _sym_of.get(_i1, ""), "sym2": _sym_of.get(_i2, ""),
+                    "z_sense": _pr["sense"], "glyph_sense": _gsense,
+                    "note": "图形×旋转 vs 背离默认冲突——反偏移绘图"
+                            "（背离约定违反形态）登记待裁",
+                })
     _hdf = pd.DataFrame(_hook_rows)
     _hp = outdir / f"_fault_hooks_{sh.key}.csv"
     if not len(_hdf):
@@ -1421,8 +1894,296 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                                      "foot_sep_m", "foot_arc1_m", "foot_arc2_m",
                                      "segs"])
     _hdf.to_csv(_hp, index=False, encoding="utf-8-sig")
+    if _hook_conf:
+        pd.DataFrame(_hook_conf).to_csv(
+            outdir / f"_fault_hooks_conflicts_{sh.key}.csv",
+            index=False, encoding="utf-8-sig")
+        print(f"钩对图形×旋转冲突: {len(_hook_conf)} 对 → "
+              f"_fault_hooks_conflicts_{sh.key}.csv（待裁定）")
     print(f"走滑钩空间识别: {len(_hdf)} 对 → {_hp.name}"
           f"（候选池 {len(_pool)} 点，符号佐证 {sorted(set(_hdf['sym1']) | set(_hdf['sym2'])) if len(_hdf) else '无'}）")
+
+    # 五类合法集核验（2026-10-11 用户裁定）：断层辅助点/性质点合法类仅五——
+    # 上盘运动方向（a=1281 双短线）/倾向指示（b=1894 箭头）/走滑钩·左行/
+    # 走滑钩·右行/倾角注记（纯数字°）；判别出五类之外的辅助点 → 未遵循国标、
+    # 超出解析能力——登记 `_fault_aux_nonstandard_<key>.csv` 交裁定（核验只
+    # 登记不剔除；剔除走符号码排除册/距离闸通道，各行其裁定）
+    _hook_pos = set()
+    if len(_hdf):
+        _srcid2pos = {int(v): i for i, v in enumerate(wt["_src_id"])}
+        for _c in ("id1", "id2"):
+            for _v in _hdf[_c]:
+                _p = _srcid2pos.get(int(_v))
+                if _p is not None:
+                    _hook_pos.add(_p)
+    _unres = []
+    for _, _r in assoc.iterrows():
+        _sn = int(_r["sub_no"])
+        if _sn in (1281, 1894) or _sn == 0:
+            continue  # 上盘运动方向 / 倾向指示 / 倾角注记（五类内）
+        if int(_r["aux_idx"]) in _hook_pos:
+            continue  # 走滑钩·左/右行（空间识别成员）
+        if _sn in _adjud:
+            continue  # 已裁定注册码（不解析/角砾岩标记/非钩等）——语义已定
+        if str(_sn) in _no_parse:
+            continue  # 已裁定不解析（2026-10-13）——语义置空留池不报警
+        _unres.append({"aux_idx": int(_r["aux_idx"]), "sub_no": _sn,
+                       "reason": "判别角色超出五类合法集（非上盘运动方向/倾向指示"
+                                 "/走滑钩·左行/走滑钩·右行/倾角注记）——未遵循国标、"
+                                 "超出解析能力（2026-10-11 用户裁定）"})
+    _nzp = outdir / f"_fault_aux_nonstandard_{sh.key}.csv"
+    if _unres:
+        pd.DataFrame(_unres).to_csv(_nzp, index=False, encoding="utf-8-sig")
+        print(f"⚠ 五类合法集核验：{len(_unres)} 点超出（未遵循国标，超出解析能力）"
+              f"→ {_nzp.name} 登记交裁定")
+    elif _nzp.exists():
+        _nzp.unlink()  # 清零防陈旧误读
+
+    # —— 组合侧别统一判别（2026-10-13 用户裁定：虚拟 seg 主算法+b 股互验）——
+    # 侧别是相对量（参照线×切向约定）：折返/双股实体上 a、b 各贴各股时
+    # assoc 侧别符号会说谎（折返链在两股行进方向相反，K46C002002 a1714/b1715
+    # 假同侧案）。同股：b 股锚定直判；异股：虚拟 seg 法——Fa（a 垂足）→J
+    # （两段局部最近接近点，间距≤500m=结构相连）→Fb（b 垂足）构成虚拟段，
+    # 分别对 a、b 求侧别（腿切向×离岸向量，约定同 _arc_side）；互验：b 股
+    # 锚定法。两法关系一致才出判定；不一致/夹角退化（<20° 或 >160°）/
+    # 无连接/跨实体 → (None,None,原因) 存疑——准确性优先
+    _VSEG_GAP_MAX_M = 500.0
+    _VSEG_DEGEN_DEG = 20.0
+
+    def _row_of(aid):
+        _q = assoc[assoc["aux_idx"] == aid]
+        return _q.iloc[0] if len(_q) else None
+
+    def _side_on_strand(aid, seg_idx, fid):
+        """点相对指定股（段）的侧别：段垂足投回链取链切向（_arc_side 同约定）。"""
+        _segm = fl_m.iloc[int(seg_idx)]
+        _pt = wt.iloc[int(aid)].geometry
+        _ptm = _pm(_pt)
+        if _segm.geom_type == "MultiLineString":
+            _segm = min(_segm.geoms, key=lambda g: g.distance(_ptm))
+        _fp = _segm.interpolate(_segm.project(_ptm))
+        _fpd = Point(_fp.x / LON_M, _fp.y / LAT_M)
+        _ch = chains[fid]
+        _d0 = _ch.project(_fpd)
+        _e = 1e-9
+        _p1 = _ch.interpolate(min(_ch.length, _d0 + _e))
+        _p2 = _ch.interpolate(max(0.0, _d0 - _e))
+        _tx = (_p1.x - _p2.x) * LON_M
+        _ty = (_p1.y - _p2.y) * LAT_M
+        _px = (_pt.x - _fpd.x) * LON_M
+        _py = (_pt.y - _fpd.y) * LAT_M
+        if math.hypot(_px, _py) < SIDE_NOISE_M:
+            return None
+        return 1 if _tx * _py - _ty * _px > 0 else -1
+
+    def _pair_sides(aid, bid):
+        """组合侧别统一判别：返回 (sa, sb, 方法注记)；存疑 (None,None,原因)。"""
+        _ra, _rb = _row_of(aid), _row_of(bid)
+        if str(_ra["fault_id"]) != str(_rb["fault_id"]):
+            return None, None, "跨实体组合（追索规则限同实体）"
+        _fid = str(_rb["fault_id"])
+        try:
+            _sb = int(float(_rb["side"]))
+        except (TypeError, ValueError):
+            _sb = None
+        _sa_seg, _sb_seg = int(_ra["seg_idx"]), int(_rb["seg_idx"])
+        if _sa_seg == _sb_seg:
+            _sa = _side_on_strand(aid, _sb_seg, _fid)
+            return _sa, _sb, "同股锚定"
+        _pa = wt.iloc[int(aid)].geometry
+        _pb = wt.iloc[int(bid)].geometry
+        _pam, _pbm = _pm(_pa), _pm(_pb)
+        _ga, _gb = fl_m.iloc[_sa_seg], fl_m.iloc[_sb_seg]
+        if _ga.geom_type == "MultiLineString":
+            _ga = min(_ga.geoms, key=lambda g: g.distance(_pam))
+        if _gb.geom_type == "MultiLineString":
+            _gb = min(_gb.geoms, key=lambda g: g.distance(_pbm))
+        _Fa = _ga.interpolate(_ga.project(_pam))
+        _Fb = _gb.interpolate(_gb.project(_pbm))
+        _dab = _pam.distance(_pbm)
+        _w = 1.5 * _dab + 500.0
+
+        def _crop(g, fp):
+            _s = g.project(fp)
+            return _substring(g, max(0.0, _s - _w), min(g.length, _s + _w))
+
+        _pj, _qj = _np_pts(_crop(_ga, _Fa), _crop(_gb, _Fb))
+        _gap = _pj.distance(_qj)
+        if _gap > _VSEG_GAP_MAX_M:
+            return None, None, f"两段局部无连接（间距 {_gap:.0f}m>500m）"
+        _J = ((_pj.x + _qj.x) / 2, (_pj.y + _qj.y) / 2)
+        _t1 = (_J[0] - _Fa.x, _J[1] - _Fa.y)
+        _t2 = (_Fb.x - _J[0], _Fb.y - _J[1])
+        _va = (_pam.x - _Fa.x, _pam.y - _Fa.y)
+        _vb = (_pbm.x - _Fb.x, _pbm.y - _Fb.y)
+        if math.hypot(*_t1) < 1.0 or math.hypot(*_t2) < 1.0:
+            return None, None, "虚拟 seg 腿退化（<1m）"
+
+        def _ang360(u, v):
+            _d = abs(math.degrees(math.atan2(u[0], u[1])
+                                  - math.atan2(v[0], v[1]))) % 360.0
+            return min(_d, 360.0 - _d)
+
+        _ga1, _gb1 = _ang360(_t1, _va), _ang360(_t2, _vb)
+        if (_ga1 < _VSEG_DEGEN_DEG or _ga1 > 180.0 - _VSEG_DEGEN_DEG
+                or _gb1 < _VSEG_DEGEN_DEG or _gb1 > 180.0 - _VSEG_DEGEN_DEG):
+            return None, None, (f"腿×离岸向量近平行（叉积退化 "
+                                f"{_ga1:.0f}°/{_gb1:.0f}°）")
+        _sa_v = 1 if _t1[0] * _va[1] - _t1[1] * _va[0] > 0 else -1
+        _sb_v = 1 if _t2[0] * _vb[1] - _t2[1] * _vb[0] > 0 else -1
+        _sa_b = _side_on_strand(aid, _sb_seg, _fid)
+        if _sb is None or _sa_b is None:
+            return None, None, "互验侧别缺省"
+        if (_sa_v == _sb_v) != (_sa_b == _sb):
+            return None, None, ("两法冲突：虚拟seg="
+                                f"{'同' if _sa_v == _sb_v else '异'}侧 / b股="
+                                f"{'同' if _sa_b == _sb else '异'}侧")
+        return _sa_v, _sb_v, f"虚拟seg+b股互验一致（段间距 {_gap:.0f}m）"
+
+    # 裁定组合锁定（2026-10-12 K46C002002 a1714+b1715 案）：实体折返致链弧
+    # 臂距失真（68.7km 链弧 vs 1992m 空间紧邻）时，用户裁定直接锁定 a-b 组合。
+    # 判定不由注册写死——管线按 b 所在股链切向约定重导 a 侧别（与 _arc_side
+    # 同源），同侧=正/异侧=逆规则照旧产出 verdict；与注册期望不符记冲突、
+    # 存疑不入表（准确性优先）；成员已被规则成组占用者记冲突不重复入组
+    for _pk, _pe in _pair_ovr.items():
+        _aid, _bid = int(_pe["a"]), int(_pe["b"])
+        _ra = assoc[assoc["aux_idx"] == _aid]
+        _rb = assoc[assoc["aux_idx"] == _bid]
+        if not len(_ra) or not len(_rb):
+            review.append({"aux_idx": _aid, "sub_no": 0,
+                           "note": f"裁定组合 {_pk}：成员缺席（出池/过滤）——未入表"})
+            continue
+        _ra, _rb = _ra.iloc[0], _rb.iloc[0]
+        _occupied = any(str(_aid) in str(_t["a1281"]).split("/")
+                        or _bid == int(_t["a1894"]) for _t in trip_rows)
+        if _occupied:
+            review.append({"aux_idx": _aid, "sub_no": 0,
+                           "note": f"裁定组合 {_pk}：成员已被规则成组占用——冲突登记"})
+            continue
+        _fid_b = str(_rb["fault_id"])
+        _sa, _sb, _how = _pair_sides(_aid, _bid)
+        if _sa is None or _sb is None:
+            review.append({"aux_idx": _aid, "sub_no": 0,
+                           "note": f"裁定组合 {_pk}：侧别判别存疑（{_how}）——不入表"})
+            continue
+        _v = "正断层产状点" if _sa == _sb else "逆断层产状点"
+        _exp = str(_pe.get("verdict", "")).strip()
+        if _exp and _v != _exp:
+            review.append({"aux_idx": _aid, "sub_no": 0,
+                           "note": f"裁定组合 {_pk}：判别重导「{_v}」≠ 注册期望"
+                                   f"「{_exp}」（{_how}）——冲突存疑，不入表"})
+            continue
+        _pt_am = _pm(wt.iloc[_aid].geometry)
+        _pt_bm = _pm(wt.iloc[_bid].geometry)
+        _span = math.hypot(_pt_am.x - _pt_bm.x, _pt_am.y - _pt_bm.y)
+        trip_rows.append({"fault_id": _fid_b, "src": "adjudicated_pair",
+                          "a1281": str(_aid), "a1894": _bid,
+                          "sides_1281": str(_sa), "side_1894": _sb,
+                          "span_m": round(_span, 0), "verdict": _v,
+                          "form": "a-b", "gzeeb_check": None})
+        review.append({"aux_idx": _aid, "sub_no": 0,
+                       "note": f"裁定组合 {_pk}：a{_aid}+b{_bid} 锁定成组（{_v}，"
+                               f"空间距 {_span:.0f}m，{_how}）"
+                               + ("；角色歧义闸在场，组合经用户裁定直锁"
+                                  if _ROLE_AMBIG else "")})
+        print(f"   裁定组合 {_pk}: a{_aid}+b{_bid} → {_v}（空间 {_span:.0f}m，{_how}）")
+
+    # 孤立 a 空间追索兜底（2026-10-12 用户裁定）：规则判别后仍孤立的带内 a，
+    # 允许在同断层实体内按空间直线距离追索最近孤立 b 成组（a-b / 双 a 时
+    # a-b-a）——实体折返/汇聚拓扑下链弧臂距失真（F002 案 68.7km 弧距 vs
+    # 1992m 空间）的补位通道。约束：同实体硬条件、空间上限沿用臂长量级 4km、
+    # 侧别统一按 b 所在股链切向重导（与 _arc_side 同源）、同侧=正/异侧=逆
+    # 照旧、双 a 互异侧→存疑不入表；src=spatial_nearest 可溯源
+    _SPATIAL_FB_MAX_M = 4000.0
+    # 扩大臂长档（2026-10-13 用户裁定）：存在孤立 a 时允许扩大臂长至 8km
+    # （2×基准）谋求合法 a-b-a/a-b 组合——K46C002002-F009 案（40.6km 大断裂
+    # 长臂测量：两臂 4466/4002m 贴 4km 界外 466m/2m，全部判别闸口通过）。
+    # 扩档组 src=spatial_nearest_ext + 审查册标注，与基准档分级可辨
+    _SPATIAL_FB_EXT_M = 8000.0
+
+    _in_trip_a, _in_trip_b = set(), set()
+    for _t in trip_rows:
+        for _x in str(_t["a1281"]).split("/"):
+            if _x.strip().lstrip("-").isdigit():
+                _in_trip_a.add(int(_x))
+        try:
+            _in_trip_b.add(int(_t["a1894"]))
+        except (TypeError, ValueError):
+            pass
+    _iso_a = [int(_i) for _i in assoc[
+        (assoc["sub_no"] == 1281) & (assoc["dist_band_ok"] != "out")
+        & (assoc["status_note"] != "orphan")]["aux_idx"]
+        if int(_i) not in _in_trip_a]
+    _iso_b = [int(_i) for _i in assoc[
+        (assoc["sub_no"] == 1894) & (assoc["dist_band_ok"] != "out")
+        & (assoc["status_note"] != "orphan")]["aux_idx"]
+        if int(_i) not in _in_trip_b]
+    _fb_groups = {}
+    for _aid in _iso_a:
+        _ra = _row_of(_aid)
+        _pa = _pm(wt.iloc[_aid].geometry)
+        _best = None
+        for _bid in _iso_b:
+            _rb = _row_of(_bid)
+            if _rb is None or str(_rb["fault_id"]) != str(_ra["fault_id"]):
+                continue
+            _d = _pa.distance(_pm(wt.iloc[_bid].geometry))
+            if _d <= _SPATIAL_FB_EXT_M and (_best is None or _d < _best[0]):
+                _best = (_d, _bid)
+        if _best is not None:
+            _fb_groups.setdefault(_best[1], []).append((_aid, _best[0]))
+    if _ROLE_AMBIG and _fb_groups:
+        # 角色歧义在场：a 角色身份受争议——空间追索为机器推导通道，关闭
+        #（与重归属关闭同构，2026-10-13 K46C001003-1827 案堵漏）
+        review.append({"aux_idx": 0, "sub_no": 0,
+                       "note": f"角色歧义在场：空间追索兜底关闭，"
+                               f"{len(_fb_groups)} 候选组未入表（歧义解除后恢复）"})
+        print(f"   ⚠ 角色歧义在场：空间追索兜底关闭（{len(_fb_groups)} 候选组未入表）")
+        _fb_groups = {}
+    _n_fb = 0
+    for _bid, _als in sorted(_fb_groups.items()):
+        _rb = _row_of(_bid)
+        _fid = str(_rb["fault_id"])
+        _als = sorted(_als, key=lambda x: x[1])[:2]   # 最近至多双 a
+        _sas = []
+        _sb = None
+        _hows = []
+        for _aid, _d in _als:
+            _sa2, _sb2, _hw = _pair_sides(_aid, _bid)
+            _sas.append((_aid, _sa2, _d))
+            _sb = _sb2
+            _hows.append(_hw)
+        if _sb is None or any(s is None for _, s, _ in _sas):
+            review.append({"aux_idx": _als[0][0], "sub_no": 1281,
+                           "note": f"空间追索 {_fid}: 侧别判别存疑"
+                                   f"（{'；'.join(_hows)}）——不入表"})
+            continue
+        if len(_sas) == 2 and _sas[0][1] != _sas[1][1]:
+            review.append({"aux_idx": _sas[0][0], "sub_no": 1281,
+                           "note": f"空间追索 {_fid}: 双 a 互异侧——存疑不入表"})
+            continue
+        _v = "正断层产状点" if _sas[0][1] == _sb else "逆断层产状点"
+        _form = "a-b" if len(_sas) == 1 else "a-b-a"
+        _span = max(d for _, _, d in _sas)
+        _ext = _span > _SPATIAL_FB_MAX_M   # 扩大臂长档标记（2026-10-13 裁定）
+        trip_rows.append({
+            "fault_id": _fid,
+            "src": "spatial_nearest_ext" if _ext else "spatial_nearest",
+            "a1281": "/".join(str(a) for a, _, _ in _sas), "a1894": _bid,
+            "sides_1281": "/".join(str(s) for _, s, _ in _sas),
+            "side_1894": _sb, "span_m": round(_span, 0), "verdict": _v,
+            "form": _form, "gzeeb_check": None})
+        _n_fb += 1
+        review.append({"aux_idx": _sas[0][0], "sub_no": 1281,
+                       "note": f"孤立 a 空间追索{'（扩大臂长档）' if _ext else ''}成组："
+                               f"{'/'.join(str(a) for a, _, _ in _sas)}"
+                               f"→b{_bid}（{_v}，空间距 {'/'.join(f'{d:.0f}' for _, _, d in _sas)}m，"
+                               f"{'；'.join(_hows)}）"})
+        print(f"   孤立 a 空间追索{'[扩档]' if _ext else ''}: {_fid} "
+              f"a{'/'.join(str(a) for a, _, _ in _sas)}+b{_bid} → {_v}"
+              f"（{_form}，空间 {_span:.0f}m）")
+    if _fb_groups and not _n_fb:
+        print("   孤立 a 空间追索: 候选组均存疑未入表（审查册登记）")
 
     tdf = pd.DataFrame(trip_rows)
     # 空表表头兜底（2026-10-05 x1 全新项目案——EmptyDataError 现场）：
