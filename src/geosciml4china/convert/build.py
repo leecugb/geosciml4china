@@ -528,6 +528,11 @@ def assemble_attitudes(
     for i, (_, row) in enumerate(gdf.iterrows()):
         if sample is not None and i >= sample:
             break
+        # D4 制图误差剔除（2026-10-16 裁定）：materialize 登记册
+        # status=excluded 行跳过不发射（源数据不改写；无 status 列的
+        # 既有 L1 件 row.get 回落 normal → 零影响，逐字节一致保持）
+        if str(row.get("status") or "normal") == "excluded":
+            continue
         sem = row["sem_type"]
         # codebook 语义基础（2026-10-07 用户裁定：严格 codebook 转换——
         # Foliation 与 Contact 同逻辑：GZBBGA 码 → codebook 语义为准，
