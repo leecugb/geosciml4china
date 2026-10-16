@@ -104,8 +104,9 @@ def test_hook_glyph_sharp_bend():
     assert classify_glyph(glyph_features(g)) == "hook_glyph"
 
 
-def test_hook_glyph_complex_outline():
-    """1630 型：多顶点轮廓+掉头回折（发夹往返）+镜像重复子路径。"""
+def test_complex_outline_not_hook():
+    """1630 裁定回归（2026-10-16 用户：1630 非走滑钩）——
+    多顶点掉头轮廓如实归 complex。"""
     run = [(i * 0.02, 0.0) for i in range(30)]
     back = [(0.56 - i * 0.02, 0.005) for i in range(30)]  # 近平行回折→~166° 掉头
     pts1 = run + back          # 末端发夹掉头（≈180° 弯）
@@ -113,7 +114,7 @@ def test_hook_glyph_complex_outline():
     f = glyph_features(g)
     assert f["n_points"] >= 60 and f["dup_pairs"] == 1
     assert f["max_turn"] >= 150
-    assert classify_glyph(f) == "hook_glyph_complex"
+    assert classify_glyph(f) == "complex"
 
 
 def test_existing_classes_unaffected_by_hook_rules():
@@ -142,6 +143,27 @@ def test_closed_bent_marker_honest_boundary():
 
 def test_strike_dip_bent_bar_regression():
     """1894 回归：T 形横杆带中点折弯仍判 strike_dip（两笔划优先）。"""
+    g = _geom([([[0.0, -0.5], [0.0, 0.5]], False),
+               ([[-0.25, 0.12], [0.05, 0.2], [0.25, 0.12]], False)])
+    assert classify_glyph(glyph_features(g)) == "strike_dip"
+
+
+def test_hook_component_238():
+    """238 型：斜杆+竖笔两笔小角形（126°/90°）。"""
+    g = _geom([([[-0.45, -0.02], [0.3, 0.2]], False),
+               ([[0.05, -0.002], [0.05, 0.23]], False)])
+    assert classify_glyph(glyph_features(g)) == "hook_component"
+
+
+def test_hook_component_239():
+    """239 型：竖笔+折笔（90° 与 ~52° 端向，75° 弯）。"""
+    g = _geom([([[0.05, -0.24], [0.05, -0.05]], False),
+               ([[0.05, -0.05], [0.4, -0.1], [0.7, 0.26]], False)])
+    assert classify_glyph(glyph_features(g)) == "hook_component"
+
+
+def test_hook_component_not_capturing_1894():
+    """1894 回归：⊥ 对（0°/90°）仍是 strike_dip 而非钩构件。"""
     g = _geom([([[0.0, -0.5], [0.0, 0.5]], False),
                ([[-0.25, 0.12], [0.05, 0.2], [0.25, 0.12]], False)])
     assert classify_glyph(glyph_features(g)) == "strike_dip"

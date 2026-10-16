@@ -124,11 +124,11 @@ def classify_glyph(f: dict) -> str:
     """规则分类器（PoC 三分型+走滑钩两型定版；复杂形不冒进→complex）。"""
     if f["n_strokes"] == 0 and f["closed_polys"] == 0 and f["max_turn"] == 0:
         return "empty"
-    # 复杂轮廓钩（1630 型）：多顶点+大角度掉头（镜像对作佐证特征保留）
+    # 复杂轮廓（原 hook_glyph_complex 类——2026-10-16 用户裁定：子图 1630
+    # 不是走滑钩；多顶点大角度掉头轮廓不构成钩语义，如实归 complex）
     if f["n_points"] >= COMPLEX_MIN_PTS and f["max_turn"] >= COMPLEX_TURN:
-        return "hook_glyph_complex"
-    # 两笔划分支优先（1894 回归保护：T 形横杆可带中点折弯——
-    # 端点方位 ⊥ 判据先于钩规则）
+        return "complex"
+    # 两笔划分支优先（1894/1281 回归保护：⊥/平行判据先于钩构件）
     if f["n_strokes"] == 2:
         a, b = f["azimuths"][0], f["azimuths"][1]
         dd = abs(a - b) % 180.0
@@ -136,6 +136,14 @@ def classify_glyph(f: dict) -> str:
             return "strike_dip"     # T 形（⊥ 对）
         if dd <= PAR_DEG or dd >= 180.0 - PAR_DEG:
             return "double_tick"    # 平行双短线
+        # 钩构件（238/239 型，2026-10-16 用户裁定"配对即钩、两码各居
+        # 一侧"）：两笔斜角带（15-85°）或一笔 60-160° 折的扁小符号——
+        # ⊥/平行对已在上方分流，斜角带为钩构件独占
+        if (15 <= dd <= 85 and f["n_points"] <= 6
+                and 0 < f["aspect"] <= 6):
+            return "hook_component"
+        if f["max_turn"] >= HOOK_TURN_LO and f["n_points"] <= HOOK_MAX_PTS:
+            return "hook_component"
         return "complex"
     # 锐角钩·开折线型：少顶点、单弯 60-160°
     if (f["closed_polys"] == 0 and f["n_strokes"] <= 2

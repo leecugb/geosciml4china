@@ -1830,6 +1830,26 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     _xy_of = {int(r_["_src_id"]): (r_.geometry.x, r_.geometry.y)
               for _, r_ in aux_cat.iterrows()}
     _hook_conf = []
+    # 符号形态闸类表（2026-10-16 用户裁定链落地）：钩对成员符号经
+    # glyphcls 分类——钩类（hook_component/hook_glyph）=佐证；
+    # 已知非钩类（closed_marker/complex/strike_dip/double_tick/
+    # single_stroke/empty）=拦截（1630 透镜/168 三角形/1949 块状/
+    # 1241 T 形等假阳性族）；无库/解码失败=放行（退化空间识别）
+    _cls_of = {}
+    if _rot_cfg or _gcfg.get("lib") or (
+            sh.root / "SLIB" / "Subgraph.lib").exists():
+        try:
+            from pymapgis.slib import (SubgraphLib as _SLib2,
+                                       symbol_geometries as _sg2)
+            from .glyphcls import glyph_features as _gf,                 classify_glyph as _cg
+            _lib2 = _SLib2(str(_glp))
+            for _s0 in sorted(set(str(v) for v in _sym_of.values())):
+                try:
+                    _cls_of[_s0] = _cg(_gf(_sg2(_lib2, int(_s0))))
+                except Exception:
+                    pass
+        except Exception:
+            pass
     _hook_rows = []
     for _fid, _sub in _assign.items():
         _prs = identify_strike_slip_hooks(chains[_fid], _sub, LON_M, LAT_M)
@@ -1885,7 +1905,28 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                     "note": "图形×旋转 vs 背离默认冲突——反偏移绘图"
                             "（背离约定违反形态）登记待裁",
                 })
-    _hdf = pd.DataFrame(_hook_rows)
+    _HOOK_CLS = {"hook_component", "hook_glyph"}
+    _NON_HOOK_CLS = {"closed_marker", "complex", "strike_dip",
+                     "double_tick", "single_stroke", "empty",
+                     "decode_failed"}
+    _kept, _excluded = [], []
+    for _row in _hook_rows:
+        _c1 = _cls_of.get(str(_row["sym1"]))
+        _c2 = _cls_of.get(str(_row["sym2"]))
+        if _c1 is None or _c2 is None:
+            _kept.append(_row)          # 无库/未分类——退化空间识别
+        elif _c1 in _NON_HOOK_CLS or _c2 in _NON_HOOK_CLS:
+            _excluded.append({**_row, "glyph1": _c1, "glyph2": _c2})
+        else:
+            _kept.append(_row)
+    if _excluded:
+        pd.DataFrame(_excluded).to_csv(
+            outdir / f"_fault_hooks_shape_excluded_{sh.key}.csv",
+            index=False, encoding="utf-8-sig")
+        print(f"   符号形态闸拦截: {len(_excluded)} 对非钩形态"
+              f"（登记 _fault_hooks_shape_excluded_{sh.key}.csv）"
+              f"——1630 透镜/168 三角形等假阳性出证据链")
+    _hdf = pd.DataFrame(_kept)
     _hp = outdir / f"_fault_hooks_{sh.key}.csv"
     if not len(_hdf):
         # 空表写表头（防下游 read_csv 空文件错误）
