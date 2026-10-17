@@ -72,14 +72,14 @@ def calibrate_inferred_faults(sheet_key: str, out_dir=None) -> dict:
     # 候选段集（2026-10-02 泛化）：原始码 04 ∪ 覆盖库生效码 04（英吉沙型——
     # 原码 01/02 经 adjudicated 生效 04 的推测段）
     cand = {i for i in range(len(faults))
-            if f"{int(faults.iloc[i]['GZEEB']):02d}" == "04"}
+            if f"{int(faults.iloc[i]['GZEEB'] or 0):02d}" == "04"}
     _gz_p = sh.root / f"_gzeeb_calibration_{sh.key}.csv"
     if _gz_p.exists():
         _gz = pd.read_csv(_gz_p, dtype=str)
         cand |= {int(i) for i in _gz[_gz["gzeeb_eff"].astype(str) == "04"]["idx"]}
     rows = []
     for i in sorted(cand):
-        gzeeb = f"{int(faults.iloc[i]['GZEEB']):02d}"
+        gzeeb = f"{int(faults.iloc[i]['GZEEB'] or 0):02d}"
         coords = list(faults.geometry.iloc[i].coords)
         cov = seg_coverage(coords)
         if cov >= COV_PASS:

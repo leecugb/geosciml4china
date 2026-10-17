@@ -53,8 +53,13 @@ def _load_attitude_entries(root: Path, key: str) -> dict:
         df = pd.read_csv(p, dtype=str)
         fam_d = {}
         for code, grp in df.groupby("GZBBGA"):
-            sem = str(grp["code_sem"].iloc[0]) if "code_sem" in df.columns \
-                else str(grp["sem_type"].mode().iloc[0])
+            # mode() 对全 NaN 组返回空 Series（2026-10-08 新疆115 泛化：
+            # K43C004004 案——校准件在、某码语义全空）→ dropna 后兜底空串
+            _mo_sem = (grp["code_sem"].dropna() if "code_sem" in df.columns
+                       else grp["sem_type"].dropna())
+            if "code_sem" not in df.columns:
+                _mo_sem = grp["sem_type"].dropna().mode()
+            sem = str(_mo_sem.iloc[0]) if len(_mo_sem) else ""
             src = str(grp["code_source"].iloc[0]) \
                 if "code_source" in df.columns else "registry"
             fam_d[_norm_code(code) if not str(code).startswith("2")
@@ -69,8 +74,9 @@ def _load_attitude_entries(root: Path, key: str) -> dict:
         df = pd.read_csv(p, dtype=str)
         fam_d = {}
         for code, grp in df.groupby("GZCE"):
-            sem = str(grp["semantic"].mode().iloc[0]) \
-                if "semantic" in df.columns else ""
+            _mo = grp["semantic"].dropna().mode() if "semantic" in df.columns \
+                else pd.Series(dtype=str)
+            sem = str(_mo.iloc[0]) if len(_mo) else ""
             fam_d[_norm_code(code)] = {
                 "semantic": sem, "source": "registry",
                 "segs": int(len(grp)), "confidence": "",
