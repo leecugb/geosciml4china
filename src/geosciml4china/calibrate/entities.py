@@ -102,10 +102,27 @@ def calibrate_entities(sheet_key: str, out_dir=None,
         return x
 
 
-    def union(a, b):
+    # 命名屏障（2026-10-17 用户裁定）：GZEAB 非空时严格同名才合并——
+    # 异名不合并（自动几何链不得跨名）。组级语义：比较两组的根名集
+    # （空名段挂靠不构成跨名桥——一组 {F7,空} 与另一组 {F12,空} 名集
+    # 不同即禁并）；force=True 仅 L5 人工裁定使用（人工钉顶 > 一切规则层）
+    _root_names = {i: set() for i in faults.index}
+    for _i, _row in faults.iterrows():
+        _nm = str(_row.get("GZEAB") or "").strip()
+        if _nm:
+            _root_names[_i] = {_nm}
+
+    def union(a, b, force=False):
         ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[rb] = ra
+        if ra == rb:
+            return True
+        if not force:
+            na, nb = _root_names.get(ra, set()), _root_names.get(rb, set())
+            if na and nb and na != nb:
+                return False
+        parent[rb] = ra
+        _root_names[ra] = _root_names.get(ra, set()) | _root_names.get(rb, set())
+        return True
 
 
     def strike(coords, which, k=3, win_m=None):
@@ -305,8 +322,8 @@ def calibrate_entities(sheet_key: str, out_dir=None,
             if ok and not is_continuation(coords_l[_es[0][0]], _es[0][1],
                                           coords_l[_es[1][0]], _es[1][1]):
                 ok = False
-            if ok and find(_es[0][0]) != find(_es[1][0]):
-                union(_es[0][0], _es[1][0])
+            if ok and union(_es[0][0], _es[1][0]):
+                # 命名屏障（2026-10-17 裁定）拒绝时不记账（链接表如实）
                 l2_links.append((_es[0][0], _es[0][1], _es[1][0], _es[1][1], dw2))
                 used_ep.add(_es[0])
                 used_ep.add(_es[1])
@@ -343,7 +360,8 @@ def calibrate_entities(sheet_key: str, out_dir=None,
                 continue
             if find(e1[0]) == find(e2[0]):
                 continue
-            union(e1[0], e2[0])
+            if not union(e1[0], e2[0]):
+                continue  # 命名屏障（2026-10-17 裁定）拒绝
             _matched.add(e1)
             _matched.add(e2)
             l2_links.append((e1[0], e1[1], e2[0], e2[1], dw))
@@ -507,7 +525,8 @@ def calibrate_entities(sheet_key: str, out_dir=None,
             continue
         if (a, w1) in used_ep or (b, w2) in used_ep:
             continue  # 端点已被更早（更优）链接占用
-        union(a, b)
+        if not union(a, b):
+            continue  # 命名屏障（2026-10-17 裁定）拒绝——不占端点、不记账
         used_ep.add((a, w1))
         used_ep.add((b, w2))
         l3_links.append((a, b, round(gap), round(frac, 2), "L3" if tier == 0 else "L3b", w1, w2))
@@ -523,7 +542,7 @@ def calibrate_entities(sheet_key: str, out_dir=None,
         if os.environ.get("NO_L5") == "1":  # 规则覆盖度自检：NO_L5=1 时跳过人工裁定
             break
         for s in grp[1:]:
-            union(grp[0], s)
+            union(grp[0], s, force=True)  # L5 人工钉顶：不受命名屏障约束
 
     # ---------- 归组与属性继承 ----------
     # 一端一链全链路审计（严格执行版）：任何端点在 L2/L2c/L3 链接中
