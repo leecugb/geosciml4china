@@ -372,6 +372,13 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
     # 已裁定注册码全集（任何角色）——歧义闸同族扫描与五类合法集核验的
     # 共同豁免集：裁定落地即语义已定，不重复立案（2026-10-13）
     _adjud = {int(c) for c in _code_reg if str(c).lstrip("-").isdigit()}
+    # 走滑钩族注册（2026-10-17 用户权威定名：238/239/1285/1286/1539/
+    # 1882/1883=走滑钩）——符号形态闸豁免集：注册钩族不受 glyphcls
+    # 非钩类拦截（用户定名 > 机器字形）；同时入钩配对候选池标记
+    _hook_var = {str(c) for c, e in _code_reg.items()
+                 if isinstance(e, dict) and e.get("role") == "hook_variant"}
+    if _hook_var:
+        print(f"   走滑钩族注册：{sorted(_hook_var)}（用户定名，形态闸豁免）")
     if _no_parse:
         print(f"   不解析册：{sorted(_no_parse)} 语义置空留池（裁定）")
     if _excl:
@@ -1850,6 +1857,32 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                     pass
         except Exception:
             pass
+    def _glyph_sense_of(_fid0, _id0, _sym0):
+        """单点 glyph×旋转旋向（H2 主通道；无约定/无角值→''）。"""
+        _rc = _rot_cfg.get(str(_sym0))
+        if not _rc or _id0 not in _ang_of or _id0 not in _xy_of:
+            return ""
+        _ang0 = _ang_of[_id0]
+        if not (_ang0 == _ang0):
+            return ""
+        _base = float(_rc.get("base", 0.0))
+        # 2026-10-17 用户裁定对齐：逆时针=减角（同 _rot_of 既定 CCW
+        # 语义；用户实证：东起逆时针 206.4° → 西南南=wd 243.6°）
+        _wd = (_base - _ang0) % 360.0 if             str(_rc.get("conv", "CCW")) == "CCW" else             (_base + _ang0) % 360.0
+        _ch0m = chains_m[_fid0]
+        _x0, _y0 = _xy_of[_id0]
+        _ftm = _ch0m.project(shapely_Point(_x0 * LON_M, _y0 * LAT_M))
+        _pA = _ch0m.interpolate(max(0.0, _ftm - 10.0))
+        _pB = _ch0m.interpolate(min(_ch0m.length, _ftm + 10.0))
+        _S0 = math.degrees(math.atan2(
+            _pB.x - _pA.x, _pB.y - _pA.y)) % 360
+        _m0 = 1 if math.cos(math.radians(_wd - _S0)) > 0 else -1
+        _svx = math.sin(math.radians(_S0))
+        _svy = math.cos(math.radians(_S0))
+        _s0 = 1 if (_svx * (_y0 * LAT_M - _pA.y)
+                    - _svy * (_x0 * LON_M - _pA.x)) > 0 else -1
+        return "左行" if _m0 == -_s0 else "右行"
+
     _hook_rows = []
     for _fid, _sub in _assign.items():
         _prs = identify_strike_slip_hooks(chains[_fid], _sub, LON_M, LAT_M)
@@ -1861,36 +1894,17 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             _gsense = ""
             for _id0, _sym0 in ((_i1, _sym_of.get(_i1, "")),
                                 (_i2, _sym_of.get(_i2, ""))):
-                _rc = _rot_cfg.get(str(_sym0))
-                if not _rc or _id0 not in _ang_of or _id0 not in _xy_of:
-                    continue
-                _ang0 = _ang_of[_id0]
-                if not (_ang0 == _ang0):
-                    continue
-                _base = float(_rc.get("base", 0.0))
-                _wd = (_base - _ang0) % 360.0 if                     str(_rc.get("conv", "CCW")) == "CCW" else                     (_base + _ang0) % 360.0
-                # 宿主切向（2026-10-16 再审计修复：原度制链 interpolate(±10.0)
-                # 单位错乱——10 度≈900km 长弦非局部切向；改 chains_m 米制链，
-                # 垂足投影 + ±10m 局部切向）
-                _ch0m = chains_m[_fid]
-                _x0, _y0 = _xy_of[_id0]
-                _ftm = _ch0m.project(shapely_Point(_x0 * LON_M, _y0 * LAT_M))
-                _pA = _ch0m.interpolate(max(0.0, _ftm - 10.0))
-                _pB = _ch0m.interpolate(min(_ch0m.length, _ftm + 10.0))
-                _S0 = math.degrees(math.atan2(
-                    _pB.x - _pA.x, _pB.y - _pA.y)) % 360
-                _m0 = 1 if math.cos(math.radians(_wd - _S0)) > 0 else -1
-                # 侧别：米制叉积（点米制化）
-                _svx = math.sin(math.radians(_S0))
-                _svy = math.cos(math.radians(_S0))
-                _s0 = 1 if (_svx * (_y0 * LAT_M - _pA.y)
-                            - _svy * (_x0 * LON_M - _pA.x)) > 0 else -1
-                _gsense = "左行" if _m0 == -_s0 else "右行"
-                break
+                _gsense = _glyph_sense_of(_fid, _id0, _sym0)
+                if _gsense:
+                    break
+            # 判定优先级（2026-10-17 用户裁定：实际指向为准——背离默认
+            # 仅是绘制约定的默认假设；相向指向的对即背离失效态）：
+            # glyph×旋转（实际指向）权威覆盖 z；z 值留档为相向形态证据
+            _sense_eff = _gsense or _pr["sense"]  # glyph 权威，无 glyph→z 兜底
             _hook_rows.append({
                 "fault_id": _fid, "id1": _i1, "id2": _i2,
                 "sym1": _sym_of.get(_i1, ""), "sym2": _sym_of.get(_i2, ""),
-                "z": round(_pr["z"], 0), "sense": _pr["sense"],
+                "z": round(_pr["z"], 0), "sense": _sense_eff,
                 "glyph_sense": _gsense,
                 "dist1_m": _pr["dist_m"][0], "dist2_m": _pr["dist_m"][1],
                 "foot_sep_m": _pr["foot_sep_m"],
@@ -1902,17 +1916,73 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
                     "fault_id": _fid, "id1": _i1, "id2": _i2,
                     "sym1": _sym_of.get(_i1, ""), "sym2": _sym_of.get(_i2, ""),
                     "z_sense": _pr["sense"], "glyph_sense": _gsense,
-                    "note": "图形×旋转 vs 背离默认冲突——反偏移绘图"
-                            "（背离约定违反形态）登记待裁",
+                    "note": "相向指向形态——背离默认失效（z 符号翻转）；"
+                            "glyph×旋转（实际指向）权威覆盖 z，"
+                            "z 值留档为相向绘制证据（10-17 裁定）",
                 })
+    # 单独走滑钩（2026-10-17 用户裁定：允许单独存在不成对）——钩类符号
+    # （rotations 注册族）未被 a/b 角色消费且未入对者，逐点经 glyph×旋转
+    # 规则出旋向，以 kind=single 行入 _fault_hooks（id2 空、z 空、
+    # sense=glyph_sense）——下游 gzeeb 消费同权（+3 票）
+    _paired_ids = {int(_r["id1"]) for _r in _hook_rows}
+    _paired_ids |= {int(_r["id2"]) for _r in _hook_rows
+                    if str(_r.get("id2") or "")}
+    _fid_of = {}
+    for _f0, _subs in _assign.items():
+        for _pid0, _px0, _py0 in _subs:
+            _fid_of[_pid0] = _f0
+
+    def _segs_of(_pid0):
+        _f0 = _fid_of.get(_pid0)
+        if _f0 is None or _f0 not in chains:
+            return []
+        _xy0 = _xy_of.get(_pid0)
+        if _xy0 is None:
+            return []
+        _a, _ = chain_arc_position(chains[_f0], _xy0[0], _xy0[1],
+                                   LON_M, LAT_M)
+        return [int(_sg) for (_f, _sg), (_s0, _s1) in _seg_arc.items()
+                if _f == _f0 and _s0 <= _a <= _s1]
+    _n_single = 0
+    for _, _r_ in aux_cat.iterrows():
+        _sid0 = int(_r_["_src_id"])
+        if _sid0 in _consumed or _sid0 in _paired_ids:
+            continue
+        _sym0 = str(int(_r_["symbol_no"]))
+        if _sym0 not in _rot_cfg:
+            continue
+        _f0 = _fid_of.get(_sid0)
+        _gs0 = _glyph_sense_of(_f0, _sid0, _sym0) if _f0 else ""
+        if not _gs0:
+            continue
+        _hook_rows.append({
+            "fault_id": _fid_of.get(_sid0, "?"), "id1": _sid0, "id2": "",
+            "sym1": _sym0, "sym2": "",
+            "z": "", "sense": _gs0, "glyph_sense": _gs0,
+            "dist1_m": "", "dist2_m": "", "foot_sep_m": "",
+            "foot_arc1_m": "", "foot_arc2_m": "",
+            "segs": ",".join(str(_sg) for _sg in _segs_of(_sid0)),
+            "kind": "single",
+        })
+        _n_single += 1
+    if _n_single:
+        print(f"   单独走滑钩（不成对）: {_n_single} 枚 → kind=single")
+
     _HOOK_CLS = {"hook_component", "hook_glyph"}
     _NON_HOOK_CLS = {"closed_marker", "complex", "strike_dip",
                      "double_tick", "single_stroke", "empty",
                      "decode_failed"}
     _kept, _excluded = [], []
     for _row in _hook_rows:
-        _c1 = _cls_of.get(str(_row["sym1"]))
-        _c2 = _cls_of.get(str(_row["sym2"]))
+        _s1 = str(_row["sym1"])
+        _s2 = str(_row["sym2"])
+        # 注册钩族豁免（用户定名 > 机器字形——1285/1286 等 complex 形
+        # 经注册即真钩，不拦截）
+        if _s1 in _hook_var or _s2 in _hook_var:
+            _kept.append(_row)
+            continue
+        _c1 = _cls_of.get(_s1)
+        _c2 = _cls_of.get(_s2)
         if _c1 is None or _c2 is None:
             _kept.append(_row)          # 无库/未分类——退化空间识别
         elif _c1 in _NON_HOOK_CLS or _c2 in _NON_HOOK_CLS:
@@ -1942,7 +2012,7 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         print(f"钩对图形×旋转冲突: {len(_hook_conf)} 对 → "
               f"_fault_hooks_conflicts_{sh.key}.csv（待裁定）")
     print(f"走滑钩空间识别: {len(_hdf)} 对 → {_hp.name}"
-          f"（候选池 {len(_pool)} 点，符号佐证 {sorted(set(_hdf['sym1']) | set(_hdf['sym2'])) if len(_hdf) else '无'}）")
+          f"（候选池 {len(_pool)} 点，符号佐证 {sorted({str(v) for v in set(_hdf['sym1']) | set(_hdf['sym2'])}) if len(_hdf) else '无'}）")
 
     # 五类合法集核验（2026-10-11 用户裁定）：断层辅助点/性质点合法类仅五——
     # 上盘运动方向（a=1281 双短线）/倾向指示（b=1894 箭头）/走滑钩·左行/
