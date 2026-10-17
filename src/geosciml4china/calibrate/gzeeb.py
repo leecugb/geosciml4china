@@ -501,6 +501,36 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 _n_ls += 1
         if _n_ls:
             print(f"   线层走滑钩接线: {_n_ls} 段补入（_line_aux_slip）")
+    # 断层线型图形通道（2026-10-17 G1：断层线型→语义票 +2——正典锚注册
+    # per-sheet 可达 ≥85% 纯度（扫描 v2：J43C001002 线型2→推测/38→推覆、
+    # K45C002002 线型2→推测，全 100%）；注册表 line_style_semantics_<key>.
+    # json 的 fault_linetype_semantics 键；消融键 style；默认空=零行为
+    _flt_map = {}
+    _lt_by_src = {}
+
+    for _lp in (sh.root / "data" / f"line_style_semantics_{sh.key}.json",
+                sh.root / f"line_style_semantics_{sh.key}.json"):
+        if _lp.exists():
+            try:
+                _flt_map = (json.loads(_lp.read_text(encoding="utf-8"))
+                            .get("fault_linetype_semantics", {}))
+            except Exception:
+                _flt_map = {}
+            break
+    if _flt_map:
+        try:
+            _fg2 = load_source_layer(str(sh.root), "LDZOFBA003.WL",
+                                     graphic=True)
+            if "linetype" in _fg2.columns:
+                # 位置索引（Reader 路径 geodataframe 无 _src_id 列——与
+                # 标定循环 idx 回退同构；geojson 路径顺序等价）
+                _lt_by_src = {i: int(b) for i, b in
+                              enumerate(_fg2["linetype"])}
+                print(f"   断层线型图形通道: 注册 {len(_flt_map)} 型 / "
+                      f"幅内 {len(_lt_by_src)} 段带型")
+        except Exception as _e:
+            print(f"   ⚠ 断层线型装载失败（{_e}）——线型票通道跳过")
+
     # 实体旋向表（2026-10-16 岩脉切断合并裁定配套通道，模块级助手
     # _entity_hook_dir 实现）：同实体全部钩段旋向**一致**（unanimous）→
     # 实体获旋向；非一致实体不出表（保守边界）。消费：①本段无钩而实体
@@ -752,6 +782,15 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         elif auxv == "正断层产状点":
             votes["正断层"] += 2
             _v_aux["正断层"] += 2
+        # 断层线型图形语义票（2026-10-17 G1）：制图样式断言 +2——
+        # 正典锚注册（线型→正典码→正典语义），与界线线型通道同权同构
+        if "style" not in _ABLATE:
+            _lt0 = _lt_by_src.get(int(row.get("_src_id", idx)))
+            if _lt0 is not None:
+                _sem0 = _flt_map.get(str(_lt0))
+                if _sem0:
+                    votes[_sem0] += 2
+                    _v_data[_sem0] += 2
         # 覆盖证据权重提升（2026-10-01 用户裁定）：第四系松散沉积物/冰雪区
         # 中展布的断层（fc≥50%）或沿覆盖边缘段（≤1km）——编码值大概率
         # 为推测断层 +2（注册码先验 +3 仍优先，不翻已裁定码义）
@@ -889,6 +928,11 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
         # ---- 结构类型层多通道互证 ----
         exp = EXPECT.get(exp_name, {})
         checks, viol = [], []
+        if "style" not in _ABLATE:
+            _lt0 = _lt_by_src.get(int(row.get("_src_id", idx)))
+            if _lt0 is not None and str(_lt0) in _flt_map:
+                checks.append(f"断层线型{_lt0}→{_flt_map[str(_lt0)]}"
+                              f"（图形注册语义票+2）")
         if _qfrac >= _q_interior_frac:
             checks.append(f"位于第四系松散沉积物内 {_qfrac * 100:.0f}%"
                           f"——推测断层强证据")
@@ -929,10 +973,15 @@ def calibrate_faults(sheet_key: str, out_dir=None) -> dict:
                 # 线层走滑指示线注入（{"sense","src"} 两键，无 z/符号列——
                 # 与 build movementSense 同构消费，只注旋向与来源）
                 checks.append(f"线层走滑指示线钩旋向（{_sense}）")
-            else:
-                _z = float(_hr["z"])
-                checks.append(f"钩旋向 z={_z:.0f}（{_sense}，符号 "
-                              f"{_hr['sym1']}/{_hr['sym2']}）")
+                continue
+            _id2v = str(_hr.get("id2") or "")
+            if not _id2v or _id2v == "nan":
+                checks.append(f"单独走滑钩（glyph×旋转，{_sense}，"
+                              f"符号 {_hr.get('sym1', '')}）")
+                continue
+            _z = float(_hr["z"])
+            checks.append(f"钩旋向 z={_z:.0f}（{_sense}，符号 "
+                          f"{_hr['sym1']}/{_hr['sym2']}）")
             if exp.get("gzeld_kin") in ("左行", "右行"):
                 pass  # 钩旋向×运动学期望违反——后置核对（终态语义）
             elif "走滑" not in structural_type:

@@ -260,9 +260,11 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
         try:
             _bg = load_source_layer(str(sh.root), "LDZOFBA002.WL",
                                     graphic=True)
-            if "linetype" in _bg.columns and "_src_id" in _bg.columns:
-                _lt_by_src = {int(a): int(b) for a, b in
-                              zip(_bg["_src_id"], _bg["linetype"])}
+            if "linetype" in _bg.columns:
+                # 位置索引（Reader 路径 geodataframe 无 _src_id 列——与
+                # 标定循环 idx 回退同构；geojson 路径顺序等价）
+                _lt_by_src = {i: int(b) for i, b in
+                              enumerate(_bg["linetype"])}
                 print(f"   线型图形通道: 注册 {len(_lt_map)} 型 / "
                       f"幅内 {len(_lt_by_src)} 界线带型")
         except Exception as _e:
