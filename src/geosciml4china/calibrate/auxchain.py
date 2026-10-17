@@ -2024,6 +2024,11 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         _srcid2pos = {int(v): i for i, v in enumerate(wt["_src_id"])}
         for _c in ("id1", "id2"):
             for _v in _hdf[_c]:
+                # 空 id 守卫（2026-10-17 测试集 20 幅案：J43C003003 等钩对
+                # CSV 空 id 单元格 → int('') 崩）——空 id 无法映射位置，
+                # 跳过不加入钩点集（钩对登记不受影响）
+                if not str(_v or "").strip():
+                    continue
                 _p = _srcid2pos.get(int(_v))
                 if _p is not None:
                     _hook_pos.add(_p)

@@ -74,8 +74,19 @@ def check_consistency(lite_dir: str | Path,
     # 行（零长度界线）同样剔除不发射——L1 侧同口径过滤
     is_excl = l1_bnd["status"].astype(str) == "excluded"
     _vd_null = l1_bnd["verdict"].isna() | l1_bnd["sem_label"].isna()
-    conv8 = l1_bnd[gzbd_eff.isin(list(CONTACT_CODES))
-                   & ~is_excl & ~_vd_null]
+    # 语义驱动对齐（2026-10-14 K46C001003 冰雪区界线 14 案）：build 的
+    # 接触发射已改为语义驱动（codebook 纪元「完全脱离 MapGIS 编码系统」），
+    # 不再按码值 CONTACT_CODES 过滤——GZBD=14（冰雪区界线，分歧未裁定）
+    # 照发（contactType=unknown）；镜像侧旧码值过滤致 C2 漂移 1 条。
+    # 现对齐 build 口径：跳过集=码级 status skip_fault/skip_nongeologic
+    # +excluded + 未标定——不再套 CONTACT_CODES
+    from ..convert import mapping as _mapping
+    _skip_codes = set()
+    for _c in l1_bnd["GZBD_eff"].astype(str).str.replace(".0", "", regex=False).unique():
+        if _mapping.gzbd_row(_c.zfill(2)).get("status") in (
+                "skip_fault", "skip_nongeologic"):
+            _skip_codes.add(_c.zfill(2))
+    conv8 = l1_bnd[~gzbd_eff.isin(_skip_codes) & ~is_excl & ~_vd_null]
 
     feats_u = sources.load_lite_features(lite_dir, "geologic_unit_view")
     feats_c = sources.load_lite_features(lite_dir, "contact_view")
@@ -84,9 +95,17 @@ def check_consistency(lite_dir: str | Path,
 
     # ① 计数
     counts = (len(feats_u), len(feats_c), len(feats_s), len(feats_a))
-    rep("C1 要素计数", counts == expect_counts,
-        f"面/界线/断层/产状 = {counts}（L1 侧 {len(l1_poly)}/{len(conv8)}/{len(l1_flt)}/{len(l1_att)}，"
-        f"期望 {expect_counts}）")
+    if expect_counts is None:
+        # 无预设期望画像（fleet 新幅）：计数仅报告——GML↔L1 一致性由
+        # C2 几何多重集及后续数据驱动断言承担（2026-10-17 测试集 20 幅案）
+        rep("C1 要素计数（无期望画像，仅报告）", True,
+            f"面/界线/断层/产状 = {counts}（L1 侧 {len(l1_poly)}/{len(conv8)}/{len(l1_flt)}/{len(l1_att)}）")
+        _exp = (None, None, None, None)
+    else:
+        rep("C1 要素计数", counts == expect_counts,
+            f"面/界线/断层/产状 = {counts}（L1 侧 {len(l1_poly)}/{len(conv8)}/{len(l1_flt)}/{len(l1_att)}，"
+            f"期望 {expect_counts}）")
+        _exp = expect_counts
 
     # 适配（供后续断言复用）
     rmap = build_reverse_unit_map(color_mapping_path)
@@ -111,7 +130,8 @@ def check_consistency(lite_dir: str | Path,
     bad = rep_u.get("symbolizer_mismatch") or []
     unm = rep_u.get("unmapped") or []
     rep("C3 面色 genericSymbolizer==反查 rgb", not bad and not unm,
-        f"mismatch={len(bad)} unmapped={unm[:5]}（{len(gdf_u)}/{expect_counts[0]}）")
+        f"mismatch={len(bad)} unmapped={unm[:5]}（{len(gdf_u)}"
+        f"{'/' + str(_exp[0]) if _exp[0] is not None else ''}）")
 
     # ④ SDS.name == L1.GZEAB（语义 sds id join，2026-10-02 裁定）
     from ..convert import ids as _ids
@@ -160,7 +180,8 @@ def check_consistency(lite_dir: str | Path,
         if dip is not None and _rdip is not None and abs(_rdip - dip) > 1e-6:
             n_bad += 1
     rep("C5 产状角度一致", n_bad == 0 and n_miss == 0,
-        f"mismatch={n_bad} missing={n_miss}（{len(gdf_a)}/{expect_counts[3]}）")
+        f"mismatch={n_bad} missing={n_miss}（{len(gdf_a)}"
+        f"{'/' + str(_exp[3]) if _exp[3] is not None else ''}）")
 
     # ⑥ 语义分布一致（2026-10-03 渲染完全基于 geosciml：断层侧改按标定
     # 结构语义对账，脱离码系统；接触侧仍码口径待界线域解耦切换）

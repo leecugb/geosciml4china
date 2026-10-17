@@ -332,7 +332,10 @@ def assemble_faults(sample: Optional[int] = None) -> List[FaultRec]:
             msense = "no_movement_sense"
         _mp = mp_of.get(aux_idx, {})
         planes_by_seg.setdefault(seg, []).append(
-            FaultAuxPlane(azimuth=float(az), dip=dip, aux_idx=aux_idx,
+            FaultAuxPlane(azimuth=float(az) % 360.0,  # 单位圆规范化
+                          # （2026-10-17 测试集 J46C001002 石棉矿案：箭头
+                          # 派生方位角恰为 360.0 → A09/A24 越界 [360.0×2]）
+                          dip=dip, aux_idx=aux_idx,
                           mode=mode, dip_source=dip_src, movement_sense=msense,
                           a_ids=a_ids,
                           mp_id=_mp.get("mp_id", f"fp.{aux_idx}"),
