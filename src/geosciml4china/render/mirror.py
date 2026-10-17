@@ -202,29 +202,35 @@ def check_consistency(lite_dir: str | Path,
         feats = fp.get("features", [])
         l1_fl = gpd.read_file(l1_dir / "faults.geojson")
         l1_fa_x = gpd.read_file(l1_dir / "fault_aux.geojson")
-        l1_fa_x["_src_id"] = l1_fa_x["_src_id"].astype(int)
-        b_sub = l1_fa_x[(l1_fa_x["kind"] == "symbol")
-                        & (l1_fa_x["sub_no"].astype(str).str.replace(".0", "", regex=False) == "1894")
-                        & (l1_fa_x["status"].astype(str) == "normal")]
-        n_view = len(feats)
-        pos_bad = 0
-        # 垂足坐标多重集比对（语义 id 下不复用 URI 解析，2026-10-02 裁定）
-        from collections import Counter as _Counter
-        expect_feet = _Counter()
-        for _, r in b_sub.iterrows():
-            seg_geom = l1_fl.geometry.iloc[int(r["seg_idx"])]
-            expect = seg_geom.interpolate(seg_geom.project(r.geometry))
-            expect_feet[(round(expect.x, 9), round(expect.y, 9))] += 1
-        for ft in feats:
-            gx, gy = ft["geometry"]["coordinates"][:2]
-            key = (round(gx, 9), round(gy, 9))
-            if expect_feet[key] <= 0:
-                pos_bad += 1
-            else:
-                expect_feet[key] -= 1
-        rep("C7 测量点视图一致（计数/垂足）",
-            n_view == len(b_sub) and pos_bad == 0,
-            f"view={n_view}/{len(b_sub)} 错位={pos_bad}")
+        if len(l1_fa_x) == 0:
+            # 空辅助点层（2026-10-17 柯坪案：0 点层文件丢失列 schema、
+            # KeyError _src_id）——b 期望 0，视图亦应空
+            rep("C7 测量点视图一致（计数/垂足）", len(feats) == 0,
+                f"view={len(feats)}/0 错位=0")
+        else:
+            l1_fa_x["_src_id"] = l1_fa_x["_src_id"].astype(int)
+            b_sub = l1_fa_x[(l1_fa_x["kind"] == "symbol")
+                            & (l1_fa_x["sub_no"].astype(str).str.replace(".0", "", regex=False) == "1894")
+                            & (l1_fa_x["status"].astype(str) == "normal")]
+            n_view = len(feats)
+            pos_bad = 0
+            # 垂足坐标多重集比对（语义 id 下不复用 URI 解析，2026-10-02 裁定）
+            from collections import Counter as _Counter
+            expect_feet = _Counter()
+            for _, r in b_sub.iterrows():
+                seg_geom = l1_fl.geometry.iloc[int(r["seg_idx"])]
+                expect = seg_geom.interpolate(seg_geom.project(r.geometry))
+                expect_feet[(round(expect.x, 9), round(expect.y, 9))] += 1
+            for ft in feats:
+                gx, gy = ft["geometry"]["coordinates"][:2]
+                key = (round(gx, 9), round(gy, 9))
+                if expect_feet[key] <= 0:
+                    pos_bad += 1
+                else:
+                    expect_feet[key] -= 1
+            rep("C7 测量点视图一致（计数/垂足）",
+                n_view == len(b_sub) and pos_bad == 0,
+                f"view={n_view}/{len(b_sub)} 错位={pos_bad}")
     else:
         rep("C7 测量点视图一致（计数/垂足）", False, "fault_attitude_point_view.geojson 缺失")
 
