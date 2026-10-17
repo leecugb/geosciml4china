@@ -557,6 +557,11 @@ def assemble_attitudes(
         # 测量本身——dip=下限，dip_hi=上限，emit 走 QuantityRange 双值；
         # 不改码不取中值
         _dip_raw = str(row["GZBBAD"] or "").strip()
+        # NaN 防空（2026-10-17 克克吐鲁克北案）：L1 空倾角经 None→NaN 后
+        # str() 为 "nan"——按缺失处理（dip=None 缺省发射），否则 "nan"
+        # 文本入 GML 且违 XSD
+        if _dip_raw.lower() in ("nan", "none", ""):
+            _dip_raw = ""
         _dip_m = re.fullmatch(r"(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)",
                               _dip_raw)
         _dip_lo = (_dip_m.group(1) if _dip_m else _dip_raw) or None

@@ -159,6 +159,15 @@ def calibrate_attitudes(sheet_key: str, out_dir=None) -> dict:
     sh = get_sheet(sheet_key)
     outdir = Path(out_dir) if out_dir else sh.root
     outdir.mkdir(parents=True, exist_ok=True)
+    # 产状字段互换约定（2026-10-17 用户裁定，塔什库尔干案）：互换制幅
+    # GZBBAB 实存倾角、GZBBAD 实存走向——质量门按旗标换列读取，
+    # 无互换幅零影响
+    _swap = False
+    try:
+        from pymapgis.semantics.profile import read_profile
+        _swap = bool(read_profile(sh.root).get("attitude_ba_swap", False))
+    except Exception:
+        pass
 
     def _l0(name):
         # 泛化（2026-10-02）：geojson/L0 优先；缺失时 MapGIS 源兜底；
@@ -220,8 +229,21 @@ def calibrate_attitudes(sheet_key: str, out_dir=None) -> dict:
         t = str(att["GZBBGA"].iloc[i])
         # ② 数据质量门：走向⊥倾向 + 倾角域值
         dq_issue = False
+        _dip_missing = False
         try:
-            a = float(att["GZBBAB"].iloc[i])
+            if _swap:
+                _sd = str(att["GZBBAD"].iloc[i] or "").strip()
+                if _sd.lower() in ("", "nan", "none"):
+                    # 互换制幅尾点（克克吐鲁克北 6 点，2026-10-17）：
+                    # 走向在常规槽 GZBBAB、倾角缺失
+                    a = float(att["GZBBAB"].iloc[i])
+                    _dip_missing = True
+                else:
+                    a = float(_sd)
+                    dv = float(att["GZBBAB"].iloc[i])
+            else:
+                a = float(att["GZBBAB"].iloc[i])
+                dv = float(att["GZBBAD"].iloc[i])
             b = float(att["GZBBAC"].iloc[i])
             d = abs(abs(a - b) - 90) % 180
             d = min(d, 180 - d)
@@ -235,18 +257,24 @@ def calibrate_attitudes(sheet_key: str, out_dir=None) -> dict:
             anom.append(dict(idx=i, gzbbga=t, host=hc, host_layer=hl,
                              host_era=he, rule="数据质量门",
                              reason="走向/倾向字段缺失"))
-        try:
-            dv = float(att["GZBBAD"].iloc[i])
-            if not (0.0 <= dv <= 90.0):
-                dq_issue = True
-                anom.append(dict(idx=i, gzbbga=t, host=hc, host_layer=hl,
-                                 host_era=he, rule="数据质量门",
-                                 reason=f"倾角 {dv}° 超域值 [0,90]"))
-        except (TypeError, ValueError):
+        if _dip_missing:
             dq_issue = True
             anom.append(dict(idx=i, gzbbga=t, host=hc, host_layer=hl,
                              host_era=he, rule="数据质量门",
-                             reason="倾角字段缺失"))
+                             reason="倾角字段缺失（互换制幅尾点）"))
+        elif not _dip_missing:
+            try:
+                dv = float(att["GZBBAB" if _swap else "GZBBAD"].iloc[i])
+                if not (0.0 <= dv <= 90.0):
+                    dq_issue = True
+                    anom.append(dict(idx=i, gzbbga=t, host=hc, host_layer=hl,
+                                     host_era=he, rule="数据质量门",
+                                     reason=f"倾角 {dv}° 超域值 [0,90]"))
+            except (TypeError, ValueError):
+                dq_issue = True
+                anom.append(dict(idx=i, gzbbga=t, host=hc, host_layer=hl,
+                                 host_era=he, rule="数据质量门",
+                                 reason="倾角字段缺失"))
         # 同码继承原则（2026-10-03 用户裁定）：码义已标定的编码值——要素
         # sem_type 直接继承码义语义标签（_CAT 表承载码义），不再携带原码；
         # 未注册码走先验拟合码义（2026-10-07 裁定，下方码级拟合后回填）；
