@@ -7925,7 +7925,8 @@
   "Qp1X"
  ],
  "quaternary_exclude_names": [
-  "新疆群"
+  "新疆群",
+  "西域组"
  ],
  "age_order_priors": {
   "_readme": "地层新老次序知识（同步自 dzt0179_color_library.json stratigraphic_contacts，同步器 _sync_colorlib_to_priors.py，重跑即整节重建）。type: superposed=叠置次序（units/names 按老→新）；simultaneous=同时代；no_contact=不同地层分区、无接触（新老不可比）；conformable=整合接触（下老上新连续叠置）。basis 分级：adjudicated=用户核验（最高优先级知识源，2026-09-20 用户定） > memoir=志书核验 > inferred=推断*待核。用途：不整合界线年轻侧判定、层序一致性审计；接触类型判定期望仍以 unit_pair_rules 为准（superposed 仅载次序，不冒充接触类型）。",

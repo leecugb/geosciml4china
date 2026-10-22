@@ -433,7 +433,8 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     Q_EXCLUDE = set(priors.get("quaternary_exclude", ["Qp1X"]))
     # 2026-10-22 用户裁定：新疆群（Qp3X 全变体）入松散第四系剔除——变体码
     # 多义（Qp3l 湖相松散/Qp3Xpal 冲洪积 与新疆群同码），故按**名称**剔除
-    # （子串包含，覆盖"晚更新世新疆群"等名称变体）；码剔除仅作兜底
+    # （子串包含，覆盖"晚更新世新疆群"等名称变体）；西域组同入名称剔除
+    # （修 Qp1x/Qp1xpl 大小写+成因后缀绕过码剔除 Qp1X 的缝隙）；码剔除仅兜底
     Q_EXCLUDE_NAMES = tuple(priors.get("quaternary_exclude_names", []))
 
 
