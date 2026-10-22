@@ -1730,7 +1730,9 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
         _a_id = int(_t["a1281"])
         _brow = assoc[assoc["aux_idx"] == _b_id].iloc[0]
         _arow = assoc[assoc["aux_idx"] == _a_id].iloc[0]
-        if _arow["side"] is None:
+        # NaN 守卫（2026-10-22 J43C002002 案）：side 列 NaN 非 None，
+        # 原 `is None` 判空漏网致 int(NaN) 崩——NaN=侧别无效，跳过该 a
+        if pd.isna(_arow["side"]):
             continue
         _a_side = int(_arow["side"])
         _b_arc, _a_arc = float(_brow["arc_s"]), float(_arow["arc_s"])
@@ -1739,7 +1741,7 @@ def calibrate_auxchain(sheet_key: str, out_dir=None) -> dict:
             _xa = int(_x.aux_idx)
             if _xa in _members or _xa == _a_id:
                 continue  # 只限孤立状态的 a
-            if str(_x.dist_band_ok) == "out" or _x.side is None:
+            if str(_x.dist_band_ok) == "out" or pd.isna(_x.side):
                 continue
             if int(_x.side) != _a_side:
                 continue  # 两 a 必同侧（合法硬约束）
