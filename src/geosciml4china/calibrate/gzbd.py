@@ -431,6 +431,10 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     # 16 推测界线自 2026-09-13 起经专项核定（见 B 段）
     # 2026-09-13 用户对齐：第四系不含已半固结成岩的沉积层（西域组 Qp1X 算基岩）
     Q_EXCLUDE = set(priors.get("quaternary_exclude", ["Qp1X"]))
+    # 2026-10-22 用户裁定：新疆群（Qp3X 全变体）入松散第四系剔除——变体码
+    # 多义（Qp3l 湖相松散/Qp3Xpal 冲洪积 与新疆群同码），故按**名称**剔除
+    # （子串包含，覆盖"晚更新世新疆群"等名称变体）；码剔除仅作兜底
+    Q_EXCLUDE_NAMES = tuple(priors.get("quaternary_exclude_names", []))
 
 
     def clean_code(c):
@@ -536,10 +540,13 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
     # 推测界线（GZBD=16）核定所需覆盖面（松散 Q 剔 Qp1X + 冰雪）
     _q_src = []
     _sg = load_source_layer(str(sh.root), "LDZOFBB001.WP", graphic=False)
-    for g, c in zip(_sg.geometry.values, _sg["QDUECC"].astype(str).values):
+    for g, c, n in zip(_sg.geometry.values,
+                       _sg["QDUECC"].astype(str).values,
+                       _sg["QDUECD"].astype(str).values):
         if g is not None and not g.is_empty \
                 and (a := _unit_age_rank(c)) is not None and a >= 1300 \
-                and clean_code(c) not in Q_EXCLUDE:
+                and clean_code(c) not in Q_EXCLUDE \
+                and not any(x in n for x in Q_EXCLUDE_NAMES):
             _q_src.append(g)
     q_u = _unary_union(_q_src) if _q_src else None
     ice_u = ice_g.geometry.union_all() if len(ice_g) else None
@@ -1160,11 +1167,14 @@ def calibrate_boundaries(sheet_key: str, out_dir=None) -> dict:
                 continue
                 # _adj_t is None（相对×绝对混比不可判）→ 落下方通用级联
         all_layers = {u["layer"] for u in lu_units + ru_units}
-        # 第四系判定：剔除半固结成岩沉积层（Qp1X 西域组等，算基岩）
+        # 第四系判定：剔除半固结成岩沉积层（Qp1X 西域组等，算基岩；
+        # 2026-10-22 增名称剔除——新疆群全变体）
         # （2026-10-04 QDUECD 兜底链：г/∑ 误录前缀码的时代从剥前缀后缀/
         # 名称时代词恢复——不再静默丢证据）
         ages = [a for u in lu_units + ru_units
                 if clean_code(u["code"]) not in Q_EXCLUDE
+                and not any(x in (u.get("name") or "")
+                            for x in Q_EXCLUDE_NAMES)
                 and (a := _age_rank_of(u)) is not None]
         if ages and max(ages) >= 1300:
             exp, cname, rpair = {"02"}, "第四系界线", "(第四系通用规则)"
