@@ -600,9 +600,17 @@ def assemble_specimens(units: Dict[str, model.UnitRec],
             _frames.append((theme, sources.read_theme(theme)))
     sp_ids = ids.specimen_ids(_frames, raw2norm)
     for theme, gdf in _frames:
+        _skip_nocode = 0
         for i, (_, row) in enumerate(gdf.iterrows()):
             if sample is not None and i >= sample:
                 break
+            # 零码标本不入视图（2026-10-22 A27 案：symbol_no=0/空=码缺失，
+            # 现存实例全为 verdict=违反（待裁定）·sem_type=未知——留 L1/审计
+            # 层如实登记，产品视图不带无法符号化的记录）
+            if not str(row.get("symbol_no") or "").strip() \
+                    or str(row.get("symbol_no")).strip() in ("0", "0.0"):
+                _skip_nocode += 1
+                continue
             host_norm = raw2norm.get(row["host_code"]) \
                 if isinstance(row.get("host_code"), str) else None
             v = _clean_optional_str(row.get("verdict"))
@@ -625,6 +633,9 @@ def assemble_specimens(units: Dict[str, model.UnitRec],
                     geometry=row.geometry.__geo_interface__,
                 )
             )
+        if _skip_nocode:
+            print(f"  ⚠ {theme}: {_skip_nocode} 条零码标本不入视图"
+                  f"（违反/待裁定——留 L1/审计层，2026-10-22 A27 案）")
     return out
 
 
